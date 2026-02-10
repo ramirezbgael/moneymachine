@@ -1,0 +1,183 @@
+.print-modal {
+  max-width: 550px;
+  width: 90%;
+}
+
+.print-modal__message {
+  text-align: center;
+  padding: var(--spacing-xl);
+}
+
+.print-modal__message p {
+  margin-bottom: 12px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.print-modal__message p:last-child {
+  margin-bottom: 0;
+}
+
+.print-modal__total {
+  font-size: 18px;
+  font-weight: 500;
+  color: #fff;
+  margin: var(--spacing-lg) 0;
+}
+
+.print-modal__total span {
+  color: #6EEB6F;
+  font-size: 36px;
+  font-weight: 700;
+  text-shadow: 0 0 20px rgba(110, 235, 111, 0.4);
+  letter-spacing: -0.02em;
+}
+
+.print-modal__question {
+  margin-top: var(--spacing-lg) !important;
+  font-size: 17px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.print-modal__hint {
+  margin-top: 10px !important;
+  font-size: 13px !important;
+  color: #6EEB6F !important;
+  font-weight: 500 !important;
+}
+
+.print-modal__options {
+  display: flex;
+  gap: 14px;
+  margin-top: var(--spacing-xl);
+}
+
+.print-modal__option {
+  flex: 1;
+  padding: 16px 28px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+}
+
+.print-modal__option:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Misma estética Cobrar: verde oscuro + borde/glow verde lima + texto verde lima */
+.print-modal__option--active {
+  background: #2E4730;
+  border: 1px solid #6EEB6F;
+  color: #6EEB6F;
+  font-weight: 600;
+  box-shadow: 0 0 0 1px #6EEB6F, 0 0 14px rgba(110, 235, 111, 0.35);
+}
+
+.print-modal__option--active:hover {
+  background: #253826;
+  border-color: #6EEB6F;
+  color: #6EEB6F;
+  box-shadow: 0 0 0 1px #6EEB6F, 0 0 18px rgba(110, 235, 111, 0.45);
+}
+
+.print-modal__browser-hint {
+  margin-top: 10px !important;
+  font-size: 12px !important;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.print-modal__ticket-copy {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--glass-border);
+}
+
+.print-modal__ticket-logo {
+  display: block;
+  max-width: 100%;
+  max-height: 80px;
+  object-fit: contain;
+  object-position: top;
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+}
+
+.print-modal__ticket-pre {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin: 0 0 12px 0;
+  max-height: 220px;
+  overflow-y: auto;
+  white-space: pre;
+  color: var(--text-primary);
+}
+
+.print-modal__copy-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #2E4730;
+  border: 1px solid #6EEB6F;
+  color: #6EEB6F;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 0 1px #6EEB6F, 0 0 12px rgba(110, 235, 111, 0.25);
+}
+
+.print-modal__copy-btn:hover {
+  background: #253826;
+  box-shadow: 0 0 0 1px #6EEB6F, 0 0 18px rgba(110, 235, 111, 0.4);
+}
+
+/* Footer: mismo estilo que modal de pago */
+.print-modal .modal__footer {
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.print-modal .modal__btn--primary {
+  font-weight: 600;
+  border-radius: 9999px;
+  background: #2E4730;
+  border: 1px solid #6EEB6F;
+  color: #6EEB6F;
+  box-shadow: 0 0 0 1px #6EEB6F, 0 0 14px rgba(110, 235, 111, 0.35);
+}
+
+.print-modal .modal__btn--primary:hover:not(:disabled) {
+  background: #253826;
+  border-color: #6EEB6F;
+  color: #6EEB6F;
+  box-shadow: 0 0 0 1px #6EEB6F, 0 0 18px rgba(110, 235, 111, 0.45);
+}
+
+.print-modal .modal__btn--primary .print-modal__hotkey {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 4px 8px;
+  background: rgba(28, 28, 28, 0.9);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6EEB6F;
+}
