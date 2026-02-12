@@ -97,18 +97,25 @@ const Layout = () => {
     )
   }
 
+  // Detectar modo demo y ajustar rutas
+  const isDemoMode = location.pathname.startsWith('/demo')
+  const baseRoute = isDemoMode ? '/demo' : ''
+  
   const menuItems = [
-    { path: '/', label: t('nav.currentSale'), icon: FaCashRegister, id: 'sale' },
-    { path: '/inventory', label: t('nav.inventory'), icon: FaBox, id: 'inventory' },
-    { path: '/pending', label: t('nav.pending'), icon: FaClock, id: 'pending' },
-    { path: '/reports', label: t('nav.reports'), icon: FaChartBar, id: 'reports' },
-    { path: '/configuracion', label: t('nav.settings'), icon: FaCog, id: 'settings' }
+    { path: `${baseRoute}/`, label: t('nav.currentSale'), icon: FaCashRegister, id: 'sale' },
+    { path: `${baseRoute}/inventory`, label: t('nav.inventory'), icon: FaBox, id: 'inventory' },
+    { path: `${baseRoute}/pending`, label: t('nav.pending'), icon: FaClock, id: 'pending' },
+    { path: `${baseRoute}/reports`, label: t('nav.reports'), icon: FaChartBar, id: 'reports' },
+    { path: `${baseRoute}/configuracion`, label: t('nav.settings'), icon: FaCog, id: 'settings' }
   ]
 
   const getActiveId = () => {
-    if (location.pathname.startsWith('/inventario')) return 'inventory'
-    if (location.pathname.startsWith('/pending')) return 'pending'
-    if (location.pathname === '/') return 'sale'
+    const path = location.pathname.replace(/^\/demo/, '') || '/'
+    if (path.startsWith('/inventario') || path.startsWith('/inventory')) return 'inventory'
+    if (path.startsWith('/pending')) return 'pending'
+    if (path.startsWith('/reports')) return 'reports'
+    if (path.startsWith('/configuracion') || path.startsWith('/settings')) return 'settings'
+    if (path === '/') return 'sale'
     // Check for exact match first, then startsWith
     const exactMatch = menuItems.find(item => location.pathname === item.path)
     if (exactMatch) return exactMatch.id

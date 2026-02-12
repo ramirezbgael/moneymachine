@@ -5,105 +5,343 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { useTenantStore } from '../store/tenantStore'
 
-// Mock products for development
+// Mock products - Tienda de computadoras y papelería (tipo Zona Asist)
 const mockProducts = [
   {
     id: 1,
-    code: 'COKE001',
-    barcode: '7501234567890',
-    name: 'Coca Cola 500ml',
-    description: 'Refresco de cola',
-    price: 15.00,
-    stock: 50
+    code: 'PAPEL-A4',
+    barcode: '7501001001001',
+    name: 'Papel bond carta 500 hojas',
+    description: 'Resma de papel bond blanco tamaño carta',
+    price: 85.00,
+    cost: 65.00,
+    stock: 45
   },
   {
     id: 2,
-    code: 'CHIPS001',
-    barcode: '7501234567891',
-    name: 'Sabritas Original 100g',
-    description: 'Papas fritas',
-    price: 18.00,
-    stock: 30
-  },
-  {
-    id: 3,
-    code: 'CANDY001',
-    barcode: '7501234567892',
-    name: 'Chicles Bubbaloo',
-    description: 'Chicle de sabores',
-    price: 3.00,
-    stock: 100
-  },
-  {
-    id: 4,
-    code: 'WATER001',
-    barcode: '7501234567893',
-    name: 'Agua Ciel 1L',
-    description: 'Agua purificada',
-    price: 12.00,
+    code: 'LAP-BIC',
+    barcode: '7501001001002',
+    name: 'Lapicero Bic Cristal azul',
+    description: 'Caja con 12 lapiceros',
+    price: 35.00,
+    cost: 22.00,
     stock: 80
   },
   {
-    id: 5,
-    code: 'JUICE001',
-    barcode: '7501234567894',
-    name: 'Jugo Del Valle 500ml',
-    description: 'Jugo de manzana',
-    price: 14.00,
+    id: 3,
+    code: 'USB-32GB',
+    barcode: '7501001001003',
+    name: 'Memoria USB Kingston 32GB',
+    description: 'USB 3.0 alta velocidad',
+    price: 145.00,
+    cost: 95.00,
     stock: 25
   },
   {
+    id: 4,
+    code: 'MOUSE-LOG',
+    barcode: '7501001001004',
+    name: 'Mouse Logitech M170 inalámbrico',
+    description: 'Mouse óptico inalámbrico con receptor USB',
+    price: 185.00,
+    cost: 125.00,
+    stock: 18
+  },
+  {
+    id: 5,
+    code: 'TECLADO-HP',
+    barcode: '7501001001005',
+    name: 'Teclado HP USB español',
+    description: 'Teclado alambrico USB layout español',
+    price: 220.00,
+    cost: 155.00,
+    stock: 12
+  },
+  {
     id: 6,
-    code: 'BREAD001',
-    barcode: '7501234567895',
-    name: 'Pan Bimbo',
-    description: 'Pan de caja',
-    price: 35.00,
+    code: 'RAM-8GB',
+    barcode: '7501001001006',
+    name: 'Memoria RAM DDR4 8GB Kingston',
+    description: 'RAM DDR4 2666MHz DIMM',
+    price: 420.00,
+    cost: 310.00,
     stock: 15
   },
   {
     id: 7,
-    code: 'MILK001',
-    barcode: '7501234567896',
-    name: 'Leche Lala 1L',
-    description: 'Leche entera',
-    price: 28.00,
-    stock: 20
+    code: 'HDD-1TB',
+    barcode: '7501001001007',
+    name: 'Disco duro WD Blue 1TB',
+    description: 'Disco duro interno 3.5" SATA 7200 RPM',
+    price: 850.00,
+    cost: 650.00,
+    stock: 8
   },
   {
     id: 8,
-    code: 'TIME001',
-    barcode: 'TIME001',
-    name: 'Internet 1 hora',
-    description: 'Tiempo de computadora',
-    price: 20.00,
-    stock: 999
+    code: 'SSD-240',
+    barcode: '7501001001008',
+    name: 'SSD Kingston A400 240GB',
+    description: 'Unidad de estado solido 2.5" SATA',
+    price: 520.00,
+    cost: 380.00,
+    stock: 22
   },
   {
     id: 9,
-    code: 'PRINT001',
-    barcode: 'PRINT001',
-    name: 'Impresión B/N',
-    description: 'Impresión blanco y negro',
-    price: 2.00,
-    stock: 999
+    code: 'CARCASA-ATX',
+    barcode: '7501001001009',
+    name: 'Gabinete Thermaltake V200 negro',
+    description: 'Carcasa ATX media torre con ventana',
+    price: 980.00,
+    cost: 720.00,
+    stock: 5
   },
   {
     id: 10,
-    code: 'PHOTO001',
-    barcode: 'PHOTO001',
-    name: 'Fotos 4x6',
-    description: 'Fotos tamaño postal',
-    price: 5.00,
+    code: 'CUADERNO-100',
+    barcode: '7501001001010',
+    name: 'Cuaderno profesional 100 hojas',
+    description: 'Cuaderno raya francés',
+    price: 32.00,
+    cost: 20.00,
+    stock: 95
+  },
+  {
+    id: 11,
+    code: 'CABLE-HDMI',
+    barcode: '7501001001011',
+    name: 'Cable HDMI 1.8m',
+    description: 'Cable HDMI 2.0 alta velocidad',
+    price: 95.00,
+    cost: 55.00,
+    stock: 38
+  },
+  {
+    id: 12,
+    code: 'TINTA-HP',
+    barcode: '7501001001012',
+    name: 'Cartucho HP 664 negro',
+    description: 'Tinta original HP para DeskJet',
+    price: 285.00,
+    cost: 210.00,
+    stock: 14
+  },
+  {
+    id: 13,
+    code: 'PRINT-BN',
+    barcode: 'PRINT-BN',
+    name: 'Impresión B/N',
+    description: 'Impresión blanco y negro por hoja',
+    price: 2.00,
+    cost: 0.50,
     stock: 999
+  },
+  {
+    id: 14,
+    code: 'PRINT-COLOR',
+    barcode: 'PRINT-COLOR',
+    name: 'Impresión a color',
+    description: 'Impresión a color por hoja',
+    price: 5.00,
+    cost: 2.00,
+    stock: 999
+  },
+  {
+    id: 15,
+    code: 'INTERNET-1H',
+    barcode: 'INTERNET-1H',
+    name: 'Internet 1 hora',
+    description: 'Tiempo de uso de computadora e internet',
+    price: 15.00,
+    cost: 0,
+    stock: 999
+  },
+  {
+    id: 16,
+    code: 'MONITOR-24',
+    barcode: '7501001001016',
+    name: 'Monitor Samsung 24" LED Full HD',
+    description: 'Monitor LED 1920x1080 HDMI VGA',
+    price: 2450.00,
+    cost: 1850.00,
+    stock: 6
+  },
+  {
+    id: 17,
+    code: 'WEBCAM-LOG',
+    barcode: '7501001001017',
+    name: 'Webcam Logitech C270 HD',
+    description: 'Cámara web 720p con micrófono',
+    price: 450.00,
+    cost: 310.00,
+    stock: 12
+  },
+  {
+    id: 18,
+    code: 'AUDIFONOS-HP',
+    barcode: '7501001001018',
+    name: 'Audífonos HP con micrófono',
+    description: 'Headset USB para videoconferencias',
+    price: 280.00,
+    cost: 190.00,
+    stock: 20
+  },
+  {
+    id: 19,
+    code: 'MOUSEPAD',
+    barcode: '7501001001019',
+    name: 'Mousepad ergonómico gel',
+    description: 'Pad para mouse con reposamuñecas',
+    price: 65.00,
+    cost: 35.00,
+    stock: 45
+  },
+  {
+    id: 20,
+    code: 'ENGRAPADORA',
+    barcode: '7501001001020',
+    name: 'Engrapadora metálica Swingline',
+    description: 'Engrapadora de escritorio 20 hojas',
+    price: 95.00,
+    cost: 60.00,
+    stock: 28
+  },
+  {
+    id: 21,
+    code: 'CLIPS-100',
+    barcode: '7501001001021',
+    name: 'Clips metálicos caja 100pz',
+    description: 'Clips estándar #1',
+    price: 18.00,
+    cost: 10.00,
+    stock: 120
+  },
+  {
+    id: 22,
+    code: 'CARPETA-AZ',
+    barcode: '7501001001022',
+    name: 'Carpeta de argollas 2" azul',
+    description: 'Carpeta vinílica 3 argollas tamaño carta',
+    price: 52.00,
+    cost: 32.00,
+    stock: 35
+  },
+  {
+    id: 23,
+    code: 'POST-IT',
+    barcode: '7501001001023',
+    name: 'Post-it notas adhesivas 3x3',
+    description: 'Bloque de 100 hojas amarillas',
+    price: 28.00,
+    cost: 16.00,
+    stock: 68
+  },
+  {
+    id: 24,
+    code: 'MARCADOR-SHARPIE',
+    barcode: '7501001001024',
+    name: 'Marcador permanente Sharpie negro',
+    description: 'Marcador punta fina indeleble',
+    price: 22.00,
+    cost: 14.00,
+    stock: 85
+  },
+  {
+    id: 25,
+    code: 'CABLE-USB-C',
+    barcode: '7501001001025',
+    name: 'Cable USB-C a USB-A 1m',
+    description: 'Cable carga rápida trenzado',
+    price: 85.00,
+    cost: 50.00,
+    stock: 42
+  },
+  {
+    id: 26,
+    code: 'HUB-USB',
+    barcode: '7501001001026',
+    name: 'Hub USB 3.0 4 puertos',
+    description: 'Concentrador USB 3.0 con LED',
+    price: 195.00,
+    cost: 125.00,
+    stock: 18
+  },
+  {
+    id: 27,
+    code: 'LIMPIADOR-PC',
+    barcode: '7501001001027',
+    name: 'Aire comprimido para electrónicos',
+    description: 'Limpiador en aerosol 400ml',
+    price: 68.00,
+    cost: 42.00,
+    stock: 32
+  },
+  {
+    id: 28,
+    code: 'CANDADO-CABLE',
+    barcode: '7501001001028',
+    name: 'Candado de seguridad Kensington',
+    description: 'Cable de seguridad para laptop',
+    price: 220.00,
+    cost: 145.00,
+    stock: 9
+  },
+  {
+    id: 29,
+    code: 'MICA-LAPTOP',
+    barcode: '7501001001029',
+    name: 'Mica protectora laptop 15.6"',
+    description: 'Protector de pantalla anti-reflejo',
+    price: 95.00,
+    cost: 58.00,
+    stock: 24
+  },
+  {
+    id: 30,
+    code: 'BATERIA-AA',
+    barcode: '7501001001030',
+    name: 'Pilas AA Duracell 4pack',
+    description: 'Baterías alcalinas AA x4',
+    price: 68.00,
+    cost: 42.00,
+    stock: 55
   }
 ]
+
+// Obtener productos demo (desde localStorage o mockProducts default)
+function getDemoProducts() {
+  try {
+    const stored = localStorage.getItem('demo-products')
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        console.log('📦 Demo products from localStorage:', parsed.length)
+        return parsed
+      }
+    }
+  } catch (e) {
+    console.warn('Error loading demo-products from localStorage:', e)
+  }
+  // Si no hay en localStorage, usar mockProducts y guardarlos
+  console.log('📦 Initializing demo products:', mockProducts.length)
+  localStorage.setItem('demo-products', JSON.stringify(mockProducts))
+  return [...mockProducts]
+}
+
+// Exportar mockProducts para modo demo
+export { mockProducts }
 
 export const productService = {
   /**
    * Get all products
    */
   getAll: async () => {
+    // En modo demo, usar productos de localStorage
+    if (typeof window !== 'undefined' && window.location?.pathname?.startsWith('/demo')) {
+      return getDemoProducts()
+    }
+    
     if (isSupabaseConfigured() && supabase) {
       try {
         const { data, error } = await supabase
@@ -125,6 +363,12 @@ export const productService = {
    * Get product by ID
    */
   getById: async (id) => {
+    // En modo demo buscar en localStorage
+    if (typeof window !== 'undefined' && window.location?.pathname?.startsWith('/demo')) {
+      const current = getDemoProducts()
+      return current.find(p => p.id == id) || null
+    }
+    
     if (isSupabaseConfigured() && supabase) {
       try {
         const { data, error } = await supabase
@@ -152,9 +396,17 @@ export const productService = {
       return null
     }
     
-    // Trim and normalize the code
     const normalizedCode = code.trim().toUpperCase()
     console.log('🔍 Searching for product with code:', normalizedCode)
+    
+    // En modo demo buscar en productos de localStorage
+    if (typeof window !== 'undefined' && window.location?.pathname?.startsWith('/demo')) {
+      const current = getDemoProducts()
+      const found = current.find(p => p.code?.toUpperCase() === normalizedCode || p.barcode?.toUpperCase() === normalizedCode)
+      if (found) console.log('✅ Product found in demo:', found.name)
+      else console.warn('❌ Product not found in demo:', normalizedCode)
+      return found || null
+    }
     
     if (isSupabaseConfigured() && supabase) {
       try {
@@ -235,6 +487,18 @@ export const productService = {
       return []
     }
 
+    // En modo demo buscar en productos de localStorage
+    if (typeof window !== 'undefined' && window.location?.pathname?.startsWith('/demo')) {
+      const current = getDemoProducts()
+      const lowerQuery = query.toLowerCase().trim()
+      return current.filter(p =>
+        p.code?.toLowerCase().includes(lowerQuery) ||
+        p.barcode?.toLowerCase().includes(lowerQuery) ||
+        p.name?.toLowerCase().includes(lowerQuery) ||
+        p.description?.toLowerCase().includes(lowerQuery)
+      )
+    }
+
     if (isSupabaseConfigured() && supabase) {
       try {
         const { data, error } = await supabase
@@ -267,6 +531,27 @@ export const productService = {
    * Create product
    */
   create: async (productData) => {
+    // En modo demo guardar en localStorage
+    if (typeof window !== 'undefined' && window.location?.pathname?.startsWith('/demo')) {
+      const current = getDemoProducts()
+      const newId = Math.max(...current.map(p => p.id), 0) + 1
+      const newProduct = {
+        id: newId,
+        code: productData.code,
+        barcode: productData.barcode || productData.code,
+        name: productData.name,
+        description: productData.description || '',
+        price: productData.price || 0,
+        cost: productData.cost || 0,
+        stock: productData.stock || 0,
+        created_at: new Date().toISOString(),
+        ...productData
+      }
+      current.push(newProduct)
+      localStorage.setItem('demo-products', JSON.stringify(current))
+      return newProduct
+    }
+    
     if (isSupabaseConfigured() && supabase) {
       try {
         const tenantId = useTenantStore.getState().currentTenantId
@@ -316,6 +601,18 @@ export const productService = {
    * Update product
    */
   update: async (id, productData) => {
+    // En modo demo actualizar en localStorage
+    if (typeof window !== 'undefined' && window.location?.pathname?.startsWith('/demo')) {
+      const current = getDemoProducts()
+      const idx = current.findIndex(p => p.id == id)
+      if (idx >= 0) {
+        current[idx] = { ...current[idx], ...productData }
+        localStorage.setItem('demo-products', JSON.stringify(current))
+        return current[idx]
+      }
+      throw new Error('Product not found')
+    }
+    
     if (isSupabaseConfigured() && supabase) {
       try {
         const { data, error } = await supabase
@@ -352,6 +649,14 @@ export const productService = {
    * Delete product
    */
   delete: async (id) => {
+    // En modo demo eliminar de localStorage
+    if (typeof window !== 'undefined' && window.location?.pathname?.startsWith('/demo')) {
+      const current = getDemoProducts()
+      const filtered = current.filter(p => p.id != id)
+      localStorage.setItem('demo-products', JSON.stringify(filtered))
+      return true
+    }
+    
     if (isSupabaseConfigured() && supabase) {
       try {
         const { error } = await supabase

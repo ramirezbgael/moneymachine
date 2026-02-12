@@ -1,0 +1,58 @@
+/* Demo Mode Banner - Verde */
+.demo-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  font-size: 0.8rem;
+  color: white;
+  font-weight: 500;
+}
+
+.demo-banner__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+}
+
+.demo-banner__text {
+  font-size: 0.75rem;
+  opacity: 0.95;
+}
+
+/* Ajustar el layout para que no tape el banner */
+body:has(.demo-banner) .layout {
+  padding-top: 40px;
+}
+
+@media (max-width: 640px) {
+  .demo-banner {
+    font-size: 0.7rem;
+    padding: 0.4rem 0.75rem;
+  }
+  
+  .demo-banner__badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+  }
+  
+  .demo-banner__text {
+    font-size: 0.7rem;
+  }
+}
