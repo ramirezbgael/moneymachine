@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useInventoryStore } from '../../store/inventoryStore'
-import { LiquidButton } from '../../components/inventory/LiquidButton'
+import { LiquidButton } from '../../components/Inventory/LiquidButton'
 
 export function PedidosInventarioPage() {
   const navigate = useNavigate()
