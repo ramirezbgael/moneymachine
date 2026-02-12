@@ -46,7 +46,7 @@ export function InventarioPage() {
         {/* Header: clean, main CTA + tabs + discrete secondaries */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="flex items-center gap-4 flex-wrap">
-            <h1 className="text-xl font-semibold text-[var(--text)]">Inventario</h1>
+            <h1 className="text-xl font-semibold text-[var(--text)]">{t('inventory.title')}</h1>
             {/* Tabs: sin bordes gruesos */}
             <nav className="flex gap-0.5 rounded-xl bg-[var(--panel)]/60 p-0.5" aria-label="Filtros">
               {(['todos', 'bajo', 'sin_stock'] as const).map((f) => (
@@ -60,7 +60,7 @@ export function InventarioPage() {
                       : 'text-[var(--muted)] hover:text-[var(--text)]'
                   }`}
                 >
-                  {f === 'todos' ? 'Todos' : f === 'bajo' ? 'Bajo stock' : 'Sin stock'}
+                  {f === 'todos' ? t('inventory.all') : f === 'bajo' ? t('inventory.low') : t('inventory.outOfStock')}
                 </button>
               ))}
             </nav>
@@ -68,7 +68,7 @@ export function InventarioPage() {
           <div className="flex flex-wrap items-center gap-2">
             <input
               type="text"
-              placeholder="Buscar por nombre o código..."
+              placeholder={t('inventory.search')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoComplete="off"
@@ -76,7 +76,7 @@ export function InventarioPage() {
               spellCheck={false}
               autoCapitalize="off"
               className="rounded-xl border border-[var(--border)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--muted)] focus:border-[var(--accent)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/40 w-52"
-              aria-label="Buscar productos"
+              aria-label={t('inventory.search')}
             />
             <button
               type="button"
@@ -89,7 +89,7 @@ export function InventarioPage() {
               type="button"
               onClick={() => navigate('/inventory/pedidos')}
               className="flex items-center justify-center w-9 h-9 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel)]/60 transition-colors"
-              aria-label="Ver pedido"
+              aria-label={t('inventory.viewOrder') || 'View order'}
             >
               <FaShoppingCart className="w-4 h-4" />
             </button>
@@ -97,13 +97,13 @@ export function InventarioPage() {
               type="button"
               onClick={() => setShowBarcodeModal(true)}
               className="flex items-center justify-center w-9 h-9 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel)]/60 transition-colors"
-              aria-label="Generar e imprimir códigos de barras"
-              title="Etiquetas / Códigos de barras"
+              aria-label={t('inventory.generateBarcodes') || 'Generar códigos de barras'}
+              title={t('inventory.barcodeLabels') || 'Etiquetas'}
             >
               <FaBarcode className="w-4 h-4" />
             </button>
             <LiquidButton size="sm" onClick={() => setShowAddProduct(true)}>
-              + Agregar producto
+              + {t('inventory.addProduct')}
             </LiquidButton>
           </div>
         </div>
@@ -116,13 +116,13 @@ export function InventarioPage() {
 
         {loading ? (
           <div className="rounded-2xl bg-[var(--panel)]/40 py-16 text-center text-sm text-[var(--muted)]">
-            Cargando productos...
+            {t('inventory.loading') || 'Loading...'}
           </div>
         ) : (
           <div className="space-y-1">
             {filtered.length === 0 ? (
               <div className="rounded-2xl bg-[var(--panel)]/40 py-16 text-center text-sm text-[var(--muted)]">
-                No hay productos que coincidan.
+{t('inventory.noMatch')}
               </div>
             ) : (
               filtered.map((product) => (
@@ -134,14 +134,14 @@ export function InventarioPage() {
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 py-2">
           <p className="text-xs text-[var(--muted)]">
-            Herramientas avanzadas de inventario para carga masiva y flujo de bodega.
+{t('inventory.advancedTools') || 'Advanced inventory tools for bulk loading and warehouse flow.'}
           </p>
           <button
             type="button"
             onClick={() => navigate('/inventario/nuevo')}
             className="text-xs text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
           >
-            Inventario nuevo (registro masivo)
+{t('inventory.bulkRegistration') || 'Inventario nuevo (registro masivo)'}
           </button>
         </div>
 
