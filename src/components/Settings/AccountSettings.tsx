@@ -1,7 +1,7 @@
 import React from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useSettingsStore } from '../../store/settingsStore'
-import { LiquidButton } from '../inventory/LiquidButton'
+import { LiquidButton } from '../Inventory/LiquidButton'
 
 export function AccountSettings() {
   const { user, signOut } = useAuthStore()

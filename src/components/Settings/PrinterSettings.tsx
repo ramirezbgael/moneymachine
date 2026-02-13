@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { FaCheck } from 'react-icons/fa'
 import { useSettingsStore } from '../../store/settingsStore'
-import { LiquidButton } from '../inventory/LiquidButton'
+import { LiquidButton } from '../Inventory/LiquidButton'
 import { getTicketText } from '../../services/printerService'
 
 interface PrinterInfo {

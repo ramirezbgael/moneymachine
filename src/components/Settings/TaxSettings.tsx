@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useSettingsStore } from '../../store/settingsStore'
-import { LiquidButton } from '../inventory/LiquidButton'
+import { LiquidButton } from '../Inventory/LiquidButton'
 
 export function TaxSettings() {
   const { taxRate, setTaxRate, t } = useSettingsStore()
