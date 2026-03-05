@@ -1,0 +1,247 @@
+/* Payment Modal - Premium Glassmorphism */
+
+.payment-modal {
+  max-width: 600px;
+}
+
+.payment-modal__total {
+  text-align: center;
+  padding: var(--spacing-xl);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-xl);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.payment-modal__total-label {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.payment-modal__total-amount {
+  font-size: 48px;
+  font-weight: 700;
+  color: #6EEB6F;
+  line-height: 1;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 20px rgba(110, 235, 111, 0.4);
+}
+
+.payment-modal__items-count {
+  font-size: 14px;
+  color: #fff;
+  opacity: 0.9;
+}
+
+.payment-modal__discount-info {
+  font-size: 13px;
+  color: #6EE7B7;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.payment-modal__section {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.payment-modal__section--focused {
+  background: rgba(0, 255, 136, 0.06);
+  border: 1px solid rgba(0, 255, 136, 0.15);
+  padding: calc(var(--spacing-sm) - 1px);
+}
+
+.payment-modal__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: var(--spacing-md);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.payment-modal__hint {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.payment-modal__options {
+  display: flex;
+  gap: 12px;
+}
+
+.payment-modal__option {
+  flex: 1;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.payment-modal__option:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Estética Cobrar: verde oscuro + borde/glow verde lima + texto verde lima */
+.payment-modal__option--active {
+  background: #2E4730;
+  border: 1px solid #6EEB6F;
+  color: #6EEB6F;
+  font-weight: 600;
+  box-shadow: 0 0 0 1px #6EEB6F, 0 0 14px rgba(110, 235, 111, 0.35);
+}
+
+.payment-modal__option--active:hover {
+  background: #253826;
+  border-color: #6EEB6F;
+  color: #6EEB6F;
+  box-shadow: 0 0 0 1px #6EEB6F, 0 0 18px rgba(110, 235, 111, 0.45);
+}
+
+/* Footer buttons: máximo contraste en el modal de pago */
+.payment-modal .modal__footer {
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.payment-modal .modal__btn--secondary {
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+  font-weight: 600;
+}
+
+.payment-modal .modal__btn--secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+/* Estética Cobrar: pill, verde oscuro, borde/glow verde lima, texto verde lima */
+.payment-modal .modal__btn--primary {
+  font-weight: 600;
+  border-radius: 9999px;
+  background: #2E4730;
+  border: 1px solid #6EEB6F;
+  color: #6EEB6F;
+  box-shadow: 0 0 0 1px #6EEB6F, 0 0 14px rgba(110, 235, 111, 0.35);
+}
+
+.payment-modal .modal__btn--primary:hover:not(:disabled) {
+  background: #253826;
+  border-color: #6EEB6F;
+  color: #6EEB6F;
+  box-shadow: 0 0 0 1px #6EEB6F, 0 0 18px rgba(110, 235, 111, 0.45);
+}
+
+.payment-modal .modal__btn--primary .payment-modal__hotkey {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 4px 8px;
+  background: rgba(28, 28, 28, 0.9);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6EEB6F;
+}
+
+.payment-modal__error {
+  padding: 14px 18px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  color: #FCA5A5;
+  font-size: 14px;
+  margin-top: var(--spacing-md);
+  text-align: center;
+}
+
+/* Customer Form */
+.payment-modal__customer-form {
+  padding: var(--spacing-md);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-md);
+}
+
+.payment-modal__field {
+  margin-bottom: var(--spacing-md);
+}
+
+.payment-modal__field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.payment-modal__input {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.payment-modal__input:focus {
+  border-color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.payment-modal__searching,
+.payment-modal__found {
+  font-size: 12px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.payment-modal__searching {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.payment-modal__found {
+  color: #6EE7B7;
+  background: rgba(110, 231, 183, 0.08);
+}
+
+.payment-modal__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-primary);
+}

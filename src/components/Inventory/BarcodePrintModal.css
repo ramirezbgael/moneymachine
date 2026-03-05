@@ -1,0 +1,173 @@
+.barcode-print-modal {
+  max-width: 520px;
+  width: 95%;
+}
+
+.barcode-print-modal__hint {
+  margin: 0 0 var(--spacing-md);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.barcode-print-modal__search {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text);
+  font-size: 14px;
+  margin-bottom: var(--spacing-md);
+}
+
+.barcode-print-modal__search::placeholder {
+  color: var(--muted);
+}
+
+.barcode-print-modal__search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.barcode-print-modal__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.barcode-print-modal__select-all {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.barcode-print-modal__select-all:hover {
+  background: var(--accent-soft);
+}
+
+.barcode-print-modal__count {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.barcode-print-modal__list {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.barcode-print-modal__empty {
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.barcode-print-modal__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.barcode-print-modal__row:hover {
+  background: var(--bg-tertiary);
+}
+
+.barcode-print-modal__row--selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.barcode-print-modal__check {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.barcode-print-modal__preview {
+  flex-shrink: 0;
+  width: 200px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.barcode-print-modal__canvas {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.barcode-print-modal__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.barcode-print-modal__name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barcode-print-modal__code {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.barcode-print-modal__error {
+  margin: var(--spacing-md) 0 0;
+  padding: 10px 12px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: var(--radius-md);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.barcode-print-modal .modal__footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-top: 1px solid var(--border);
+}
+
+.barcode-print-modal .modal__btn--primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.barcode-print-modal .modal__btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -1,0 +1,55 @@
+.scanner-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.scanner-input__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.scanner-input__hotkey {
+  font-size: 11px;
+  padding: 4px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--glass-border);
+  border-radius: 4px;
+  color: var(--accent-primary);
+  font-family: 'Courier New', monospace;
+}
+
+.scanner-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  outline: none;
+  font-family: 'Courier New', monospace;
+}
+
+.scanner-input::placeholder {
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+.scanner-input:focus,
+.scanner-input--focused {
+  border-color: var(--accent-primary);
+  box-shadow: var(--glow-accent);
+  background: var(--bg-secondary);
+}
+
+.scanner-input:focus::placeholder {
+  opacity: 0.5;
+}

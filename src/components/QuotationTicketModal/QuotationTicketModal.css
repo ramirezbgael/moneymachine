@@ -1,0 +1,232 @@
+/* Quotation Ticket Modal */
+
+.quotation-ticket-modal {
+  max-width: 600px;
+}
+
+.quotation-ticket {
+  background: white;
+  color: #000;
+  padding: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Header */
+.quotation-ticket__header {
+  text-align: center;
+  padding: 20px;
+  border-bottom: 2px dashed #000;
+}
+
+.quotation-ticket__business-name {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.quotation-ticket__type {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 12px;
+  letter-spacing: 2px;
+}
+
+.quotation-ticket__code {
+  font-size: 11px;
+  margin-bottom: 8px;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.quotation-ticket__date {
+  font-size: 10px;
+  color: #666;
+}
+
+/* Divider */
+.quotation-ticket__divider {
+  border-top: 1px dashed #000;
+  margin: 12px 0;
+}
+
+/* Products List */
+.quotation-ticket__products {
+  padding: 0 20px;
+}
+
+.quotation-ticket__products-header {
+  display: grid;
+  grid-template-columns: 2fr 0.6fr 1fr 1fr;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #000;
+  font-weight: bold;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.quotation-ticket__product-row {
+  display: grid;
+  grid-template-columns: 2fr 0.6fr 1fr 1fr;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px dotted #ccc;
+}
+
+.quotation-ticket__product-row:last-child {
+  border-bottom: none;
+}
+
+.quotation-ticket__col-product {
+  text-align: left;
+}
+
+.quotation-ticket__col-qty {
+  text-align: center;
+}
+
+.quotation-ticket__col-price,
+.quotation-ticket__col-subtotal {
+  text-align: right;
+}
+
+.quotation-ticket__product-name {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.quotation-ticket__product-code {
+  font-size: 9px;
+  color: #666;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+/* Totals */
+.quotation-ticket__totals {
+  padding: 0 20px;
+  margin-top: 12px;
+}
+
+.quotation-ticket__total-line {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 12px;
+}
+
+.quotation-ticket__total-line--discount {
+  color: #d32f2f;
+}
+
+.quotation-ticket__total-line--final {
+  font-weight: bold;
+  font-size: 16px;
+  padding: 12px 0;
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+  margin-top: 8px;
+}
+
+/* QR Code Section */
+.quotation-ticket__qr-section {
+  text-align: center;
+  padding: 20px;
+  margin-top: 20px;
+  border-top: 2px dashed #000;
+}
+
+.quotation-ticket__qr-label {
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.quotation-ticket__qr-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  background: white;
+  border: 2px solid #000;
+  border-radius: 4px;
+  margin: 0 auto 12px;
+  width: fit-content;
+}
+
+.quotation-ticket__qr-image {
+  width: 200px;
+  height: 200px;
+  display: block;
+}
+
+.quotation-ticket__qr-hint {
+  font-size: 10px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Footer */
+.quotation-ticket__footer {
+  text-align: center;
+  padding: 12px 20px;
+  border-top: 1px dashed #000;
+  font-size: 9px;
+  color: #666;
+}
+
+.quotation-ticket__footer-text {
+  margin: 0;
+}
+
+/* Modal Content Adjustments */
+.modal__content {
+  padding: 0 !important;
+}
+
+.quotation-ticket-modal .modal__content {
+  background: #f5f5f5;
+  padding: 20px !important;
+}
+
+/* Print styles */
+@media print {
+  .modal-overlay {
+    background: white;
+  }
+  
+  .modal__header,
+  .modal__footer {
+    display: none !important;
+  }
+  
+  .quotation-ticket-modal {
+    box-shadow: none;
+    border: none;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .quotation-ticket {
+    page-break-inside: avoid;
+  }
+
+  .quotation-ticket__qr-section {
+    page-break-inside: avoid;
+  }
+}
+
+/* Screen styles (non-print) */
+@media screen {
+  .quotation-ticket {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+}
