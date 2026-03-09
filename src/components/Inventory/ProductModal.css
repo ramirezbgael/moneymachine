@@ -6,24 +6,27 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background:
+    radial-gradient(circle at 15% 10%, rgba(0, 255, 136, 0.08), transparent 38%),
+    radial-gradient(circle at 85% 85%, rgba(31, 107, 255, 0.08), transparent 42%),
+    rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(12px);
 }
 
 .product-modal {
-  background: var(--bg-secondary);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
   width: 90%;
-  max-width: 600px;
+  max-width: 680px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
   overflow: hidden;
 }
 
@@ -46,8 +49,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-lg) var(--spacing-xl);
-  border-bottom: 1px solid var(--glass-border);
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.product-modal__header-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.product-modal__header-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .product-modal__close {
@@ -72,16 +88,16 @@
 
 .product-modal__step-indicator {
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-tertiary);
+  font-weight: 700;
+  color: var(--accent-primary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
 }
 
 /* Content */
 .product-modal__content {
   flex: 1;
-  padding: var(--spacing-xl);
+  padding: 28px 24px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -89,11 +105,11 @@
 }
 
 .product-modal__question {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 var(--spacing-xl) 0;
-  line-height: 1.3;
+  margin: 0 0 32px 0;
+  line-height: 1.2;
 }
 
 .product-modal__required {
@@ -107,10 +123,10 @@
   align-items: center;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--glass-border);
-  border-radius: 6px;
+  padding: 10px 12px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
 }
 
 .product-modal__suggestion-text {
@@ -132,7 +148,7 @@
 
 .product-modal__suggestion-btn:hover {
   background: var(--accent-primary);
-  color: var(--text-primary);
+  color: #000;
 }
 
 /* Input */
@@ -142,20 +158,21 @@
 
 .product-modal__input {
   width: 100%;
-  padding: 16px 20px;
-  font-size: 18px;
+  padding: 16px 18px;
+  font-size: 17px;
   background: var(--bg-tertiary);
-  border: 2px solid var(--glass-border);
-  border-radius: 8px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
   color: var(--text-primary);
   outline: none;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   font-weight: 400;
 }
 
 .product-modal__input:focus {
   border-color: var(--accent-primary);
-  background: var(--bg-secondary);
+  background: var(--panel-2);
+  box-shadow: 0 0 0 4px var(--accent-glow);
 }
 
 .product-modal__input::placeholder {
@@ -168,10 +185,10 @@
   font-size: 13px;
   color: var(--text-secondary);
   margin-top: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--bg-tertiary);
-  border-radius: 6px;
-  border-left: 3px solid var(--accent-primary);
+  padding: 10px 12px;
+  background: var(--accent-soft);
+  border-radius: 10px;
+  border-left: 4px solid var(--accent-primary);
 }
 
 /* Footer */
@@ -179,8 +196,9 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  padding: var(--spacing-lg) var(--spacing-xl);
-  border-top: 1px solid var(--glass-border);
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-2);
 }
 
 .product-modal__footer-spacer {
@@ -191,14 +209,14 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: 12px 24px;
+  padding: 12px 18px;
   font-size: 14px;
-  font-weight: 600;
-  border: 1px solid var(--glass-border);
-  border-radius: 6px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.15s ease;
-  background: var(--bg-tertiary);
+  transition: all 0.2s ease;
+  background: var(--panel);
   color: var(--text-primary);
 }
 
@@ -221,12 +239,15 @@
 .product-modal__btn--next {
   background: var(--accent-primary);
   border-color: var(--accent-primary);
-  color: var(--text-primary);
+  color: #000;
+  min-width: 146px;
+  justify-content: center;
 }
 
 .product-modal__btn--next:hover:not(:disabled) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+  color: #000;
 }
 
 .product-modal__btn svg {
@@ -236,13 +257,13 @@
 
 /* Edit Mode Styles */
 .product-modal--edit {
-  max-width: 800px;
+  max-width: 920px;
 }
 
 .product-modal--edit .product-modal__content {
   min-height: auto;
   justify-content: flex-start;
-  padding: var(--spacing-xl);
+  padding: 24px;
   overflow-y: auto;
 }
 
@@ -260,8 +281,8 @@
 .product-modal__form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-xl);
+  gap: 18px;
+  margin-bottom: 18px;
 }
 
 .product-modal__form-group {
@@ -276,7 +297,7 @@
 
 .product-modal__form-label {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -287,9 +308,9 @@
   width: 100%;
   padding: 12px 14px;
   font-size: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   color: var(--text-primary);
   outline: none;
   transition: all 0.2s ease;
@@ -299,7 +320,7 @@
 .product-modal__form-input:focus,
 .product-modal__form-textarea:focus {
   border-color: var(--accent-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--panel-2);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
@@ -348,8 +369,8 @@
 .product-modal__invoice-input {
   padding: 10px 12px;
   font-size: 13px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--glass-border);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   cursor: pointer;
@@ -361,7 +382,7 @@
   background: var(--accent-primary);
   border: none;
   border-radius: var(--radius-sm);
-  color: var(--text-primary);
+  color: #000;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -391,19 +412,20 @@
 }
 
 .product-modal__btn--secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--panel);
   color: var(--text-primary);
 }
 
 .product-modal__btn--primary {
   background: var(--accent-primary);
   border-color: var(--accent-primary);
-  color: var(--text-primary);
+  color: #000;
 }
 
 .product-modal__btn--primary:hover:not(:disabled) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+  color: #000;
 }
 
 .product-modal__btn--primary:disabled {
@@ -413,11 +435,11 @@
 
 /* Image Section */
 .product-modal__image-section {
-  margin-bottom: var(--spacing-xl);
-  padding: var(--spacing-lg);
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  padding: 18px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
 }
 
 .product-modal__image-container {
@@ -433,8 +455,8 @@
   height: 200px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--glass-border);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -452,8 +474,8 @@
   right: 8px;
   width: 32px;
   height: 32px;
-  background: rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 50%;
   color: var(--text-primary);
   font-size: 14px;
@@ -475,8 +497,8 @@
   width: 200px;
   height: 200px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.03);
-  border: 2px dashed var(--glass-border);
+  background: var(--bg-tertiary);
+  border: 2px dashed var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -493,7 +515,7 @@
 
 .product-modal__image-actions {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -506,20 +528,20 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 16px;
+  padding: 10px 14px;
   font-size: 13px;
-  font-weight: 500;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
+  font-weight: 700;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .product-modal__image-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--panel-2);
+  border-color: var(--border);
   color: var(--text-primary);
   transform: translateY(-1px);
 }
@@ -572,6 +594,16 @@
     width: 150px;
     height: 150px;
   }
+
+  .product-modal__image-preview-step,
+  .product-modal__image-placeholder-step {
+    width: 200px;
+    height: 200px;
+  }
+
+  .product-modal__image-placeholder-step {
+    font-size: 48px;
+  }
 }
 
 /* Image Step Styles (for step-by-step form) */
@@ -580,17 +612,18 @@
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-lg);
-  padding: var(--spacing-lg) 0;
+  padding: var(--spacing-xl) 0;
+  margin-top: 40px;
 }
 
 .product-modal__image-preview-step {
   position: relative;
-  width: 300px;
-  height: 300px;
+  width: 250px;
+  height: 250px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--glass-border);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -608,8 +641,8 @@
   right: 12px;
   width: 36px;
   height: 36px;
-  background: rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 50%;
   color: var(--text-primary);
   font-size: 16px;
@@ -628,18 +661,18 @@
 }
 
 .product-modal__image-placeholder-step {
-  width: 300px;
-  height: 300px;
+  width: 250px;
+  height: 250px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.03);
-  border: 2px dashed var(--glass-border);
+  background: var(--bg-tertiary);
+  border: 2px dashed var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--spacing-md);
   color: var(--text-muted);
-  font-size: 64px;
+  font-size: 56px;
 }
 
 .product-modal__image-placeholder-step span {
@@ -660,9 +693,9 @@
   gap: 8px;
   padding: 12px 20px;
   font-size: 14px;
-  font-weight: 500;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
+  font-weight: 600;
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
@@ -670,8 +703,8 @@
 }
 
 .product-modal__image-btn-step:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--panel-2);
+  border-color: var(--border);
   color: var(--text-primary);
   transform: translateY(-1px);
 }
@@ -807,13 +840,13 @@
 .camera-modal__btn--capture {
   background: var(--accent-primary);
   border-color: var(--accent-primary);
-  color: white;
+  color: #000;
 }
 
 .camera-modal__btn--capture:hover {
   background: var(--accent-primary);
   opacity: 0.9;
-  color: white;
+  color: #000;
 }
 
 .camera-modal__btn--cancel {

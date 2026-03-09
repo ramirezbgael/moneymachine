@@ -5,6 +5,7 @@ import type { Product, StockStatus } from '../../types/inventory'
 import { useInventoryStore } from '../../store/inventoryStore'
 import { LiquidButton } from './LiquidButton'
 import { StockAdjustModal } from './StockAdjustModal'
+import { getProductIcon } from './ProductIcons'
 
 function getStockStatus(product: Product): StockStatus {
   const stock = product.stock ?? 0
@@ -14,18 +15,12 @@ function getStockStatus(product: Product): StockStatus {
   return 'OK'
 }
 
-function getMargin(product: Product): number | null {
-  const price = product.price ?? 0
-  const cost = product.cost ?? 0
-  if (cost <= 0) return null
-  return Math.round(((price - cost) / cost) * 100)
-}
-
 interface InventoryRowProps {
   product: Product
+  onAddedToOrder?: (productName: string) => void
 }
 
-export function InventoryRow({ product }: InventoryRowProps) {
+export function InventoryRow({ product, onAddedToOrder }: InventoryRowProps) {
   const navigate = useNavigate()
   const [modal, setModal] = useState<'entrada' | 'salida' | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -35,14 +30,9 @@ export function InventoryRow({ product }: InventoryRowProps) {
     incrementStock,
     decrementStock,
     addToPurchaseOrder,
-    updateProduct,
   } = useInventoryStore()
 
-  const [stockInput, setStockInput] = useState<string | null>(null)
-  const stockInputRef = useRef<HTMLInputElement>(null)
-
   const status = getStockStatus(product)
-  const margin = getMargin(product)
   const stock = product.stock ?? 0
 
   useEffect(() => {
@@ -50,8 +40,23 @@ export function InventoryRow({ product }: InventoryRowProps) {
     const close = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
     }
+    const closeOnScroll = () => setMenuOpen(false)
+    const closeOnWheel = () => setMenuOpen(false)
+    const closeOnTouch = () => setMenuOpen(false)
+    
     document.addEventListener('click', close)
-    return () => document.removeEventListener('click', close)
+    document.addEventListener('scroll', closeOnScroll, true)
+    window.addEventListener('scroll', closeOnScroll)
+    window.addEventListener('wheel', closeOnWheel, { passive: true })
+    window.addEventListener('touchmove', closeOnTouch, { passive: true })
+    
+    return () => {
+      document.removeEventListener('click', close)
+      document.removeEventListener('scroll', closeOnScroll, true)
+      window.removeEventListener('scroll', closeOnScroll)
+      window.removeEventListener('wheel', closeOnWheel)
+      window.removeEventListener('touchmove', closeOnTouch)
+    }
   }, [menuOpen])
 
   const handleConfirmEntrada = (payload: {
@@ -91,126 +96,55 @@ export function InventoryRow({ product }: InventoryRowProps) {
       quantity: 1,
       suggestedSupplier: product.supplier as string | undefined,
     })
+    onAddedToOrder?.(product.name)
   }
-
-  const displayStock = stockInput !== null ? stockInput : String(stock)
-  const applyStockInput = () => {
-    const raw = stockInputRef.current?.value ?? stockInput ?? ''
-    const num = Math.floor(Number(raw))
-    if (!Number.isNaN(num) && num >= 0 && num !== stock) {
-      updateProduct(product.id, { stock: num })
-    }
-    setStockInput(null)
-  }
-  const onStockInputFocus = () => setStockInput(String(stock))
-  const onStockInputBlur = () => applyStockInput()
-  const onStockInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      stockInputRef.current?.blur()
-    }
-  }
-
-  const statusLabel = status === 'SIN STOCK' ? 'SIN STOCK' : status === 'BAJO' ? 'BAJO' : 'OK'
-  const statusColor =
-    status === 'SIN STOCK'
-      ? 'text-[var(--danger)]'
-      : status === 'BAJO'
-        ? 'text-amber-400/90'
-        : 'text-[var(--accent)]'
 
   return (
     <>
       <div
-        className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4 rounded-2xl bg-[var(--panel)]/40 py-3 px-4 transition-[box-shadow] hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+        onClick={() => navigate(`/inventory/producto/${product.id}`)}
+        className={`flex items-center gap-2 rounded-xl bg-[var(--panel)]/35 py-2.5 px-3 transition-all duration-200 hover:bg-[var(--panel)]/60 hover:shadow-lg hover:shadow-[var(--accent)]/10 backdrop-blur-sm cursor-pointer ${menuOpen ? 'relative z-[9990]' : ''}`}
       >
-        {/* Col 1: thumb + name — flexible */}
-        <div className="flex items-center gap-3 min-w-0 flex-1 md:min-w-[200px]">
-          <div className="w-11 h-11 rounded-xl bg-[var(--panel)]/60 flex-shrink-0 overflow-hidden flex items-center justify-center">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="w-9 h-9 rounded-lg bg-[var(--panel)]/60 flex-shrink-0 overflow-hidden flex items-center justify-center">
             {product.image_url ? (
               <img src={product.image_url} alt="" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-lg text-[var(--muted)]">📦</span>
+              React.createElement(getProductIcon((product as any).icon), { className: 'w-4 h-4 text-[var(--accent)]' })
             )}
           </div>
           <div className="min-w-0">
-            <div className="font-medium text-[var(--text)] truncate text-base">
-              {product.name}
-            </div>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              {product.category && (
-                <span className="text-[var(--muted)] text-xs">
-                  {product.category}
-                </span>
-              )}
-              <span className="text-[var(--muted)] text-xs">
-                {product.code || product.barcode || '—'}
-              </span>
+            <div className="font-semibold text-[var(--text)] truncate text-sm leading-tight">{product.name}</div>
+            <div className="text-[11px] text-[var(--muted)] truncate leading-tight">
+              {product.code || product.barcode || 'Sin codigo'}
             </div>
           </div>
         </div>
 
-        {/* Col 2: Precio — ancho fijo, alineado a la derecha */}
-        <div className="w-full md:w-28 flex md:flex-col md:items-end gap-0.5 shrink-0">
-          <span className="text-base font-semibold text-[var(--accent)] tabular-nums">
+        <div className="shrink-0 text-right">
+          <span className="text-sm font-semibold text-[var(--text)] tabular-nums">
             ${(product.price ?? 0).toFixed(2)}
           </span>
-          <span className="text-xs text-[var(--muted)] tabular-nums">
-            Compra ${(product.cost ?? 0).toFixed(2)}
-          </span>
         </div>
 
-        {/* Col 3: Margen — ancho fijo, alineado a la derecha */}
-        <div className="w-full md:w-12 text-left md:text-right shrink-0">
-          {margin != null ? (
-            <span className="text-xs text-[var(--muted)] tabular-nums">{margin}%</span>
-          ) : (
-            <span className="text-xs text-[var(--muted)]">—</span>
-          )}
+        <div className="shrink-0 flex items-center gap-1.5">
+          <span className="text-xs text-[var(--muted)]">{stock}</span>
+          <span
+            className={`inline-block h-2.5 w-2.5 rounded-full ${
+              status === 'SIN STOCK'
+                ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]'
+                : status === 'BAJO'
+                  ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]'
+                  : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]'
+            }`}
+            aria-label={`Estado de stock: ${status}`}
+            title={`Estado de stock: ${status}`}
+          />
         </div>
 
-        {/* Col 4+5: Stock unificado — Stock: − [input] + status */}
-        <div className="w-full md:w-40 shrink-0 flex items-center gap-1.5 flex-wrap md:justify-end">
-          <span className="text-xs text-[var(--muted)]">Stock:</span>
-          <div className="flex items-center gap-0.5 rounded-lg bg-[var(--panel)]/50 p-0.5" role="group" aria-label="Ajustar stock">
-            <button
-              type="button"
-              onClick={() => setModal('salida')}
-              className="w-7 h-7 rounded-md flex items-center justify-center text-sm text-[var(--muted)] hover:bg-[var(--accent-soft)]/50 hover:text-[var(--accent)] transition-colors active:scale-95"
-              aria-label="Disminuir"
-            >
-              −
-            </button>
-            <input
-              ref={stockInputRef}
-              type="text"
-              inputMode="numeric"
-              value={displayStock}
-              onFocus={onStockInputFocus}
-              onBlur={onStockInputBlur}
-              onKeyDown={onStockInputKeyDown}
-              onChange={(e) => setStockInput(e.target.value.replace(/\D/g, '').slice(0, 8))}
-              className="w-10 text-center text-xs tabular-nums bg-transparent border-none outline-none text-[var(--text)] rounded px-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              aria-label="Cantidad en stock"
-            />
-            <button
-              type="button"
-              onClick={() => setModal('entrada')}
-              className="w-7 h-7 rounded-md flex items-center justify-center text-sm text-[var(--muted)] hover:bg-[var(--accent-soft)]/50 hover:text-[var(--accent)] transition-colors active:scale-95"
-              aria-label="Aumentar"
-            >
-              +
-            </button>
-          </div>
-          <span className={`text-[10px] font-medium uppercase tracking-wide ${statusColor}`}>
-            {statusLabel}
-          </span>
-        </div>
-
-        {/* Col 6: Agregar al pedido (icono carrito) */}
-        <div className="w-full md:w-[88px] shrink-0 flex justify-start md:justify-end">
-          <LiquidButton size="sm" onClick={handleAddToOrder} aria-label="Agregar al pedido">
-            <FaShoppingCart className="w-4 h-4" />
+        <div className="shrink-0">
+          <LiquidButton size="sm" onClick={(e) => { e.stopPropagation(); handleAddToOrder(); }} aria-label="Agregar al pedido" className="!px-2.5 !py-2">
+            <FaShoppingCart className="w-3.5 h-3.5" />
           </LiquidButton>
         </div>
 
@@ -218,18 +152,18 @@ export function InventoryRow({ product }: InventoryRowProps) {
         <div className="relative shrink-0 w-8 flex justify-end" ref={menuRef}>
           <button
             type="button"
-            onClick={() => setMenuOpen((o) => !o)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--muted)] hover:bg-[var(--panel)]/60 hover:text-[var(--text)] transition-colors"
+            onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-lg text-[var(--muted)] hover:bg-[var(--panel)]/80 hover:text-[var(--accent)] transition-all hover:shadow-md"
             aria-label="Más opciones"
             aria-expanded={menuOpen}
           >
             ⋯
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 py-1 min-w-[140px] rounded-xl bg-[var(--panel-2)] shadow-lg z-10 border border-[var(--border)]/50">
+            <div className="absolute right-0 top-full mt-2 py-2 min-w-[180px] rounded-2xl bg-[var(--panel)] shadow-2xl shadow-black/60 z-[9999] border-2 border-[var(--border)]">
               <button
                 type="button"
-                className="w-full text-left px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--panel)]/80 rounded-lg"
+                className="w-full text-left px-4 py-3 text-sm font-medium text-[var(--text)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent)] transition-colors"
                 onClick={() => {
                   setMenuOpen(false)
                   navigate(`/inventory/producto/${product.id}`)
@@ -239,7 +173,7 @@ export function InventoryRow({ product }: InventoryRowProps) {
               </button>
               <button
                 type="button"
-                className="w-full text-left px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--panel)]/80 rounded-lg"
+                className="w-full text-left px-4 py-3 text-sm font-medium text-[var(--text)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent)] transition-colors"
                 onClick={() => {
                   setMenuOpen(false)
                   navigate(`/inventory/producto/${product.id}`)
@@ -249,7 +183,7 @@ export function InventoryRow({ product }: InventoryRowProps) {
               </button>
               <button
                 type="button"
-                className="w-full text-left px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--panel)]/80 rounded-lg"
+                className="w-full text-left px-4 py-3 text-sm font-medium text-[var(--text)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent)] transition-colors"
                 onClick={() => {
                   setMenuOpen(false)
                   setModal('entrada')

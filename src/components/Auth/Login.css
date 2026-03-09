@@ -94,7 +94,7 @@
   background: var(--accent-primary);
   border: 1px solid var(--accent-primary);
   border-radius: 6px;
-  color: var(--text-primary);
+  color: #000;
   cursor: pointer;
   transition: all 0.15s ease;
   margin-top: var(--spacing-md);

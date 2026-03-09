@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { LiquidButton } from '../inventory/LiquidButton'
+import { LiquidButton } from '../Inventory/LiquidButton'
 
 export function FacturacionMXSettings() {
   const [regimen, setRegimen] = useState('')

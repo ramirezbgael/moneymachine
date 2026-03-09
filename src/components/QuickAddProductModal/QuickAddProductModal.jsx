@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { productService } from '../../services/productService'
 import { playScanBeep } from '../../services/soundService'
 import { useSaleStore } from '../../store/saleStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import '../Modal/Modal.css'
 import './QuickAddProductModal.css'
 
@@ -12,6 +13,7 @@ import './QuickAddProductModal.css'
  * - Auto-fills barcode from scanner
  */
 const QuickAddProductModal = ({ initialBarcode, onSave, onCancel }) => {
+  const { t } = useSettingsStore()
   const [productData, setProductData] = useState({
     barcode: initialBarcode || '',
     code: initialBarcode || '',
@@ -109,65 +111,65 @@ const QuickAddProductModal = ({ initialBarcode, onSave, onCancel }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal__header">
-          <h2 className="modal__title">Product Not Found</h2>
+          <h2 className="modal__title">{t('quickAddProductModal.title')}</h2>
           <button className="modal__close" onClick={onCancel}>×</button>
         </div>
 
         <div className="modal__content">
           <div className="quick-add-modal__message">
-            <p>Barcode <strong>{initialBarcode}</strong> not found.</p>
-            <p>Create a new product quickly:</p>
+            <p>{t('quickAddProductModal.barcodeNotFound').replace('{barcode}', initialBarcode)}</p>
+            <p>{t('quickAddProductModal.createQuickly')}</p>
           </div>
 
           <div className="quick-add-modal__form">
             <div className="quick-add-modal__field">
-              <label className="quick-add-modal__field-label">Barcode *</label>
+              <label className="quick-add-modal__field-label">{t('quickAddProductModal.barcode')}</label>
               <input
                 type="text"
                 className="quick-add-modal__input"
                 value={productData.barcode}
                 onChange={(e) => handleChange('barcode', e.target.value)}
-                placeholder="Barcode"
+                placeholder={t('quickAddProductModal.barcode')}
               />
             </div>
 
             <div className="quick-add-modal__field">
-              <label className="quick-add-modal__field-label">Code</label>
+              <label className="quick-add-modal__field-label">{t('quickAddProductModal.code')}</label>
               <input
                 type="text"
                 className="quick-add-modal__input"
                 value={productData.code}
                 onChange={(e) => handleChange('code', e.target.value)}
-                placeholder="Internal code"
+                placeholder={t('quickAddProductModal.internalCode')}
               />
             </div>
 
             <div className="quick-add-modal__field">
-              <label className="quick-add-modal__field-label">Name *</label>
+              <label className="quick-add-modal__field-label">{t('quickAddProductModal.name')}</label>
               <input
                 ref={nameInputRef}
                 type="text"
                 className="quick-add-modal__input"
                 value={productData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="Product name"
+                placeholder={t('quickAddProductModal.productName')}
               />
             </div>
 
             <div className="quick-add-modal__field">
-              <label className="quick-add-modal__field-label">Description</label>
+              <label className="quick-add-modal__field-label">{t('quickAddProductModal.description')}</label>
               <input
                 type="text"
                 className="quick-add-modal__input"
                 value={productData.description}
                 onChange={(e) => handleChange('description', e.target.value)}
-                placeholder="Product description"
+                placeholder={t('quickAddProductModal.productDescription')}
               />
             </div>
 
             <div className="quick-add-modal__field-row">
               <div className="quick-add-modal__field">
-                <label className="quick-add-modal__field-label">Price *</label>
+                <label className="quick-add-modal__field-label">{t('quickAddProductModal.price')}</label>
                 <input
                   type="number"
                   min="0"
@@ -180,7 +182,7 @@ const QuickAddProductModal = ({ initialBarcode, onSave, onCancel }) => {
               </div>
 
               <div className="quick-add-modal__field">
-                <label className="quick-add-modal__field-label">Stock</label>
+                <label className="quick-add-modal__field-label">{t('quickAddProductModal.stock')}</label>
                 <input
                   type="number"
                   min="0"

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import type { Product, ScanSessionItem } from '../../types/inventory'
 import { LiquidButton } from './LiquidButton'
 import { useInventoryStore } from '../../store/inventoryStore'
+import { useSettingsStore } from '../../store/settingsStore'
 
 interface NewProductWizardProps {
   open: boolean
@@ -27,6 +28,7 @@ export function NewProductWizard({
   speechAvailable,
   onRegistered,
 }: NewProductWizardProps) {
+  const { t } = useSettingsStore()
   const { createProduct, addMovement } = useInventoryStore()
 
   const [name, setName] = useState('')
@@ -50,7 +52,7 @@ export function NewProductWizard({
 
   useEffect(() => {
     if (open && voiceEnabled) {
-      speak('Nuevo producto. Di el nombre del producto.')
+      speak(t('inventoryNewPage.newProductWizard.voicePrompt'))
     }
   }, [open, voiceEnabled])
 
@@ -144,9 +146,9 @@ export function NewProductWizard({
     >
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-[var(--text)]">Nuevo producto</h2>
+          <h2 className="text-xl font-semibold text-[var(--text)]">{t('inventoryNewPage.newProductWizard.title')}</h2>
           <p className="text-xs text-[var(--muted)] mt-1">
-            Código escaneado: <span className="font-mono text-[var(--text)]">{code}</span>
+            {t('inventoryNewPage.newProductWizard.scannedCode')} <span className="font-mono text-[var(--text)]">{code}</span>
           </p>
         </div>
         <button
@@ -154,7 +156,7 @@ export function NewProductWizard({
           onClick={onClose}
           className="text-[var(--muted)] hover:text-[var(--text)] text-sm px-2 py-1 rounded-xl hover:bg-[var(--panel-2)]"
         >
-          Cerrar
+          {t('inventoryNewPage.newProductWizard.close')}
         </button>
       </div>
 
@@ -162,7 +164,7 @@ export function NewProductWizard({
       <div>
           <div className="flex items-center justify-between mb-1">
             <label className="block text-xs font-medium text-white/70">
-              Paso 1 · Nombre del producto
+              {t('inventoryNewPage.newProductWizard.step1.label')}
             </label>
             {voiceEnabled && speechAvailable && (
               <button
@@ -175,7 +177,7 @@ export function NewProductWizard({
                 }`}
               >
                 <span className="mr-1">🎤</span>
-                {listening ? 'Escuchando…' : 'Dictar'}
+                {listening ? t('inventoryNewPage.newProductWizard.step1.listening') : t('inventoryNewPage.newProductWizard.step1.dictate')}
               </button>
             )}
           </div>
@@ -184,13 +186,13 @@ export function NewProductWizard({
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-4 py-2.5 text-sm text-[var(--text)] placeholder-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
-            placeholder="Ej: Coca Cola 600ml"
+            placeholder={t('inventoryNewPage.newProductWizard.step1.placeholder')}
           />
           {voiceEnabled && speechAvailable && (
             <p className="mt-1 text-[10px] text-[var(--muted)]">
               {listening
-                ? 'Hablando al micrófono… pulsa nuevamente “Escuchando…” para detener.'
-                : 'Pulsa 🎤 Dictar y di el nombre del producto.'}
+                ? t('inventoryNewPage.newProductWizard.step1.listeningHint')
+                : t('inventoryNewPage.newProductWizard.step1.hint')}
             </p>
           )}
       </div>
@@ -198,7 +200,7 @@ export function NewProductWizard({
       {/* Paso 2: Stock inicial */}
       <div>
           <label className="block text-xs font-medium text-[var(--muted)] mb-1">
-            Paso 2 · Stock inicial
+            {t('inventoryNewPage.newProductWizard.step2.label')}
           </label>
           <div className="inline-flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-3 py-2">
             <button
@@ -240,11 +242,11 @@ export function NewProductWizard({
       {/* Paso 3: Precios */}
       <div>
           <label className="block text-xs font-medium text-[var(--muted)] mb-2">
-            Paso 3 · Precios
+            {t('inventoryNewPage.newProductWizard.step3.label')}
           </label>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="text-[11px] text-[var(--muted)] mb-1">Precio de compra</div>
+              <div className="text-[11px] text-[var(--muted)] mb-1">{t('inventoryNewPage.newProductWizard.step3.purchasePrice')}</div>
               <input
                 type="number"
                 min={0}
@@ -264,7 +266,7 @@ export function NewProductWizard({
               />
             </div>
             <div>
-              <div className="text-[11px] text-[var(--muted)] mb-1">Precio de venta</div>
+              <div className="text-[11px] text-[var(--muted)] mb-1">{t('inventoryNewPage.newProductWizard.step3.salePrice')}</div>
               <input
                 type="number"
                 min={0}
@@ -285,7 +287,7 @@ export function NewProductWizard({
             </div>
           </div>
           <div className="mt-2 text-[11px] text-[var(--muted)]">
-            Margen:{' '}
+            {t('inventoryNewPage.newProductWizard.step3.margin')}{' '}
             <span className="font-semibold text-[var(--text)]">
               {margin != null ? `${margin}%` : '—'}
             </span>
@@ -294,7 +296,7 @@ export function NewProductWizard({
 
       <div className="flex justify-end gap-2 pt-2">
         <LiquidButton variant="secondary" size="sm" onClick={onClose}>
-          Cancelar
+          {t('inventoryNewPage.newProductWizard.cancel')}
         </LiquidButton>
         <LiquidButton
           size="sm"
@@ -306,7 +308,7 @@ export function NewProductWizard({
             stock <= 0
           }
         >
-          {saving ? 'Guardando…' : 'Confirmar'}
+          {saving ? t('inventoryNewPage.newProductWizard.saving') : t('inventoryNewPage.newProductWizard.confirm')}
         </LiquidButton>
       </div>
     </div>

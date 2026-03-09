@@ -1,5 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { FaTrashAlt } from 'react-icons/fa'
 import type { Product, StockStatus } from '../../types/inventory'
 import { LiquidButton } from './LiquidButton'
 import { useInventoryStore } from '../../store/inventoryStore'
@@ -14,10 +15,12 @@ function getStockStatus(product: Product): StockStatus {
 
 interface ProductHeaderProps {
   product: Product
-  onEditNameImage?: () => void
+  onEditProduct?: () => void
+  editButtonLabel?: string
+  onDelete?: () => void
 }
 
-export function ProductHeader({ product, onEditNameImage }: ProductHeaderProps) {
+export function ProductHeader({ product, onEditProduct, editButtonLabel = 'Editar producto', onDelete }: ProductHeaderProps) {
   const navigate = useNavigate()
   const addToPurchaseOrder = useInventoryStore((s) => s.addToPurchaseOrder)
   const status = getStockStatus(product)
@@ -72,13 +75,26 @@ export function ProductHeader({ product, onEditNameImage }: ProductHeaderProps) 
         >
           Agregar al pedido
         </LiquidButton>
-        <LiquidButton
-          variant="secondary"
-          size="sm"
-          onClick={() => onEditNameImage?.()}
-        >
-          Editar nombre/imagen
-        </LiquidButton>
+        {onEditProduct && (
+          <LiquidButton
+            variant="secondary"
+            size="sm"
+            onClick={onEditProduct}
+          >
+            {editButtonLabel}
+          </LiquidButton>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="rounded-2xl border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-4 py-2 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger)]/20 hover:border-[var(--danger)]/50 transition-all flex items-center gap-2"
+            title="Eliminar producto"
+          >
+            <FaTrashAlt className="w-3.5 h-3.5" />
+            Eliminar
+          </button>
+        )}
       </div>
     </div>
   )

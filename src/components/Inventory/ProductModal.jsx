@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { FaArrowRight, FaArrowLeft, FaCheck, FaUpload, FaFilePdf, FaFileCode, FaCamera, FaImage, FaMagic, FaTimes } from 'react-icons/fa'
+import { FaArrowRight, FaArrowLeft, FaCheck, FaUpload, FaCamera, FaImage, FaMagic, FaTimes } from 'react-icons/fa'
 import { useInventoryStore } from '../../store/inventoryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { imageService } from '../../services/imageService'
+import { IconPicker } from './ProductIcons'
 import './ProductModal.css'
 
 /**
@@ -24,12 +25,14 @@ const ProductModal = ({ product, onClose, onSave }) => {
     cost: product?.cost?.toString() || '0',
     price: product?.price?.toString() || '0',
     stock: product?.stock?.toString() || '0',
-    image_url: product?.image_url || product?.image || null
+    image_url: product?.image_url || product?.image || null,
+    icon: product?.icon || 'box'
   })
   
   // Image state
   const [productImage, setProductImage] = useState(product?.image_url || product?.image || null)
   const [imagePreview, setImagePreview] = useState(product?.image_url || product?.image || null)
+  const [selectedIcon, setSelectedIcon] = useState(product?.icon || 'box')
   const [removingBackground, setRemovingBackground] = useState(false)
   const [showCamera, setShowCamera] = useState(false)
   const [cameraStream, setCameraStream] = useState(null)
@@ -40,26 +43,29 @@ const ProductModal = ({ product, onClose, onSave }) => {
   // Original values for comparison (edit mode only)
   const [originalData, setOriginalData] = useState(isEditMode ? { ...formData } : null)
   
-  // Invoice requirement state
-  const [requiresInvoice, setRequiresInvoice] = useState(false)
-  const [invoiceFiles, setInvoiceFiles] = useState({ pdf: null, xml: null })
-  const [invoiceError, setInvoiceError] = useState('')
-  
   // Add mode state (step-by-step)
   const [currentStep, setCurrentStep] = useState(0)
   const [suggestedCode, setSuggestedCode] = useState('')
   const inputRef = useRef(null)
 
-  const steps = [
-    { key: 'code', label: 'Product Code', placeholder: 'Enter product code', required: true },
-    { key: 'name', label: 'Product Name', placeholder: 'Enter product name', required: true },
-    { key: 'image', label: 'Product Image', placeholder: 'Upload or capture image', required: false, type: 'image' },
-    { key: 'barcode', label: 'Barcode', placeholder: 'Enter barcode (optional)', required: false },
-    { key: 'description', label: 'Description', placeholder: 'Enter description (optional)', required: false },
-    { key: 'cost', label: 'Purchase Price', placeholder: '0.00', required: true, type: 'number' },
-    { key: 'price', label: 'Sale Price', placeholder: '0.00', required: true, type: 'number' },
-    { key: 'stock', label: 'Initial Stock', placeholder: '0', required: false, type: 'number' }
+  const stepsConfig = [
+    { key: 'code', required: true },
+    { key: 'name', required: true },
+    { key: 'icon', required: false, type: 'icon' },
+    { key: 'image', required: false, type: 'image' },
+    { key: 'barcode', required: false },
+    { key: 'description', required: false },
+    { key: 'cost', required: true, type: 'number' },
+    { key: 'price', required: true, type: 'number' },
+    { key: 'stock', required: false, type: 'number' }
   ]
+
+  const steps = stepsConfig.map((step, index) => ({
+    ...step,
+    label: t(`productModal.steps.${index}.label`),
+    placeholder: t(`productModal.steps.${index}.placeholder`),
+    ariaLabel: t(`productModal.steps.${index}.ariaLabel`)
+  }))
 
   // Initialize original data on mount (edit mode)
   useEffect(() => {
@@ -73,12 +79,14 @@ const ProductModal = ({ product, onClose, onSave }) => {
         cost: product.cost?.toString() || '0',
         price: product.price?.toString() || '0',
         stock: product.stock?.toString() || '0',
-        image_url: productImageUrl
+        image_url: productImageUrl,
+        icon: product.icon || 'box'
       }
       setOriginalData(original)
       setFormData(original)
       setProductImage(productImageUrl)
       setImagePreview(productImageUrl)
+      setSelectedIcon(product.icon || 'box')
     }
   }, [isEditMode, product])
 
@@ -89,18 +97,10 @@ const ProductModal = ({ product, onClose, onSave }) => {
     }
   }, [])
 
-  // Check if price or stock changed (edit mode)
+  // Keep this effect to react to field edits in edit mode (no invoice enforcement)
   useEffect(() => {
     if (isEditMode && originalData) {
-      const priceChanged = parseFloat(formData.price) !== parseFloat(originalData.price)
-      const costChanged = parseFloat(formData.cost) !== parseFloat(originalData.cost)
-      const stockChanged = parseInt(formData.stock) !== parseInt(originalData.stock)
-      
-      setRequiresInvoice(priceChanged || costChanged || stockChanged)
-      if (!priceChanged && !costChanged && !stockChanged) {
-        setInvoiceFiles({ pdf: null, xml: null })
-        setInvoiceError('')
-      }
+      // Intentionally no-op: edits are allowed without invoice upload.
     }
   }, [formData.price, formData.cost, formData.stock, originalData, isEditMode])
 
@@ -129,14 +129,17 @@ const ProductModal = ({ product, onClose, onSave }) => {
     try {
       const existingCodes = products
         .map(p => p.code)
-        .filter(code => /^[A-Z]+(\d+)$/.test(code))
+        .filter(code => code && /^[A-Z]+(\d+)$/.test(code))
         .map(code => {
           const match = code.match(/(\d+)$/)
-          return match ? parseInt(match[1]) : 0
+          if (!match) return 0
+          const num = parseInt(match[1], 10)
+          // Ignore invalid or extremely large numbers
+          return (isNaN(num) || num > 999999) ? 0 : num
         })
       
       const maxNumber = existingCodes.length > 0 ? Math.max(...existingCodes) : 0
-      const nextNumber = maxNumber + 1
+      const nextNumber = Math.min(maxNumber + 1, 9999) // Cap at 9999 for 4-digit padding
       const suggested = `PROD${String(nextNumber).padStart(4, '0')}`
       
       setSuggestedCode(suggested)
@@ -166,22 +169,6 @@ const ProductModal = ({ product, onClose, onSave }) => {
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1)
-    }
-  }
-
-  const handleFileChange = (type, e) => {
-    const file = e.target.files[0]
-    if (file) {
-      if (type === 'pdf' && file.type !== 'application/pdf') {
-        setInvoiceError('El archivo PDF no es válido')
-        return
-      }
-      if (type === 'xml' && !file.name.endsWith('.xml')) {
-        setInvoiceError('El archivo XML no es válido')
-        return
-      }
-      setInvoiceFiles(prev => ({ ...prev, [type]: file }))
-      setInvoiceError('')
     }
   }
 
@@ -338,10 +325,7 @@ const ProductModal = ({ product, onClose, onSave }) => {
 
   const handleSubmit = async () => {
     // Validate invoice requirement (edit mode)
-    if (isEditMode && requiresInvoice && !invoiceFiles.pdf) {
-      setInvoiceError('Debes subir al menos el PDF de la factura para justificar los cambios')
-      return
-    }
+     // Invoice requirement removed - users can edit without uploading invoice
 
     let imageUrl = productImage || formData.image_url
 
@@ -388,12 +372,6 @@ const ProductModal = ({ product, onClose, onSave }) => {
     // Remove image field if it exists (use image_url instead)
     delete submitData.image
 
-    // Include invoice files if required
-    if (isEditMode && requiresInvoice && invoiceFiles.pdf) {
-      submitData.invoicePdf = invoiceFiles.pdf
-      submitData.invoiceXml = invoiceFiles.xml
-    }
-
     onSave(submitData)
   }
 
@@ -414,7 +392,8 @@ const ProductModal = ({ product, onClose, onSave }) => {
       formData.cost !== originalData.cost ||
       formData.price !== originalData.price ||
       formData.stock !== originalData.stock ||
-      formData.image_url !== originalData.image_url
+      formData.image_url !== originalData.image_url ||
+      formData.icon !== originalData.icon
     )
 
     const profitMargin = formData.cost && formData.price
@@ -535,6 +514,21 @@ const ProductModal = ({ product, onClose, onSave }) => {
               </div>
             </div>
 
+            {/* Icon Section */}
+            <div className="product-modal__icon-section" style={{ marginBottom: '24px' }}>
+              <label className="product-modal__form-label">ICONO DEL PRODUCTO</label>
+              <p className="text-xs text-[var(--muted)] mb-3">
+                Selecciona un icono para representar este producto cuando no tenga imagen
+              </p>
+              <IconPicker
+                value={selectedIcon}
+                onChange={(iconId) => {
+                  setSelectedIcon(iconId)
+                  setFormData(prev => ({ ...prev, icon: iconId }))
+                }}
+              />
+            </div>
+
             <div className="product-modal__form-grid">
               <div className="product-modal__form-group">
                 <label className="product-modal__form-label">
@@ -632,47 +626,6 @@ const ProductModal = ({ product, onClose, onSave }) => {
               </div>
             </div>
 
-            {/* Invoice requirement section */}
-            {requiresInvoice && (
-              <div className="product-modal__invoice-section">
-                <div className="product-modal__invoice-warning">
-                  ⚠️ Has modificado precios o stock. Debes subir una factura para justificar los cambios.
-                </div>
-                <div className="product-modal__invoice-files">
-                  <div className="product-modal__invoice-group">
-                    <label className="product-modal__invoice-label">
-                      <FaFilePdf /> Factura PDF <span className="product-modal__required">*</span>
-                    </label>
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={(e) => handleFileChange('pdf', e)}
-                      className="product-modal__invoice-input"
-                    />
-                    {invoiceFiles.pdf && (
-                      <span className="product-modal__invoice-name">{invoiceFiles.pdf.name}</span>
-                    )}
-                  </div>
-                  <div className="product-modal__invoice-group">
-                    <label className="product-modal__invoice-label">
-                      <FaFileCode /> Factura XML (Opcional)
-                    </label>
-                    <input
-                      type="file"
-                      accept=".xml"
-                      onChange={(e) => handleFileChange('xml', e)}
-                      className="product-modal__invoice-input"
-                    />
-                    {invoiceFiles.xml && (
-                      <span className="product-modal__invoice-name">{invoiceFiles.xml.name}</span>
-                    )}
-                  </div>
-                </div>
-                {invoiceError && (
-                  <div className="product-modal__invoice-error">{invoiceError}</div>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="product-modal__footer">
@@ -746,10 +699,13 @@ const ProductModal = ({ product, onClose, onSave }) => {
 
         {/* Header */}
         <div className="product-modal__header">
-          <button className="product-modal__close" onClick={onClose}>×</button>
-          <div className="product-modal__step-indicator">
-            Step {currentStep + 1} of {steps.length}
+          <div className="product-modal__header-meta">
+            <div className="product-modal__step-indicator">
+              {t('productModal.stepIndicator').replace('{current}', currentStep + 1).replace('{total}', steps.length)}
+            </div>
+            <div className="product-modal__header-title">{t('inventory.addProduct')}</div>
           </div>
+          <button className="product-modal__close" onClick={onClose}>×</button>
         </div>
 
         {/* Content */}
@@ -761,7 +717,7 @@ const ProductModal = ({ product, onClose, onSave }) => {
           
           {currentField.key === 'code' && suggestedCode && (
             <div className="product-modal__suggestion">
-              <span className="product-modal__suggestion-text">Suggested code:</span>
+              <span className="product-modal__suggestion-text">{t('productModal.suggestedCode')}</span>
               <button
                 type="button"
                 className="product-modal__suggestion-btn"
@@ -774,6 +730,22 @@ const ProductModal = ({ product, onClose, onSave }) => {
               </button>
             </div>
           )}
+
+          {/* Icon Step */}
+          {currentField.type === 'icon' ? (
+            <div className="product-modal__icon-step">
+              <p className="text-sm text-[var(--muted)] mb-4 text-center">
+                Elige un icono que represente este producto (opcional)
+              </p>
+              <IconPicker
+                value={selectedIcon}
+                onChange={(iconId) => {
+                  setSelectedIcon(iconId)
+                  setFormData(prev => ({ ...prev, icon: iconId }))
+                }}
+              />
+            </div>
+          ) : null}
 
           {/* Image Step */}
           {currentField.type === 'image' ? (
@@ -881,15 +853,9 @@ const ProductModal = ({ product, onClose, onSave }) => {
           )}
 
           {/* Helper text for prices */}
-          {currentField.key === 'cost' && formData.cost && formData.price && (
+          {(currentField.key === 'cost' || currentField.key === 'price') && formData.cost && formData.price && (
             <div className="product-modal__helper">
-              Profit margin: {((parseFloat(formData.price) - parseFloat(formData.cost)) / parseFloat(formData.price) * 100).toFixed(1)}%
-            </div>
-          )}
-
-          {currentField.key === 'price' && formData.cost && formData.price && (
-            <div className="product-modal__helper">
-              Profit: ${(parseFloat(formData.price) - parseFloat(formData.cost)).toFixed(2)} per unit
+              {t('productModal.profitMargin').replace('{margin}', ((parseFloat(formData.price) - parseFloat(formData.cost)) / parseFloat(formData.price) * 100).toFixed(1))}
             </div>
           )}
         </div>
@@ -903,7 +869,7 @@ const ProductModal = ({ product, onClose, onSave }) => {
               onClick={handleBack}
             >
               <FaArrowLeft />
-              Back
+              {t('pendingSales.goBack')}
             </button>
           )}
           
@@ -918,11 +884,11 @@ const ProductModal = ({ product, onClose, onSave }) => {
             {currentStep === steps.length - 1 ? (
               <>
                 <FaCheck />
-                Create
+                {t('inventory.addProduct')}
               </>
             ) : (
               <>
-                Next
+                Continuar
                 <FaArrowRight />
               </>
             )}

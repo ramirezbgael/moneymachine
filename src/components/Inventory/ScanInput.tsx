@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react'
+import { useSettingsStore } from '../../store/settingsStore'
 
 interface ScanInputProps {
   onScan: (code: string) => void
@@ -10,12 +11,12 @@ export interface ScanInputRef {
   focus: () => void
 }
 
-const defaultPlaceholder = 'Escanea o escribe un código y presiona Enter…'
-
 export const ScanInput = forwardRef<ScanInputRef, ScanInputProps>(function ScanInput(
-  { onScan, placeholder = defaultPlaceholder, disabled },
+  { onScan, placeholder, disabled },
   ref
 ) {
+  const { t } = useSettingsStore()
+  const defaultPlaceholder = t('inventoryNewPage.scanInput.placeholder')
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   useImperativeHandle(ref, () => ({
@@ -71,7 +72,7 @@ export const ScanInput = forwardRef<ScanInputRef, ScanInputProps>(function ScanI
         disabled={disabled}
         defaultValue=""
         className="w-full rounded-3xl border border-[var(--accent)]/50 bg-[var(--panel-2)] px-5 py-4 text-lg text-[var(--text)] placeholder-[var(--muted)] shadow-[0_0_0_1px_var(--accent)]/25 focus:outline-none focus:border-[var(--accent)] focus:shadow-[0_0_25px_var(--accent-glow)] transition-all"
-        placeholder={placeholder}
+        placeholder={placeholder ?? defaultPlaceholder}
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}

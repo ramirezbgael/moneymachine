@@ -301,13 +301,13 @@ const Inventory = () => {
           </div>
           <div className="inventory__header-actions">
             <button className="inventory__btn inventory__btn--secondary">
-              {t('inventory.reports')}
+              📊 {t('inventory.reports')}
             </button>
             <button 
               className="inventory__btn inventory__btn--tertiary"
               onClick={() => setShowImportModal(true)}
             >
-              {t('inventory.import')}
+              📥 {t('inventory.import')}
             </button>
             <button className="inventory__btn inventory__btn--primary" onClick={handleAddProduct}>
               + {t('inventory.addProduct')}
@@ -372,7 +372,7 @@ const Inventory = () => {
                       className="inventory__th-sortable"
                       onClick={() => handleSort('name')}
                     >
-                      <span>{t('inventory.name')}</span>
+                      <span>Producto</span>
                       <div className="inventory__sort-indicator">
                         {sortColumn === 'name' ? (
                           sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />
@@ -385,7 +385,7 @@ const Inventory = () => {
                       className="inventory__th-sortable"
                       onClick={() => handleSort('code')}
                     >
-                      <span>{t('inventory.code')}</span>
+                      <span>SKU / Código</span>
                       <div className="inventory__sort-indicator">
                         {sortColumn === 'code' ? (
                           sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />
@@ -398,7 +398,7 @@ const Inventory = () => {
                       className="inventory__th-sortable"
                       onClick={() => handleSort('price')}
                     >
-                      <span>{t('inventory.price')}</span>
+                      <span>Precio</span>
                       <div className="inventory__sort-indicator">
                         {sortColumn === 'price' ? (
                           sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />
@@ -411,7 +411,7 @@ const Inventory = () => {
                       className="inventory__th-sortable"
                       onClick={() => handleSort('stock')}
                     >
-                      <span>{t('inventory.stock')}</span>
+                      <span>Stock</span>
                       <div className="inventory__sort-indicator">
                         {sortColumn === 'stock' ? (
                           sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />
@@ -424,7 +424,7 @@ const Inventory = () => {
                       className="inventory__th-sortable"
                       onClick={() => handleSort('lastMovement')}
                     >
-                      <span>{t('inventory.lastMovement')}</span>
+                      <span>Último Mov.</span>
                       <div className="inventory__sort-indicator">
                         {sortColumn === 'lastMovement' ? (
                           sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />
@@ -433,7 +433,7 @@ const Inventory = () => {
                         )}
                       </div>
                     </th>
-                    <th>{t('inventory.actions')}</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -131,7 +131,7 @@ const ItemsList = () => {
           <div className="items-list__name-cell">
             <div className="items-list__name">
               {noStock && (
-                <span className="items-list__stock-alert" title="Stock insuficiente o sin stock">
+                <span className="items-list__stock-alert" title={t('itemsList.noStock')}>
                   <FaExclamationTriangle />
                 </span>
               )}
@@ -157,7 +157,7 @@ const ItemsList = () => {
                 e.stopPropagation()
                 decrementQuantity(item.id)
               }}
-              title="Decrease quantity (- or ←)"
+              title={t('itemsList.decreaseQuantity')}
             >
               −
             </button>
@@ -199,7 +199,7 @@ const ItemsList = () => {
                 e.stopPropagation()
                 incrementQuantity(item.id)
               }}
-              title="Increase quantity (+ or →)"
+              title={t('itemsList.increaseQuantity')}
             >
               +
             </button>
@@ -217,7 +217,7 @@ const ItemsList = () => {
               e.stopPropagation()
               removeItem(item.id)
             }}
-            title="Remove item (Delete)"
+            title={t('itemsList.removeItem')}
           >
             ×
           </button>

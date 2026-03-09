@@ -123,7 +123,7 @@
   background: var(--accent-primary);
   border: 1px solid var(--accent-primary);
   border-radius: var(--radius-md);
-  color: var(--text-primary);
+  color: #000;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   margin-top: var(--spacing-md);
@@ -272,7 +272,7 @@
 
 .settings__card--active .settings__card-name,
 .settings__card--active .settings__card-code {
-  color: var(--text-primary);
+  color: #000;
 }
 
 .settings__card-content {

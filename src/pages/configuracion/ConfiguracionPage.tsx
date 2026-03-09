@@ -10,7 +10,8 @@ import { TaxSettings } from '../../components/settings/TaxSettings'
 import { PrinterSettings } from '../../components/settings/PrinterSettings'
 import { FacturacionMXSettings } from '../../components/settings/FacturacionMXSettings'
 import { SystemInfoSettings } from '../../components/settings/SystemInfoSettings'
-import { FiUser, FiMonitor, FiGlobe, FiDollarSign, FiPercent, FiPrinter, FiFileText, FiCpu } from 'react-icons/fi'
+import { SyncStatusSettings } from '../../components/settings/SyncStatusSettings'
+import { FiUser, FiMonitor, FiGlobe, FiDollarSign, FiPercent, FiPrinter, FiFileText, FiCpu, FiRefreshCw } from 'react-icons/fi'
 
 const STORAGE_KEY = 'moneymachine-settings-section'
 
@@ -22,28 +23,14 @@ type SectionId =
   | 'taxes'
   | 'printer'
   | 'facturacion'
+  | 'syncStatus'
   | 'system'
+
+const SHOW_TAX_AND_FACTURACION_SECTIONS = false
 
 export function ConfiguracionPage() {
   const t = useSettingsStore((s) => s.t)
   const [active, setActive] = useState<SectionId>('account')
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY) as SectionId | null
-      if (saved) setActive(saved)
-    } catch {
-      // ignore
-    }
-  }, [])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, active)
-    } catch {
-      // ignore
-    }
-  }, [active])
 
   const items: SettingsMenuItem[] = useMemo(
     () => [
@@ -90,6 +77,12 @@ export function ConfiguracionPage() {
         icon: <FiFileText />,
       },
       {
+        id: 'syncStatus',
+        title: 'Sincronización',
+        description: 'Estado de copia local y datos',
+        icon: <FiRefreshCw />,
+      },
+      {
         id: 'system',
         title: 'Sistema',
         description: 'Información del sistema',
@@ -99,7 +92,43 @@ export function ConfiguracionPage() {
     []
   )
 
-  const currentItem = items.find((i) => i.id === active) ?? items[0]
+  const visibleItems = useMemo(
+    () =>
+      items.filter((item) => {
+        if (!SHOW_TAX_AND_FACTURACION_SECTIONS && (item.id === 'taxes' || item.id === 'facturacion')) {
+          return false
+        }
+        return true
+      }),
+    [items]
+  )
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY) as SectionId | null
+      if (!saved) return
+      const isVisible = visibleItems.some((i) => i.id === saved)
+      setActive(isVisible ? saved : 'account')
+    } catch {
+      // ignore
+    }
+  }, [visibleItems])
+
+  useEffect(() => {
+    const isVisible = visibleItems.some((i) => i.id === active)
+    if (!isVisible) {
+      setActive('account')
+      return
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEY, active)
+    } catch {
+      // ignore
+    }
+  }, [active, visibleItems])
+
+  const currentItem = visibleItems.find((i) => i.id === active) ?? visibleItems[0]
 
   return (
     <div className="min-h-full bg-[var(--bg)] text-[var(--text)] p-6">
@@ -116,7 +145,7 @@ export function ConfiguracionPage() {
               onChange={(e) => setActive(e.target.value as SectionId)}
               className="w-full rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--accent)] focus:outline-none"
             >
-              {items.map((i) => (
+              {visibleItems.map((i) => (
                 <option key={i.id} value={i.id}>
                   {i.title}
                 </option>
@@ -127,7 +156,7 @@ export function ConfiguracionPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-[260px,minmax(0,1fr)] gap-5 items-start">
           <aside>
-            <SettingsMenu items={items} activeId={active} onSelect={(id) => setActive(id as SectionId)} />
+            <SettingsMenu items={visibleItems} activeId={active} onSelect={(id) => setActive(id as SectionId)} />
           </aside>
           <section className="transition-all duration-200">
             {active === 'account' && (
@@ -150,7 +179,7 @@ export function ConfiguracionPage() {
                 <CurrencySettings />
               </SettingsSection>
             )}
-            {active === 'taxes' && (
+            {SHOW_TAX_AND_FACTURACION_SECTIONS && active === 'taxes' && (
               <SettingsSection title="Impuestos" description="Configura el porcentaje de impuestos que se aplicará por defecto.">
                 <TaxSettings />
               </SettingsSection>
@@ -160,9 +189,14 @@ export function ConfiguracionPage() {
                 <PrinterSettings />
               </SettingsSection>
             )}
-            {active === 'facturacion' && (
+            {SHOW_TAX_AND_FACTURACION_SECTIONS && active === 'facturacion' && (
               <SettingsSection title="Facturación MX" description="Datos fiscales para emitir CFDI en México.">
                 <FacturacionMXSettings />
+              </SettingsSection>
+            )}
+            {active === 'syncStatus' && (
+              <SettingsSection title="Sincronización" description="Estado de tu copia local y sincronización con el servidor.">
+                <SyncStatusSettings />
               </SettingsSection>
             )}
             {active === 'system' && (

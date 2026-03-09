@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Product, InventoryMovement, PurchaseOrderItem, ScanSessionItem } from '../types/inventory'
 import { productService } from '../services/productService'
+import { offlineProductService } from '../services/offlineProductService'
 import { mockMovements } from '../mock/mockMovements'
 
 interface InventoryState {
@@ -30,6 +31,7 @@ interface InventoryState {
   deleteProduct: (productId: number | string) => Promise<void>
 
   addScanSessionItem: (item: ScanSessionItem) => void
+  saveScanSession: () => Promise<void>
   clearScanSession: () => void
   setLastScannedCode: (code: string | null) => void
   setVoiceEnabled: (enabled: boolean) => void
@@ -53,7 +55,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   fetchProducts: async () => {
     set({ loading: true, error: null })
     try {
-      const products = await productService.getAll()
+      const products = await offlineProductService.getAll()
       set({ products: products || [], loading: false })
     } catch (e) {
       set({ products: [], loading: false, error: (e as Error).message })
@@ -109,7 +111,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (!product) return
     const newStock = (product.stock || 0) + quantity
     try {
-      await productService.update(productId, { ...product, stock: newStock })
+      await offlineProductService.update(productId, { ...product, stock: newStock })
       addMovement({
         productId,
         type: 'entrada',
@@ -136,7 +138,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (!product) return
     const newStock = Math.max(0, (product.stock || 0) - quantity)
     try {
-      await productService.update(productId, { ...product, stock: newStock })
+      await offlineProductService.update(productId, { ...product, stock: newStock })
       addMovement({
         productId,
         type: 'salida',
@@ -156,12 +158,12 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   createProduct: async (productData) => {
-    const created = await productService.create(productData as Parameters<typeof productService.create>[0])
+    const created = await offlineProductService.create(productData as Parameters<typeof offlineProductService.create>[0])
     set((s) => ({ products: [...s.products, created as Product] }))
     return created as Product
   },
   updateProduct: async (productId, productData) => {
-    const updated = await productService.update(productId, productData as Parameters<typeof productService.update>[1])
+    const updated = await offlineProductService.update(productId, productData as Parameters<typeof offlineProductService.update>[1])
     set((s) => ({
       products: s.products.map((p) => (p.id === productId ? (updated as Product) : p)),
       selectedProduct: s.selectedProduct?.id === productId ? (updated as Product) : s.selectedProduct,
@@ -169,7 +171,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     return updated as Product
   },
   deleteProduct: async (productId) => {
-    await productService.delete(productId)
+    await offlineProductService.delete(productId)
     set((s) => ({
       products: s.products.filter((p) => p.id !== productId),
       selectedProduct: s.selectedProduct?.id === productId ? null : s.selectedProduct,
@@ -180,6 +182,49 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     set((s) => ({
       scanSessionProducts: [item, ...s.scanSessionProducts],
     })),
+
+  saveScanSession: async () => {
+    const { scanSessionProducts, createProduct, incrementStock, fetchProducts } = get()
+    if (scanSessionProducts.length === 0) return
+
+    try {
+      set({ loading: true, error: null })
+      
+      for (const item of scanSessionProducts) {
+        if (item.isNew) {
+          // Create new product
+          await createProduct({
+            name: item.name,
+            code: item.code,
+            price: item.salePrice,
+            cost: item.purchasePrice,
+            stock: item.initialStock,
+          })
+        } else if (item.productId && item.initialStock > 0) {
+          // Update stock for existing product
+          await incrementStock(item.productId, item.initialStock, {
+            notes: `Registro masivo: ${item.name}`,
+          })
+        }
+      }
+
+      // Clear session after successful save
+      set({
+        scanSessionProducts: [],
+        lastScannedCode: null,
+        loading: false,
+      })
+
+      // Refresh products list
+      await fetchProducts()
+    } catch (err) {
+      set({ 
+        error: (err as Error)?.message || 'Error al guardar los productos',
+        loading: false,
+      })
+      throw err
+    }
+  },
 
   clearScanSession: () =>
     set({

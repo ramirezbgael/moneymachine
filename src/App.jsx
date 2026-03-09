@@ -1,17 +1,19 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import CurrentSale from './components/CurrentSale/CurrentSale'
 import { InventarioPage } from './pages/inventario/InventarioPage'
 import { ProductoDetallesPage } from './pages/inventario/ProductoDetallesPage'
 import { PedidosInventarioPage } from './pages/inventario/PedidosInventarioPage'
-import { InventoryNewPage } from './components/inventory/InventoryNewPage'
+import { InventoryNewPage } from './components/Inventory/InventoryNewPage'
 import Pending from './components/Pending/Pending'
 import Reports from './components/Reports/Reports'
 import { ConfiguracionPage } from './pages/configuracion/ConfiguracionPage'
 import Login from './components/Auth/Login'
 import Register from './components/Auth/Register'
 import { useAuthStore } from './store/authStore'
+import { NetworkStatus } from './components/NetworkStatus/NetworkStatus'
+import { offlineProductService } from './services/offlineProductService'
 import './App.css'
 
 // Protected Route Component
@@ -26,8 +28,23 @@ const ProtectedRoute = ({ children }) => {
 }
 
 function App() {
+  // Initialize offline services
+  useEffect(() => {
+    const initOfflineServices = async () => {
+      try {
+        await offlineProductService.init()
+        console.log('✅ Offline services initialized')
+      } catch (error) {
+        console.error('❌ Failed to initialize offline services:', error)
+      }
+    }
+
+    initOfflineServices()
+  }, [])
+
   return (
     <BrowserRouter>
+      <NetworkStatus />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

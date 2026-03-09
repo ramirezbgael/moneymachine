@@ -150,7 +150,7 @@
 
 .modal__btn--primary {
   background: var(--accent-primary);
-  color: var(--text-primary);
+  color: #000;
   border-color: var(--accent-primary);
   box-shadow: 0 4px 12px var(--accent-glow);
 }
@@ -158,6 +158,7 @@
 .modal__btn--primary:hover:not(:disabled) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+  color: #000;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(0, 255, 136, 0.25);
 }

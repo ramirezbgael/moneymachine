@@ -1,4 +1,5 @@
 import React from 'react'
+import { useSettingsStore } from '../../store/settingsStore'
 
 interface VoiceToggleProps {
   enabled: boolean
@@ -7,6 +8,8 @@ interface VoiceToggleProps {
 }
 
 export function VoiceToggle({ enabled, available, onToggle }: VoiceToggleProps) {
+  const { t } = useSettingsStore()
+  
   return (
     <div className="flex items-center gap-3">
       <button
@@ -21,11 +24,11 @@ export function VoiceToggle({ enabled, available, onToggle }: VoiceToggleProps) 
         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/60 border border-white/15">
           <span className={`h-2 w-1 rounded-full ${enabled ? 'bg-[#00ff88]' : 'bg-white/40'}`} />
         </span>
-        <span>Modo voz (experimental)</span>
+        <span>{t('inventoryNewPage.voiceToggle.title')}</span>
       </button>
       {!available && (
         <span className="text-[11px] text-white/40">
-          Voz no disponible en este sistema
+          {t('inventoryNewPage.voiceToggle.notAvailable')}
         </span>
       )}
     </div>

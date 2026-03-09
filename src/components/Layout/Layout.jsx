@@ -12,6 +12,7 @@ import './Layout.css'
  * 3-zone structure: Sidebar | Content | Right Panel (prepared)
  */
 const Layout = () => {
+  const { t } = useSettingsStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -20,7 +21,6 @@ const Layout = () => {
   const [setupLoading, setSetupLoading] = useState(false)
   const [setupError, setSetupError] = useState('')
 
-  const t = useSettingsStore(state => state.t)
   const user = useAuthStore(state => state.user)
   const { currentTenantId, currentTenant, loading: tenantLoading, error: tenantError, loadTenants } = useTenantStore()
   const signOut = useAuthStore(state => state.signOut)
@@ -138,7 +138,7 @@ const Layout = () => {
           <button
             className="sidebar__toggle"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            aria-label="Toggle sidebar width"
+            aria-label={t('layout.toggleSidebar')}
           >
             {sidebarCollapsed ? '→' : '←'}
           </button>

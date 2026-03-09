@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react'
 import { useSaleStore } from '../../store/saleStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import { productService } from '../../services/productService'
 import './ScannerInput.css'
 
@@ -10,6 +11,7 @@ import './ScannerInput.css'
  * - Enter: Add product or trigger not found callback
  */
 const ScannerInput = ({ onProductNotFound }) => {
+  const { t } = useSettingsStore()
   const inputRef = useRef(null)
   const [value, setValue] = useState('')
   const [isFocused, setIsFocused] = useState(true)
@@ -122,7 +124,7 @@ const ScannerInput = ({ onProductNotFound }) => {
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        placeholder="Scan barcode or type code, then press Enter"
+        placeholder={t('scannerInput.placeholder')}
         autoComplete="off"
       />
     </div>

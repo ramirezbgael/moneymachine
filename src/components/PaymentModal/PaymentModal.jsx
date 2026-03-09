@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useSaleStore } from '../../store/saleStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import { processSale } from '../../services/saleService'
 import '../Modal/Modal.css'
 import './PaymentModal.css'
@@ -12,6 +13,7 @@ import './PaymentModal.css'
  * - Enter to confirm payment
  */
 const PaymentModal = ({ onComplete, onCancel }) => {
+  const { t } = useSettingsStore()
   const items = useSaleStore(state => state.items)
   const getTotals = useSaleStore(state => state.getTotals)
   const clearSale = useSaleStore(state => state.clearSale)
@@ -251,42 +253,42 @@ const PaymentModal = ({ onComplete, onCancel }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal__header">
-          <h2 className="modal__title">Payment</h2>
+          <h2 className="modal__title">{t('paymentModal.title')}</h2>
           <button className="modal__close" onClick={onCancel}>×</button>
         </div>
 
         <div className="modal__content">
           {/* Total Display */}
           <div className="payment-modal__total">
-            <div className="payment-modal__total-label">Total to Pay</div>
+            <div className="payment-modal__total-label">{t('paymentModal.totalToPay')}</div>
             <div className="payment-modal__total-amount">${total.toFixed(2)}</div>
-            <div className="payment-modal__items-count">{itemCount} item(s)</div>
+            <div className="payment-modal__items-count">{itemCount} {t('paymentModal.items')}</div>
           </div>
 
           {/* Payment Method */}
           <div className={`payment-modal__section ${focusedSection === 'payment' ? 'payment-modal__section--focused' : ''}`}>
             <label className="payment-modal__label">
-              Payment Method
-              {focusedSection === 'payment' && <span className="payment-modal__hint">← → to navigate</span>}
+              {t('paymentModal.paymentMethod')}
+              {focusedSection === 'payment' && <span className="payment-modal__hint">{t('paymentModal.navigateHint')}</span>}
             </label>
             <div className="payment-modal__options">
               <button
                 className={`payment-modal__option ${paymentMethod === 'cash' ? 'payment-modal__option--active' : ''}`}
                 onClick={() => setPaymentMethod('cash')}
               >
-                Cash
+                {t('paymentModal.cash')}
               </button>
               <button
                 className={`payment-modal__option ${paymentMethod === 'card' ? 'payment-modal__option--active' : ''}`}
                 onClick={() => setPaymentMethod('card')}
               >
-                Card
+                {t('paymentModal.card')}
               </button>
               <button
                 className={`payment-modal__option ${paymentMethod === 'transfer' ? 'payment-modal__option--active' : ''}`}
                 onClick={() => setPaymentMethod('transfer')}
               >
-                Transfer
+                {t('paymentModal.transfer')}
               </button>
             </div>
           </div>
@@ -294,21 +296,21 @@ const PaymentModal = ({ onComplete, onCancel }) => {
           {/* Receipt Type */}
           <div className={`payment-modal__section ${focusedSection === 'receipt' ? 'payment-modal__section--focused' : ''}`}>
             <label className="payment-modal__label">
-              Receipt Type
-              {focusedSection === 'receipt' && <span className="payment-modal__hint">← → to navigate</span>}
+              {t('paymentModal.receiptType')}
+              {focusedSection === 'receipt' && <span className="payment-modal__hint">{t('paymentModal.navigateHint')}</span>}
             </label>
             <div className="payment-modal__options">
               <button
                 className={`payment-modal__option ${receiptType === 'ticket' ? 'payment-modal__option--active' : ''}`}
                 onClick={() => setReceiptType('ticket')}
               >
-                Ticket
+                {t('paymentModal.ticket')}
               </button>
               <button
                 className={`payment-modal__option ${receiptType === 'invoice' ? 'payment-modal__option--active' : ''}`}
                 onClick={() => setReceiptType('invoice')}
               >
-                Invoice
+                {t('paymentModal.invoice')}
               </button>
             </div>
           </div>
@@ -317,26 +319,26 @@ const PaymentModal = ({ onComplete, onCancel }) => {
           {receiptType === 'invoice' && (
             <div className="payment-modal__section payment-modal__customer-form">
               <label className="payment-modal__label">
-                Customer Information
-                <span className="payment-modal__hint">↑ ← → to navigate back</span>
+                {t('paymentModal.customerInformation')}
+                <span className="payment-modal__hint">{t('paymentModal.customerFormHint')}</span>
               </label>
 
               {/* Phone Input */}
               <div className="payment-modal__field">
-                <label className="payment-modal__field-label">Phone *</label>
+                <label className="payment-modal__field-label">{t('paymentModalTexts.phone')}</label>
                 <input
                   ref={phoneInputRef}
                   type="tel"
                   className="payment-modal__input"
                   value={customer.phone}
                   onChange={(e) => handleCustomerChange('phone', e.target.value)}
-                  placeholder="Enter phone number"
+                  placeholder={t('paymentModalTexts.enterPhoneNumber')}
                 />
                 {searchingCustomer && (
-                  <div className="payment-modal__searching">Searching...</div>
+                  <div className="payment-modal__searching">{t('paymentModalTexts.searching')}</div>
                 )}
                 {!searchingCustomer && customer.phone && customerFound && (
-                  <div className="payment-modal__found">Customer found</div>
+                  <div className="payment-modal__found">{t('paymentModalTexts.customerFound')}</div>
                 )}
               </div>
 
@@ -344,24 +346,24 @@ const PaymentModal = ({ onComplete, onCancel }) => {
               {!customerFound && customer.phone && (
                 <>
                   <div className="payment-modal__field">
-                    <label className="payment-modal__field-label">Name *</label>
+                    <label className="payment-modal__field-label">{t('paymentModalTexts.customerName')}</label>
                     <input
                       type="text"
                       className="payment-modal__input"
                       value={customer.name}
                       onChange={(e) => handleCustomerChange('name', e.target.value)}
-                      placeholder="Customer name"
+                      placeholder={t('paymentModalTexts.customerName')}
                     />
                   </div>
 
                   <div className="payment-modal__field">
-                    <label className="payment-modal__field-label">Last Name *</label>
+                    <label className="payment-modal__field-label">{t('paymentModalTexts.customerLastName')}</label>
                     <input
                       type="text"
                       className="payment-modal__input"
                       value={customer.lastName}
                       onChange={(e) => handleCustomerChange('lastName', e.target.value)}
-                      placeholder="Customer last name"
+                      placeholder={t('paymentModalTexts.customerLastName')}
                     />
                   </div>
 
@@ -377,13 +379,13 @@ const PaymentModal = ({ onComplete, onCancel }) => {
                   </div>
 
                   <div className="payment-modal__field">
-                    <label className="payment-modal__field-label">Email</label>
+                    <label className="payment-modal__field-label">{t('paymentModalTexts.customerEmail')}</label>
                     <input
                       type="email"
                       className="payment-modal__input"
                       value={customer.email}
                       onChange={(e) => handleCustomerChange('email', e.target.value)}
-                      placeholder="customer@example.com"
+                      placeholder={t('paymentModalTexts.customerEmail')}
                     />
                   </div>
 

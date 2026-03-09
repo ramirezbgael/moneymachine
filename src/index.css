@@ -201,7 +201,7 @@ code {
   font-size: 14px;
   font-weight: 600;
   font-family: inherit;
-  color: var(--neon-green);
+  color: #000;
   background: var(--neon-green-dim);
   border: 1px solid var(--neon-green-border);
   border-radius: var(--radius-2xl);
