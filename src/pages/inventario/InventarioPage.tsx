@@ -9,6 +9,8 @@ import ProductModal from '../../components/Inventory/ProductModal'
 import ImportModal from '../../components/Inventory/ImportModal'
 import BarcodePrintModal from '../../components/Inventory/BarcodePrintModal'
 
+const ITEMS_PER_PAGE = 10
+
 export function InventarioPage() {
   const navigate = useNavigate()
   const t = useSettingsStore((s) => s.t)
@@ -23,6 +25,7 @@ export function InventarioPage() {
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const [toastMessage, setToastMessage] = useState('')
   const [toastTimer, setToastTimer] = useState<number | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Don't auto-load products on mount - wait for user action
   const handleLoadAll = () => {
@@ -107,6 +110,29 @@ export function InventarioPage() {
     }
     return true
   })
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const pageStartIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const paginatedFiltered = filtered.slice(pageStartIndex, pageStartIndex + ITEMS_PER_PAGE)
+  const showingFrom = filtered.length === 0 ? 0 : pageStartIndex + 1
+  const showingTo = Math.min(pageStartIndex + ITEMS_PER_PAGE, filtered.length)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, filter, viewMode])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
+  const visiblePageEnd = Math.min(totalPages, currentPage + 2)
+  const visiblePageStart = Math.max(1, visiblePageEnd - 4)
+  const visiblePages = Array.from(
+    { length: visiblePageEnd - visiblePageStart + 1 },
+    (_, idx) => visiblePageStart + idx
+  )
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] p-6 flex flex-col">
@@ -409,7 +435,7 @@ export function InventarioPage() {
                     No hay productos que coincidan.
                   </div>
                 ) : (
-                  filtered.map((product) => (
+                  paginatedFiltered.map((product) => (
                     <InventoryRow
                       key={product.id}
                       product={product}
@@ -422,8 +448,42 @@ export function InventarioPage() {
 
             <div className="mt-8 flex flex-wrap items-center justify-between gap-3 py-2">
               <p className="text-xs text-[var(--muted)]">
-                Mostrando {filtered.length} de {products.length} productos
+                Mostrando {showingFrom}-{showingTo} de {filtered.length} productos
               </p>
+              {filtered.length > ITEMS_PER_PAGE && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-2.5 py-1 rounded-md text-xs border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--accent)]/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Anterior
+                  </button>
+                  {visiblePages.map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={`min-w-8 px-2 py-1 rounded-md text-xs border transition-colors ${
+                        page === currentPage
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--accent)]'
+                          : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--accent)]/40'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-2.5 py-1 rounded-md text-xs border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--accent)]/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => navigate('/inventario/nuevo')}

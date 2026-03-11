@@ -291,14 +291,9 @@ export const productService = {
         if (error.message && error.message.includes('ya existe')) {
           throw error
         }
-        // Fallback to mock
-        const newProduct = {
-          id: Date.now(),
-          ...productData,
-          created_at: new Date().toISOString()
-        }
-        mockProducts.push(newProduct)
-        return newProduct
+        // Important: do not fallback to mock when Supabase is configured.
+        // Let offline service decide queue/retry behavior.
+        throw error
       }
     }
 
@@ -329,13 +324,9 @@ export const productService = {
         return data
       } catch (error) {
         console.error('Supabase error:', error)
-        // Fallback to mock
-        const index = mockProducts.findIndex(p => p.id === id)
-        if (index >= 0) {
-          mockProducts[index] = { ...mockProducts[index], ...productData }
-          return mockProducts[index]
-        }
-        throw new Error('Product not found')
+        // Important: do not fallback to mock when Supabase is configured.
+        // Let offline service decide queue/retry behavior.
+        throw error
       }
     }
 
@@ -363,13 +354,9 @@ export const productService = {
         return true
       } catch (error) {
         console.error('Supabase error:', error)
-        // Fallback to mock
-        const index = mockProducts.findIndex(p => p.id === id)
-        if (index >= 0) {
-          mockProducts.splice(index, 1)
-          return true
-        }
-        throw new Error('Product not found')
+        // Important: do not fallback to mock when Supabase is configured.
+        // Let offline service decide queue/retry behavior.
+        throw error
       }
     }
 

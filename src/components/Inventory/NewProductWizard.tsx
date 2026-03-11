@@ -11,6 +11,8 @@ interface NewProductWizardProps {
   voiceEnabled: boolean
   speechAvailable: boolean
   onRegistered: (sessionItem: ScanSessionItem) => void
+  autoCloseOnRegistered?: boolean
+  compact?: boolean
 }
 
 declare global {
@@ -27,6 +29,8 @@ export function NewProductWizard({
   voiceEnabled,
   speechAvailable,
   onRegistered,
+  autoCloseOnRegistered = true,
+  compact = false,
 }: NewProductWizardProps) {
   const { t } = useSettingsStore()
   const { createProduct, addMovement } = useInventoryStore()
@@ -55,6 +59,17 @@ export function NewProductWizard({
       speak(t('inventoryNewPage.newProductWizard.voicePrompt'))
     }
   }, [open, voiceEnabled])
+
+  useEffect(() => {
+    if (!open) return
+    // Reset form when switching to another scanned code.
+    setName('')
+    setStock(1)
+    setPurchasePrice(0)
+    setSalePrice(0)
+    setSaving(false)
+    setListening(false)
+  }, [code, open])
 
   const handleDictate = (field: 'name') => {
     if (!speechAvailable || typeof window === 'undefined') return
@@ -114,7 +129,9 @@ export function NewProductWizard({
       }
 
       onRegistered(sessionItem)
-      onClose()
+      if (autoCloseOnRegistered) {
+        onClose()
+      }
     } finally {
       setSaving(false)
     }
@@ -140,14 +157,16 @@ export function NewProductWizard({
     <div
       role="form"
       onKeyDown={handleKeyDown}
-      className={`rounded-3xl bg-[var(--panel)] border border-[var(--border)] shadow-[var(--shadow)] p-6 space-y-5 transition-all ${
-        open ? 'opacity-100 translate-y-0' : 'pointer-events-none opacity-0 -translate-y-2'
-      }`}
+      className={`rounded-3xl bg-[linear-gradient(180deg,rgba(13,18,16,0.97)_0%,rgba(8,12,11,0.97)_100%)] border border-[var(--border)] shadow-[0_12px_28px_rgba(0,0,0,0.35)] transition-all max-h-full overflow-y-auto ${
+        compact ? 'p-3.5 space-y-2.5' : 'p-6 space-y-5'
+      } ${open ? 'opacity-100 translate-y-0' : 'pointer-events-none opacity-0 -translate-y-2'}`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--border)]/70 bg-[var(--panel-2)]/60 px-3 py-2">
         <div>
-          <h2 className="text-xl font-semibold text-[var(--text)]">{t('inventoryNewPage.newProductWizard.title')}</h2>
-          <p className="text-xs text-[var(--muted)] mt-1">
+          <h2 className={`${compact ? 'text-lg' : 'text-xl'} font-semibold text-[var(--text)]`}>
+            {t('inventoryNewPage.newProductWizard.title')}
+          </h2>
+          <p className="text-xs text-[var(--muted)] mt-0.5">
             {t('inventoryNewPage.newProductWizard.scannedCode')} <span className="font-mono text-[var(--text)]">{code}</span>
           </p>
         </div>
@@ -185,10 +204,12 @@ export function NewProductWizard({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-4 py-2.5 text-sm text-[var(--text)] placeholder-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
+            className={`w-full rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-4 ${
+              compact ? 'py-2' : 'py-2.5'
+            } text-sm text-[var(--text)] placeholder-[var(--muted)] focus:border-[var(--accent)] focus:outline-none`}
             placeholder={t('inventoryNewPage.newProductWizard.step1.placeholder')}
           />
-          {voiceEnabled && speechAvailable && (
+          {voiceEnabled && speechAvailable && !compact && (
             <p className="mt-1 text-[10px] text-[var(--muted)]">
               {listening
                 ? t('inventoryNewPage.newProductWizard.step1.listeningHint')
@@ -197,16 +218,17 @@ export function NewProductWizard({
           )}
       </div>
 
-      {/* Paso 2: Stock inicial */}
-      <div>
+      {/* Paso 2 + 3: Stock y Precios */}
+      <div className={`${compact ? 'grid grid-cols-1 md:grid-cols-[220px_1fr] gap-2.5 items-start' : 'space-y-3'}`}>
+        <div>
           <label className="block text-xs font-medium text-[var(--muted)] mb-1">
             {t('inventoryNewPage.newProductWizard.step2.label')}
           </label>
-          <div className="inline-flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-3 py-2">
+          <div className="inline-flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-2.5 py-1.5">
             <button
               type="button"
               onClick={() => setStock((s) => Math.max(1, s - 1))}
-              className="h-9 w-9 rounded-2xl bg-[var(--panel-2)] border border-[var(--border)] text-lg text-[var(--text)] hover:bg-[var(--panel)]"
+              className="h-8 w-8 rounded-xl bg-[var(--panel-2)] border border-[var(--border)] text-base text-[var(--text)] hover:bg-[var(--panel)]"
             >
               −
             </button>
@@ -227,24 +249,23 @@ export function NewProductWizard({
                 if (stock < 1) setStock(1)
               }}
               onFocus={(e) => e.target.select()}
-              className="w-16 bg-transparent text-center text-xl font-semibold text-[var(--accent)] focus:outline-none"
+              className="w-14 bg-transparent text-center text-lg font-semibold text-[var(--accent)] focus:outline-none"
             />
             <button
               type="button"
               onClick={() => setStock((s) => s + 1)}
-              className="h-9 w-9 rounded-2xl bg-[var(--panel-2)] border border-[var(--border)] text-lg text-[var(--text)] hover:bg-[var(--panel)]"
+              className="h-8 w-8 rounded-xl bg-[var(--panel-2)] border border-[var(--border)] text-base text-[var(--text)] hover:bg-[var(--panel)]"
             >
               +
             </button>
           </div>
-      </div>
+        </div>
 
-      {/* Paso 3: Precios */}
-      <div>
+        <div>
           <label className="block text-xs font-medium text-[var(--muted)] mb-2">
             {t('inventoryNewPage.newProductWizard.step3.label')}
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid grid-cols-2 ${compact ? 'gap-2' : 'gap-3'}`}>
             <div>
               <div className="text-[11px] text-[var(--muted)] mb-1">{t('inventoryNewPage.newProductWizard.step3.purchasePrice')}</div>
               <input
@@ -261,7 +282,9 @@ export function NewProductWizard({
                   const n = parseFloat(v)
                   if (!Number.isNaN(n) && n >= 0) setPurchasePrice(n)
                 }}
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-3 py-2 text-sm text-[var(--text)] placeholder-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
+                className={`w-full rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-3 ${
+                  compact ? 'py-1.5' : 'py-2'
+                } text-sm text-[var(--text)] placeholder-[var(--muted)] focus:border-[var(--accent)] focus:outline-none`}
                 placeholder="0.00"
               />
             </div>
@@ -281,7 +304,9 @@ export function NewProductWizard({
                   const n = parseFloat(v)
                   if (!Number.isNaN(n) && n >= 0) setSalePrice(n)
                 }}
-                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-3 py-2 text-sm text-[var(--text)] placeholder-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
+                className={`w-full rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-3 ${
+                  compact ? 'py-1.5' : 'py-2'
+                } text-sm text-[var(--text)] placeholder-[var(--muted)] focus:border-[var(--accent)] focus:outline-none`}
                 placeholder="0.00"
               />
             </div>
@@ -292,9 +317,10 @@ export function NewProductWizard({
               {margin != null ? `${margin}%` : '—'}
             </span>
           </div>
+        </div>
       </div>
 
-      <div className="flex justify-end gap-2 pt-2">
+      <div className={`flex justify-end gap-2 ${compact ? 'sticky bottom-0 -mx-3.5 mt-1 border-t border-[var(--border)] bg-[var(--panel)]/95 px-3.5 py-2 backdrop-blur-md' : 'pt-2'}`}>
         <LiquidButton variant="secondary" size="sm" onClick={onClose}>
           {t('inventoryNewPage.newProductWizard.cancel')}
         </LiquidButton>
@@ -314,4 +340,9 @@ export function NewProductWizard({
     </div>
   )
 }
+
+
+
+
+
 

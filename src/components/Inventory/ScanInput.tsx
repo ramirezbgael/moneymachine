@@ -71,7 +71,7 @@ export const ScanInput = forwardRef<ScanInputRef, ScanInputProps>(function ScanI
         type="text"
         disabled={disabled}
         defaultValue=""
-        className="w-full rounded-3xl border border-[var(--accent)]/50 bg-[var(--panel-2)] px-5 py-4 text-lg text-[var(--text)] placeholder-[var(--muted)] shadow-[0_0_0_1px_var(--accent)]/25 focus:outline-none focus:border-[var(--accent)] focus:shadow-[0_0_25px_var(--accent-glow)] transition-all"
+        className="w-full rounded-2xl border border-[var(--accent)]/50 bg-[var(--panel-2)] px-4 py-2.5 text-base text-[var(--text)] placeholder-[var(--muted)] shadow-[0_0_0_1px_var(--accent)]/20 focus:outline-none focus:border-[var(--accent)] focus:shadow-[0_0_16px_var(--accent-glow)] transition-all"
         placeholder={placeholder ?? defaultPlaceholder}
         autoComplete="off"
         autoCorrect="off"
@@ -83,4 +83,5 @@ export const ScanInput = forwardRef<ScanInputRef, ScanInputProps>(function ScanI
     </div>
   )
 })
+
 
