@@ -157,11 +157,11 @@ export function NewProductWizard({
     <div
       role="form"
       onKeyDown={handleKeyDown}
-      className={`rounded-3xl bg-[linear-gradient(180deg,rgba(13,18,16,0.97)_0%,rgba(8,12,11,0.97)_100%)] border border-[var(--border)] shadow-[0_12px_28px_rgba(0,0,0,0.35)] transition-all max-h-full overflow-y-auto ${
+      className={`rounded-3xl border border-[var(--border)] bg-[var(--panel)] shadow-[0_12px_28px_rgba(0,0,0,0.22)] transition-all max-h-full overflow-y-auto ${
         compact ? 'p-3.5 space-y-2.5' : 'p-6 space-y-5'
       } ${open ? 'opacity-100 translate-y-0' : 'pointer-events-none opacity-0 -translate-y-2'}`}
     >
-      <div className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--border)]/70 bg-[var(--panel-2)]/60 px-3 py-2">
+      <div className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-3 py-2">
         <div>
           <h2 className={`${compact ? 'text-lg' : 'text-xl'} font-semibold text-[var(--text)]`}>
             {t('inventoryNewPage.newProductWizard.title')}
@@ -182,17 +182,17 @@ export function NewProductWizard({
       {/* Paso 1: Nombre */}
       <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="block text-xs font-medium text-white/70">
+            <label className="block text-xs font-medium text-[var(--muted)]">
               {t('inventoryNewPage.newProductWizard.step1.label')}
             </label>
             {voiceEnabled && speechAvailable && (
               <button
                 type="button"
                 onClick={() => handleDictate('name')}
-                className={`text-[11px] px-2 py-1 rounded-xl border text-white/70 transition-all ${
+                className={`text-[11px] px-2 py-1 rounded-xl border transition-all ${
                   listening
-                    ? 'border-[rgba(0,255,136,0.8)] bg-[rgba(0,255,136,0.16)] text-[#00ff88] shadow-[0_0_14px_rgba(0,255,136,0.45)]'
-                    : 'border-white/15 hover:border-[rgba(0,255,136,0.6)] hover:text-[#00ff88]'
+                    ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)] shadow-[0_0_14px_var(--accent-glow)]'
+                    : 'border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
                 }`}
               >
                 <span className="mr-1">🎤</span>
@@ -320,7 +320,7 @@ export function NewProductWizard({
         </div>
       </div>
 
-      <div className={`flex justify-end gap-2 ${compact ? 'sticky bottom-0 -mx-3.5 mt-1 border-t border-[var(--border)] bg-[var(--panel)]/95 px-3.5 py-2 backdrop-blur-md' : 'pt-2'}`}>
+      <div className={`flex justify-end gap-2 ${compact ? 'sticky bottom-0 -mx-3.5 mt-1 border-t border-[var(--border)] bg-[var(--panel)] px-3.5 py-2' : 'pt-2'}`}>
         <LiquidButton variant="secondary" size="sm" onClick={onClose}>
           {t('inventoryNewPage.newProductWizard.cancel')}
         </LiquidButton>

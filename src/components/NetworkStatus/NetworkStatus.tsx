@@ -7,6 +7,7 @@ export function NetworkStatus() {
   const [pendingOps, setPendingOps] = useState(0)
   const [isSyncing, setIsSyncing] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+  const toastAnchorClass = 'fixed right-3 top-[calc(env(safe-area-inset-top)+72px)] md:right-4 md:top-4 z-50'
 
   useEffect(() => {
     // Listen to network changes
@@ -46,34 +47,24 @@ export function NetworkStatus() {
     }
   }
 
-  const handleForceSync = async () => {
-    try {
-      setIsSyncing(true)
-      await syncQueueService.forceSyncNow()
-      await updatePendingCount()
-    } catch (error) {
-      console.error('Sync failed:', error)
-    } finally {
-      setIsSyncing(false)
-    }
-  }
-
   if (!isOnline && pendingOps === 0) {
     // Show minimal offline indicator
     return (
-      <div 
-        className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--panel)] border border-[var(--border)] shadow-lg cursor-pointer"
-        onClick={() => setShowDetails(!showDetails)}
-      >
-        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-        <span className="text-xs text-[var(--muted)]">Sin conexión</span>
+      <div className={toastAnchorClass}>
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--panel)] border border-[var(--border)] shadow-lg cursor-pointer"
+          onClick={() => setShowDetails(!showDetails)}
+        >
+          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+          <span className="text-xs text-[var(--muted)]">Sin conexión</span>
+        </div>
       </div>
     )
   }
 
   if (!isOnline || pendingOps > 0) {
     return (
-      <div className="fixed top-4 right-4 z-50">
+      <div className={toastAnchorClass}>
         <div 
           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--panel)] border border-[var(--border)] shadow-lg cursor-pointer"
           onClick={() => setShowDetails(!showDetails)}
@@ -113,21 +104,13 @@ export function NetworkStatus() {
                 </div>
               )}
 
-              {isOnline && pendingOps > 0 && !isSyncing && (
-                <button
-                  onClick={handleForceSync}
-                  className="w-full mt-3 px-3 py-2 rounded-lg bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] font-medium transition-colors"
-                >
-                  Sincronizar ahora
-                </button>
-              )}
             </div>
 
             <div className="mt-3 pt-3 border-t border-[var(--border)]">
               <p className="text-[10px] text-[var(--muted)]">
                 {isOnline 
-                  ? 'Los cambios se sincronizarán automáticamente'
-                  : 'Los cambios se guardarán localmente y se sincronizarán cuando vuelva la conexión'
+                  ? 'Los cambios se sincronizan automáticamente. Si falla por conexión, reintenta 5x5 cada minuto.'
+                  : 'Los cambios se guardan localmente y subirán en cuanto vuelva la conexión.'
                 }
               </p>
             </div>
@@ -139,12 +122,14 @@ export function NetworkStatus() {
 
   // Online with no pending operations - show minimal green indicator
   return (
-    <div 
-      className="fixed top-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--panel)] border border-[var(--border)] shadow-lg cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
-      onClick={() => setShowDetails(!showDetails)}
-    >
-      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-      <span className="text-xs text-[var(--muted)]">En línea</span>
+    <div className={toastAnchorClass}>
+      <div
+        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--panel)] border border-[var(--border)] shadow-lg cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+        onClick={() => setShowDetails(!showDetails)}
+      >
+        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+        <span className="text-xs text-[var(--muted)]">En línea</span>
+      </div>
     </div>
   )
 }

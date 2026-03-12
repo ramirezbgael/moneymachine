@@ -72,46 +72,6 @@ export function SyncStatusSettings() {
     }
   }
 
-  const handleForceSync = async () => {
-    if (!syncStatus.isOnline) {
-      setSyncMessage('❌ No hay conexión a internet')
-      setTimeout(() => setSyncMessage(''), 3000)
-      return
-    }
-
-    try {
-      setIsSyncing(true)
-      setSyncMessage('Enviando cambios...')
-
-      // Read fresh pending count at click-time to avoid stale disabled/label states.
-      const pendingNow = await syncQueueService.getPendingCount()
-      if (pendingNow === 0) {
-        setSyncMessage('ℹ️ No hay cambios pendientes por enviar')
-        setTimeout(() => setSyncMessage(''), 3000)
-        await loadSyncStatus()
-        return
-      }
-
-      const result = await syncQueueService.forceSyncNow()
-      const success = result?.success ?? 0
-      const failed = result?.failed ?? 0
-
-      if (failed > 0) {
-        setSyncMessage(`⚠️ Envío parcial: ${success} enviados, ${failed} pendientes`) 
-      } else {
-        setSyncMessage(`✅ Envío completado: ${success} cambios`) 
-      }
-      setTimeout(() => setSyncMessage(''), 3000)
-      await loadSyncStatus()
-    } catch (error) {
-      console.error('Sync error:', error)
-      setSyncMessage('❌ Error al sincronizar')
-      setTimeout(() => setSyncMessage(''), 3000)
-    } finally {
-      setIsSyncing(false)
-    }
-  }
-
   const handleRefreshFromServer = async () => {
     if (!syncStatus.isOnline) {
       setSyncMessage('❌ No hay conexión a internet')
@@ -265,21 +225,6 @@ export function SyncStatusSettings() {
       {/* Actions */}
       <div className="space-y-3">
         <button
-          onClick={handleForceSync}
-          disabled={!syncStatus.isOnline || isSyncing}
-          className="w-full rounded-xl bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 disabled:bg-[var(--panel)] disabled:opacity-50 disabled:cursor-not-allowed border border-[var(--accent)]/30 disabled:border-[var(--border)] px-4 py-3 flex items-center justify-center gap-3 text-[var(--accent)] disabled:text-[var(--muted)] font-medium transition-colors"
-        >
-          <FiRefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          <span>
-            {isSyncing 
-              ? 'Enviando cambios...' 
-              : syncStatus.pendingOperations === 0 
-                ? 'Verificar y enviar cambios locales'
-                : `Enviar cambios pendientes (${syncStatus.pendingOperations})`}
-          </span>
-        </button>
-
-        <button
           onClick={handleRefreshFromServer}
           disabled={!syncStatus.isOnline || isSyncing}
           className="w-full rounded-xl bg-[var(--panel)] hover:bg-[var(--panel-2)] disabled:opacity-50 disabled:cursor-not-allowed border border-[var(--border)] px-4 py-3 flex items-center justify-center gap-3 text-[var(--text)] font-medium transition-colors"
@@ -297,6 +242,7 @@ export function SyncStatusSettings() {
         <ul className="text-xs text-[var(--muted)] space-y-1">
           <li>• Todos tus cambios se guardan primero en tu dispositivo (copia local)</li>
           <li>• Si hay internet, los cambios se envían automáticamente al servidor</li>
+          <li>• Si falla por desconexión, se reintenta automáticamente en 5 series de 5 intentos (cada minuto)</li>
           <li>• Sin internet, puedes seguir trabajando normalmente</li>
           <li>• Forzar actualización descarga datos del servidor (pull), no envía cambios</li>
           <li>• Tus datos están siempre protegidos y nunca se pierden</li>

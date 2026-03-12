@@ -43,8 +43,30 @@ export const useSettingsStore = create((set, get) => {
     ticketIcon: initialSettings.ticketIcon || 'none',
     businessLogo: initialSettings.businessLogo || '',
     ticketPrintLogo: initialSettings.ticketPrintLogo !== false,
+    showFeaturedProducts: initialSettings.showFeaturedProducts !== false,
 
-    // Update theme
+    // Toggle featured products panel
+    setShowFeaturedProducts: (value) => {
+      set({ showFeaturedProducts: value })
+      const currentState = get()
+      const settingsToSave = {
+        theme: currentState.theme,
+        language: currentState.language,
+        currency: currentState.currency,
+        taxRate: currentState.taxRate,
+        printerName: currentState.printerName,
+        printerWidth: currentState.printerWidth,
+        autoPrint: currentState.autoPrint,
+        ticketTemplate: currentState.ticketTemplate,
+        ticketFooterLines: currentState.ticketFooterLines,
+        businessName: currentState.businessName,
+        ticketIcon: currentState.ticketIcon,
+        businessLogo: currentState.businessLogo,
+        ticketPrintLogo: currentState.ticketPrintLogo,
+        showFeaturedProducts: value
+      }
+      saveSettings(settingsToSave)
+    },
     setTheme: (theme) => {
       set({ theme })
       const currentState = get()

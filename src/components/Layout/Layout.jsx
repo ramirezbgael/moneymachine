@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { FaCashRegister, FaBox, FaClock, FaChartBar, FaCog } from 'react-icons/fa'
+import { FaCashRegister, FaBox, FaClock, FaChartBar, FaCog, FaUserClock } from 'react-icons/fa'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useTenantStore } from '../../store/tenantStore'
 import { useAuthStore } from '../../store/authStore'
@@ -22,6 +22,7 @@ const Layout = () => {
   const [setupError, setSetupError] = useState('')
 
   const user = useAuthStore(state => state.user)
+  const subscriptionsEnabled = useTenantStore(state => state.featureFlags?.subscriptions)
   const { currentTenantId, currentTenant, loading: tenantLoading, error: tenantError, loadTenants } = useTenantStore()
   const signOut = useAuthStore(state => state.signOut)
 
@@ -101,13 +102,24 @@ const Layout = () => {
     { path: '/', label: t('nav.currentSale'), icon: FaCashRegister, id: 'sale' },
     { path: '/inventory', label: t('nav.inventory'), icon: FaBox, id: 'inventory' },
     { path: '/pending', label: t('nav.pending'), icon: FaClock, id: 'pending' },
-    { path: '/reports', label: t('nav.reports'), icon: FaChartBar, id: 'reports' },
+    { path: '/finanzas', label: 'Finanzas', icon: FaChartBar, id: 'finance' },
     { path: '/configuracion', label: t('nav.settings'), icon: FaCog, id: 'settings' }
   ]
+
+  if (subscriptionsEnabled) {
+    menuItems.splice(3, 0, {
+      path: '/subscriptions',
+      label: t('nav.subscriptions'),
+      icon: FaUserClock,
+      id: 'subscriptions'
+    })
+  }
 
   const getActiveId = () => {
     if (location.pathname.startsWith('/inventario')) return 'inventory'
     if (location.pathname.startsWith('/pending')) return 'pending'
+    if (location.pathname.startsWith('/subscriptions')) return 'subscriptions'
+    if (location.pathname.startsWith('/finanzas') || location.pathname.startsWith('/reports')) return 'finance'
     if (location.pathname === '/') return 'sale'
     // Check for exact match first, then startsWith
     const exactMatch = menuItems.find(item => location.pathname === item.path)
@@ -119,17 +131,31 @@ const Layout = () => {
   }
 
   const activeId = getActiveId()
+  const allowMobileScroll =
+    location.pathname.startsWith('/inventory') ||
+    location.pathname.startsWith('/inventario') ||
+    location.pathname.startsWith('/configuracion')
+
+  const isMobileViewport = () => window.matchMedia('(max-width: 768px)').matches
 
   const handleNavigation = (path) => {
     navigate(path)
     setMobileSidebarOpen(false)
   }
 
+  const handleSidebarToggle = () => {
+    if (isMobileViewport()) {
+      setMobileSidebarOpen(false)
+      return
+    }
+    setSidebarCollapsed(!sidebarCollapsed)
+  }
+
   return (
-    <div className="layout">
+    <div className={`layout ${mobileSidebarOpen ? 'layout--mobile-nav-open' : ''}`}>
       {/* Sidebar - Zone 1 */}
       <aside
-        className={`layout__sidebar ${sidebarCollapsed ? 'layout__sidebar--collapsed' : ''} ${
+        className={`layout__sidebar ${sidebarCollapsed && !mobileSidebarOpen ? 'layout__sidebar--collapsed' : ''} ${
           mobileSidebarOpen ? 'layout__sidebar--mobile-open' : ''
         }`}
       >
@@ -137,7 +163,7 @@ const Layout = () => {
           <div className="sidebar__logo">Moneymachine</div>
           <button
             className="sidebar__toggle"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onClick={handleSidebarToggle}
             aria-label={t('layout.toggleSidebar')}
           >
             {sidebarCollapsed ? '→' : '←'}
@@ -181,18 +207,20 @@ const Layout = () => {
         </div>
       </aside>
 
+      {mobileSidebarOpen && <button type="button" className="layout__backdrop md:hidden" onClick={() => setMobileSidebarOpen(false)} aria-label="Cerrar menú" />}
+
       {/* Main Content - Zone 2 */}
-      <main className="layout__main">
+      <main className={`layout__main ${allowMobileScroll ? 'layout__main--mobile-scroll' : ''}`}>
         <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-white/10">
           <button
             type="button"
             onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="text-white/80"
+            className="layout__mobile-menu-btn"
             aria-label="Abrir menú"
           >
             ☰
           </button>
-          <div className="text-sm text-white/70">{currentTenant?.name || 'Moneymachine'}</div>
+          <div className="text-sm text-[var(--text)]/70">{currentTenant?.name || 'Moneymachine'}</div>
         </div>
         <Outlet />
       </main>

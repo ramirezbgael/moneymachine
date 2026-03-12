@@ -25,11 +25,11 @@
 .payment-modal__total-amount {
   font-size: 48px;
   font-weight: 700;
-  color: #6EEB6F;
+  color: var(--accent-primary);
   line-height: 1;
   margin-bottom: 12px;
   letter-spacing: -0.02em;
-  text-shadow: 0 0 20px rgba(110, 235, 111, 0.4);
+  text-shadow: 0 0 20px var(--accent-glow);
 }
 
 .payment-modal__items-count {
@@ -105,20 +105,19 @@
   transform: translateY(-1px);
 }
 
-/* Estética Cobrar: verde oscuro + borde/glow verde lima + texto verde lima */
 .payment-modal__option--active {
-  background: #6EEB6F;
-  border: 1px solid #6EEB6F;
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
   color: #000;
   font-weight: 600;
-  box-shadow: 0 0 0 1px #6EEB6F, 0 0 14px rgba(110, 235, 111, 0.35);
+  box-shadow: 0 0 0 1px var(--accent-primary), 0 0 14px var(--accent-glow);
 }
 
 .payment-modal__option--active:hover {
-  background: #84ff99;
-  border-color: #84ff99;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
   color: #000;
-  box-shadow: 0 0 0 1px #84ff99, 0 0 18px rgba(110, 235, 111, 0.45);
+  box-shadow: 0 0 0 1px var(--accent-hover), 0 0 18px var(--accent-glow);
 }
 
 /* Footer buttons: máximo contraste en el modal de pago */
@@ -141,21 +140,20 @@
   color: #fff;
 }
 
-/* Estética Cobrar: pill, verde oscuro, borde/glow verde lima, texto verde lima */
 .payment-modal .modal__btn--primary {
   font-weight: 600;
   border-radius: 9999px;
-  background: #6EEB6F;
-  border: 1px solid #6EEB6F;
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
   color: #000;
-  box-shadow: 0 0 0 1px #6EEB6F, 0 0 14px rgba(110, 235, 111, 0.35);
+  box-shadow: 0 0 0 1px var(--accent-primary), 0 0 14px var(--accent-glow);
 }
 
 .payment-modal .modal__btn--primary:hover:not(:disabled) {
-  background: #84ff99;
-  border-color: #84ff99;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
   color: #000;
-  box-shadow: 0 0 0 1px #84ff99, 0 0 18px rgba(110, 235, 111, 0.45);
+  box-shadow: 0 0 0 1px var(--accent-hover), 0 0 18px var(--accent-glow);
 }
 
 .payment-modal .modal__btn--primary .payment-modal__hotkey {
@@ -244,4 +242,71 @@
   cursor: pointer;
   font-size: 14px;
   color: var(--text-primary);
+}
+
+/* Light mode contrast fixes */
+:root[data-theme='light'] .payment-modal__total {
+  background: rgba(15, 23, 42, 0.04);
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+:root[data-theme='light'] .payment-modal__total-label,
+:root[data-theme='light'] .payment-modal__items-count,
+:root[data-theme='light'] .payment-modal__label,
+:root[data-theme='light'] .payment-modal__hint {
+  color: var(--text-primary);
+}
+
+:root[data-theme='light'] .payment-modal__section--focused {
+  background: color-mix(in srgb, var(--accent-primary) 8%, white);
+  border-color: color-mix(in srgb, var(--accent-primary) 28%, rgba(15, 23, 42, 0.12));
+}
+
+:root[data-theme='light'] .payment-modal__option {
+  background: rgba(15, 23, 42, 0.04);
+  border-color: rgba(15, 23, 42, 0.12);
+  color: var(--text-primary);
+}
+
+:root[data-theme='light'] .payment-modal__option:hover {
+  background: rgba(15, 23, 42, 0.08);
+  border-color: rgba(15, 23, 42, 0.2);
+  color: var(--text-primary);
+}
+
+:root[data-theme='light'] .payment-modal .modal__footer {
+  background: rgba(15, 23, 42, 0.03);
+  border-top-color: rgba(15, 23, 42, 0.12);
+}
+
+:root[data-theme='light'] .payment-modal .modal__btn--secondary {
+  background: rgba(15, 23, 42, 0.06);
+  border-color: rgba(15, 23, 42, 0.18);
+  color: var(--text-primary);
+}
+
+:root[data-theme='light'] .payment-modal .modal__btn--secondary:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.1);
+  border-color: rgba(15, 23, 42, 0.26);
+  color: var(--text-primary);
+}
+
+:root[data-theme='light'] .payment-modal__input {
+  background: rgba(15, 23, 42, 0.03);
+  border-color: rgba(15, 23, 42, 0.16);
+  color: var(--text-primary);
+}
+
+:root[data-theme='light'] .payment-modal__input:focus {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+:root[data-theme='light'] .payment-modal__searching {
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--text-secondary);
+}
+
+:root[data-theme='light'] .payment-modal__found {
+  background: color-mix(in srgb, var(--accent-primary) 10%, white);
+  color: color-mix(in srgb, var(--accent-primary) 70%, #0f172a);
 }

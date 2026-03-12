@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FaShoppingCart, FaBarcode, FaFileInvoice } from 'react-icons/fa'
+import { FaShoppingCart, FaBarcode, FaFileInvoice, FaBoxes, FaClock, FaDollarSign, FaArrowUp, FaArrowDown } from 'react-icons/fa'
 import { useInventoryStore } from '../../store/inventoryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { InventoryRow } from '../../components/Inventory/InventoryRow'
@@ -26,6 +26,10 @@ export function InventarioPage() {
   const [toastMessage, setToastMessage] = useState('')
   const [toastTimer, setToastTimer] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [sortState, setSortState] = useState<{ key: 'alpha' | 'time' | 'price' | null; direction: 'asc' | 'desc' | null }>({
+    key: null,
+    direction: null
+  })
 
   // Don't auto-load products on mount - wait for user action
   const handleLoadAll = () => {
@@ -111,15 +115,57 @@ export function InventarioPage() {
     return true
   })
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const sortedFiltered = [...filtered].sort((a, b) => {
+    if (!sortState.key || !sortState.direction) return 0
+
+    let aValue: number | string = 0
+    let bValue: number | string = 0
+
+    if (sortState.key === 'alpha') {
+      aValue = (a.name || '').toLowerCase()
+      bValue = (b.name || '').toLowerCase()
+    }
+
+    if (sortState.key === 'price') {
+      aValue = Number(a.price || 0)
+      bValue = Number(b.price || 0)
+    }
+
+    if (sortState.key === 'time') {
+      const aDate = a.updated_at || a.created_at || a.last_sale_date || a.lastSaleDate || null
+      const bDate = b.updated_at || b.created_at || b.last_sale_date || b.lastSaleDate || null
+      aValue = aDate ? new Date(aDate).getTime() : 0
+      bValue = bDate ? new Date(bDate).getTime() : 0
+    }
+
+    if (aValue < bValue) return sortState.direction === 'asc' ? -1 : 1
+    if (aValue > bValue) return sortState.direction === 'asc' ? 1 : -1
+    return 0
+  })
+
+  const cycleSort = (key: 'alpha' | 'time' | 'price') => {
+    setSortState((prev) => {
+      if (prev.key !== key) {
+        return { key, direction: 'asc' }
+      }
+
+      if (prev.direction === 'asc') {
+        return { key, direction: 'desc' }
+      }
+
+      return { key: null, direction: null }
+    })
+  }
+
+  const totalPages = Math.max(1, Math.ceil(sortedFiltered.length / ITEMS_PER_PAGE))
   const pageStartIndex = (currentPage - 1) * ITEMS_PER_PAGE
-  const paginatedFiltered = filtered.slice(pageStartIndex, pageStartIndex + ITEMS_PER_PAGE)
-  const showingFrom = filtered.length === 0 ? 0 : pageStartIndex + 1
-  const showingTo = Math.min(pageStartIndex + ITEMS_PER_PAGE, filtered.length)
+  const paginatedFiltered = sortedFiltered.slice(pageStartIndex, pageStartIndex + ITEMS_PER_PAGE)
+  const showingFrom = sortedFiltered.length === 0 ? 0 : pageStartIndex + 1
+  const showingTo = Math.min(pageStartIndex + ITEMS_PER_PAGE, sortedFiltered.length)
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, filter, viewMode])
+  }, [search, filter, viewMode, sortState.key, sortState.direction])
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -135,7 +181,7 @@ export function InventarioPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] p-6 flex flex-col">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] p-4 md:p-6 pb-32 md:pb-6 flex flex-col">
       <div className="max-w-7xl mx-auto flex-1 flex flex-col">
         <h1 className="text-2xl font-bold text-[var(--text)] mb-4">Inventario</h1>
 
@@ -147,7 +193,7 @@ export function InventarioPage() {
 
         {viewMode === 'empty' ? (
           // Empty state: search-first dashboard
-          <div className="max-w-3xl mx-auto flex-1 flex flex-col justify-center">
+          <div className="max-w-3xl mx-auto flex-1 flex flex-col justify-start md:justify-center pt-2 md:pt-0 pb-10 md:pb-0">
             {/* Large search input */}
             <div className="mb-6">
               <div className="relative">
@@ -279,42 +325,42 @@ export function InventarioPage() {
             </div>
 
             {/* Action cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-3 md:grid-cols-3 gap-2 md:gap-4 mb-6">
               <button
                 onClick={() => setShowAddProduct(true)}
-                className="group relative rounded-2xl bg-[var(--panel)]/40 shadow-lg shadow-black/5 p-6 text-left transition-all hover:bg-[var(--panel)]/70 hover:shadow-2xl hover:shadow-[var(--accent)]/15 hover:scale-[1.02]"
+                className="group relative rounded-2xl bg-[var(--panel)]/40 shadow-lg shadow-black/5 p-3 md:p-6 text-center md:text-left transition-all hover:bg-[var(--panel)]/70 hover:shadow-2xl hover:shadow-[var(--accent)]/15 hover:scale-[1.02] min-h-[96px] md:min-h-0 aspect-square md:aspect-auto flex flex-col justify-center"
               >
-                <div className="text-4xl mb-3">📦</div>
-                <h3 className="text-lg font-bold text-[var(--text)] mb-2 group-hover:text-[var(--accent)] transition-colors">
+                <div className="text-2xl md:text-4xl mb-1 md:mb-3">📦</div>
+                <h3 className="text-xs md:text-lg font-bold text-[var(--text)] mb-0 md:mb-2 group-hover:text-[var(--accent)] transition-colors leading-tight">
                   Agregar producto
                 </h3>
-                <p className="text-sm text-[var(--muted)]">
+                <p className="hidden md:block text-sm text-[var(--muted)]">
                   Registra un nuevo producto en el inventario
                 </p>
               </button>
 
               <button
                 onClick={() => setShowImportModal(true)}
-                className="group relative rounded-2xl bg-[var(--panel)]/40 shadow-lg shadow-black/5 p-6 text-left transition-all hover:bg-[var(--panel)]/70 hover:shadow-2xl hover:shadow-[var(--accent)]/15 hover:scale-[1.02]"
+                className="group relative rounded-2xl bg-[var(--panel)]/40 shadow-lg shadow-black/5 p-3 md:p-6 text-center md:text-left transition-all hover:bg-[var(--panel)]/70 hover:shadow-2xl hover:shadow-[var(--accent)]/15 hover:scale-[1.02] min-h-[96px] md:min-h-0 aspect-square md:aspect-auto flex flex-col justify-center"
               >
-                <div className="text-4xl mb-3">📄</div>
-                <h3 className="text-lg font-bold text-[var(--text)] mb-2 group-hover:text-[var(--accent)] transition-colors">
+                <div className="text-2xl md:text-4xl mb-1 md:mb-3">📄</div>
+                <h3 className="text-xs md:text-lg font-bold text-[var(--text)] mb-0 md:mb-2 group-hover:text-[var(--accent)] transition-colors leading-tight">
                   Importar factura
                 </h3>
-                <p className="text-sm text-[var(--muted)]">
+                <p className="hidden md:block text-sm text-[var(--muted)]">
                   Carga masiva desde archivo o factura
                 </p>
               </button>
 
               <button
                 onClick={handleLoadAll}
-                className="group relative rounded-2xl bg-[var(--panel)]/40 shadow-lg shadow-black/5 p-6 text-left transition-all hover:bg-[var(--panel)]/70 hover:shadow-2xl hover:shadow-[var(--accent)]/15 hover:scale-[1.02]"
+                className="group relative rounded-2xl bg-[var(--panel)]/40 shadow-lg shadow-black/5 p-3 md:p-6 text-center md:text-left transition-all hover:bg-[var(--panel)]/70 hover:shadow-2xl hover:shadow-[var(--accent)]/15 hover:scale-[1.02] min-h-[96px] md:min-h-0 aspect-square md:aspect-auto flex flex-col justify-center"
               >
-                <div className="text-4xl mb-3">📋</div>
-                <h3 className="text-lg font-bold text-[var(--text)] mb-2 group-hover:text-[var(--accent)] transition-colors">
+                <div className="text-2xl md:text-4xl mb-1 md:mb-3">📋</div>
+                <h3 className="text-xs md:text-lg font-bold text-[var(--text)] mb-0 md:mb-2 group-hover:text-[var(--accent)] transition-colors leading-tight">
                   Ver todos los productos
                 </h3>
-                <p className="text-sm text-[var(--muted)]">
+                <p className="hidden md:block text-sm text-[var(--muted)]">
                   Explorar el inventario completo
                 </p>
               </button>
@@ -328,25 +374,26 @@ export function InventarioPage() {
             </div>
 
             {/* Secondary actions */}
-            <div className="flex flex-wrap items-center justify-center gap-4 pt-6 pb-4 border-t border-[var(--border)]/30">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 pt-6 pb-8 md:pb-4 border-t border-[var(--border)]/30">
               <button
                 onClick={() => navigate('/inventory/pedidos')}
-                className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
+                className="flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--panel)]/45 px-3 py-2.5 text-sm text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/40 transition-colors"
               >
                 <FaShoppingCart className="w-4 h-4" />
                 Ver pedidos
               </button>
               <button
                 onClick={() => setShowBarcodeModal(true)}
-                className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
+                className="flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--panel)]/45 px-3 py-2.5 text-sm text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/40 transition-colors"
               >
                 <FaBarcode className="w-4 h-4" />
                 Imprimir códigos de barras
               </button>
               <button
                 onClick={() => navigate('/inventario/nuevo')}
-                className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
+                className="flex items-center justify-center gap-2 rounded-xl border border-[var(--accent)]/35 bg-[var(--accent)]/10 px-3 py-2.5 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/15 transition-colors"
               >
+                <FaBoxes className="w-4 h-4" />
                 Registro masivo
               </button>
             </div>
@@ -380,6 +427,50 @@ export function InventarioPage() {
                 </nav>
               </div>
               <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 lg:justify-end lg:overflow-x-auto">
+                <div className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)]/40 bg-[var(--panel)]/55 p-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => cycleSort('alpha')}
+                    className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
+                      sortState.key === 'alpha'
+                        ? 'bg-[var(--accent-soft)]/80 text-[var(--accent)]'
+                        : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel)]/50'
+                    }`}
+                    title="Orden alfabético"
+                  >
+                    <span>A</span>
+                    {sortState.key === 'alpha' && sortState.direction === 'asc' ? <FaArrowUp className="w-3 h-3" /> : null}
+                    {sortState.key === 'alpha' && sortState.direction === 'desc' ? <FaArrowDown className="w-3 h-3" /> : null}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cycleSort('time')}
+                    className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
+                      sortState.key === 'time'
+                        ? 'bg-[var(--accent-soft)]/80 text-[var(--accent)]'
+                        : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel)]/50'
+                    }`}
+                    title="Orden por fecha"
+                  >
+                    <FaClock className="w-3 h-3" />
+                    {sortState.key === 'time' && sortState.direction === 'asc' ? <FaArrowUp className="w-3 h-3" /> : null}
+                    {sortState.key === 'time' && sortState.direction === 'desc' ? <FaArrowDown className="w-3 h-3" /> : null}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cycleSort('price')}
+                    className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
+                      sortState.key === 'price'
+                        ? 'bg-[var(--accent-soft)]/80 text-[var(--accent)]'
+                        : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel)]/50'
+                    }`}
+                    title="Orden por precio"
+                  >
+                    <FaDollarSign className="w-3 h-3" />
+                    {sortState.key === 'price' && sortState.direction === 'asc' ? <FaArrowUp className="w-3 h-3" /> : null}
+                    {sortState.key === 'price' && sortState.direction === 'desc' ? <FaArrowDown className="w-3 h-3" /> : null}
+                  </button>
+                </div>
                 <input
                   type="text"
                   placeholder="Buscar por nombre o código..."
@@ -446,11 +537,11 @@ export function InventarioPage() {
               </div>
             )}
 
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 py-2">
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-3 py-2 pb-8 md:pb-2">
               <p className="text-xs text-[var(--muted)]">
-                Mostrando {showingFrom}-{showingTo} de {filtered.length} productos
+                Mostrando {showingFrom}-{showingTo} de {sortedFiltered.length} productos
               </p>
-              {filtered.length > ITEMS_PER_PAGE && (
+              {sortedFiltered.length > ITEMS_PER_PAGE && (
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
@@ -487,8 +578,9 @@ export function InventarioPage() {
               <button
                 type="button"
                 onClick={() => navigate('/inventario/nuevo')}
-                className="text-xs text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg border border-[var(--accent)]/35 bg-[var(--accent)]/10 px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/15 transition-colors"
               >
+                <FaBoxes className="w-3 h-3" />
                 Inventario nuevo (registro masivo)
               </button>
             </div>

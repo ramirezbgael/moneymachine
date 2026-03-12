@@ -9,7 +9,7 @@ import './FloatingBar.css'
  * Fixed at bottom, always visible
  * F2 hotkey for checkout
  */
-const FloatingBar = ({ onCheckout }) => {
+const FloatingBar = ({ onCheckout, onSavePending, savingPending = false }) => {
   const t = useSettingsStore(state => state.t)
   const getTotals = useSaleStore(state => state.getTotals)
   const setDiscount = useSaleStore(state => state.setDiscount)
@@ -127,17 +127,29 @@ const FloatingBar = ({ onCheckout }) => {
           </div>
         </div>
 
-        <button
-          className="floating-bar__checkout-btn"
-          disabled={!hasItems}
-          onClick={() => {
-            playRegisterOpen()
-            onCheckout()
-          }}
-        >
-          {t('currentSale.checkout')}
-          <span className="floating-bar__hotkey">[F2]</span>
-        </button>
+        <div className="floating-bar__actions">
+          {hasItems && onSavePending && (
+            <button
+              className="floating-bar__pending-btn-mobile"
+              disabled={savingPending}
+              onClick={onSavePending}
+            >
+              {savingPending ? t('currentSale.savingPending') : t('currentSale.savePending')}
+            </button>
+          )}
+
+          <button
+            className="floating-bar__checkout-btn"
+            disabled={!hasItems}
+            onClick={() => {
+              playRegisterOpen()
+              onCheckout()
+            }}
+          >
+            {t('currentSale.checkout')}
+            <span className="floating-bar__hotkey">[F2]</span>
+          </button>
+        </div>
       </div>
     </div>
   )

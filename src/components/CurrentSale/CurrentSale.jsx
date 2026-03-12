@@ -1,18 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { FaFileInvoice } from 'react-icons/fa'
 import ProductSearch from '../ProductSearch/ProductSearch'
 import ItemsList from '../ItemsList/ItemsList'
 import FloatingBar from '../FloatingBar/FloatingBar'
 import PaymentModalMVP from '../PaymentModal/PaymentModalMVP'
 import PrintModal from '../PrintModal/PrintModal'
 import QuickAddProductModal from '../QuickAddProductModal/QuickAddProductModal'
-import QuotationTicketModal from '../QuotationTicketModal/QuotationTicketModal'
+import FeaturedProducts from '../FeaturedProducts/FeaturedProducts'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useSaleStore } from '../../store/saleStore'
 import { useAuthStore } from '../../store/authStore'
 import { processSale } from '../../services/saleService'
-import { quotationService } from '../../services/quotationService'
 import './CurrentSale.css'
 
 /**
@@ -20,22 +17,17 @@ import './CurrentSale.css'
  * Single screen layout optimized for keyboard and barcode scanner
  */
 const CurrentSale = () => {
-  const navigate = useNavigate()
   const t = useSettingsStore(state => state.t)
   const language = useSettingsStore(state => state.language)
+  const showFeaturedProducts = useSettingsStore(state => state.showFeaturedProducts)
   const { items, getTotals, clearSale } = useSaleStore()
   const { user } = useAuthStore()
   
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showPrintModal, setShowPrintModal] = useState(false)
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
-  const [showQuotationTicket, setShowQuotationTicket] = useState(false)
-  const [quotationCode, setQuotationCode] = useState(null)
-  const [quotationItems, setQuotationItems] = useState([])
-  const [quotationTotals, setQuotationTotals] = useState({})
   const [processedSale, setProcessedSale] = useState(null)
   const [currentDateTime, setCurrentDateTime] = useState(new Date())
-  const [savingQuotation, setSavingQuotation] = useState(false)
   const [savingPending, setSavingPending] = useState(false)
 
   // Update date/time every minute
@@ -73,61 +65,6 @@ const CurrentSale = () => {
     setShowQuickAddModal(false)
   }
 
-  const handleSaveAsQuotation = async () => {
-    if (items.length === 0) {
-      alert(t('currentSale.empty'))
-      return
-    }
-
-    setSavingQuotation(true)
-    try {
-      const totals = getTotals()
-      const { subtotal, discountAmount, subtotalAfterDiscount, taxRate, taxAmount, total } = totals
-      
-      // Save items and totals before clearing
-      setQuotationItems([...items])
-      setQuotationTotals(totals)
-      
-      const quotation = await quotationService.createQuotation({
-        items,
-        subtotal,
-        discount: discountAmount,
-        subtotalAfterDiscount,
-        taxRate,
-        taxAmount,
-        total,
-        userId: user?.id || null
-      })
-
-      // Show quotation ticket modal with QR code and items
-      setQuotationCode(quotation.quotation_code)
-      setShowQuotationTicket(true)
-      
-      // Clear sale after showing ticket
-      clearSale()
-    } catch (error) {
-      console.error('Error saving quotation:', error)
-      alert('Error saving quotation: ' + error.message)
-    } finally {
-      setSavingQuotation(false)
-    }
-  }
-
-  const handleQuotationTicketClose = () => {
-    setShowQuotationTicket(false)
-    setQuotationCode(null)
-    setQuotationItems([])
-    setQuotationTotals({})
-    
-    // Refocus search input for next sale
-    setTimeout(() => {
-      const searchInput = document.querySelector('.product-search__input')
-      if (searchInput) {
-        searchInput.focus()
-      }
-    }, 100)
-  }
-
   const handleSaveAsPending = useCallback(async () => {
     if (items.length === 0) {
       alert(t('currentSale.empty'))
@@ -162,7 +99,7 @@ const CurrentSale = () => {
   // F3: Guardar como pendiente (ventas pendientes)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'F3' && items.length > 0 && !savingPending && !savingQuotation) {
+      if (e.key === 'F3' && items.length > 0 && !savingPending) {
         const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)
         if (!inInput) {
           e.preventDefault()
@@ -172,7 +109,7 @@ const CurrentSale = () => {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [items.length, savingPending, savingQuotation, handleSaveAsPending])
+  }, [items.length, savingPending, handleSaveAsPending])
 
   const formatDateTime = (date) => {
     // Map language codes to locale strings
@@ -214,15 +151,6 @@ const CurrentSale = () => {
                 {savingPending ? t('currentSale.savingPending') : t('currentSale.savePending')}
                 <span className="current-sale__hotkey">[F3]</span>
               </button>
-              <button
-                className="current-sale__pending-btn"
-                onClick={handleSaveAsQuotation}
-                disabled={savingQuotation}
-                title={t('currentSale.saveQuotation')}
-              >
-                <FaFileInvoice />
-                {savingQuotation ? t('currentSale.savingQuotation') : t('currentSale.saveQuotation')}
-              </button>
             </div>
           )}
         </div>
@@ -233,13 +161,20 @@ const CurrentSale = () => {
         <ProductSearch />
       </div>
 
+      {/* Featured Products strip */}
+      {showFeaturedProducts && <FeaturedProducts />}
+
       {/* Items List */}
       <div className="current-sale__items">
         <ItemsList />
       </div>
 
       {/* Floating Bar - Fixed Bottom */}
-      <FloatingBar onCheckout={() => setShowPaymentModal(true)} />
+      <FloatingBar
+        onCheckout={() => setShowPaymentModal(true)}
+        onSavePending={handleSaveAsPending}
+        savingPending={savingPending}
+      />
 
       {/* Payment modal */}
       {showPaymentModal && (
@@ -267,16 +202,6 @@ const CurrentSale = () => {
             setShowQuickAddModal(false)
             setPendingBarcode('')
           }}
-        />
-      )}
-
-      {/* Quotation Ticket Modal */}
-      {showQuotationTicket && quotationCode && (
-        <QuotationTicketModal
-          quotationCode={quotationCode}
-          items={quotationItems}
-          totals={quotationTotals}
-          onClose={handleQuotationTicketClose}
         />
       )}
     </div>

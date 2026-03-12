@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { useTenantStore } from './tenantStore'
+import { useAuthStore } from './authStore'
 
 // Mock data for fallback
 const mockTopProducts = [
@@ -26,20 +28,527 @@ const mockDailySales = [
   { date: '2026-01-24', total: 680 }
 ]
 
+const mockDailySoldProducts = [
+  { id: 'm1', name: 'Product A', code: 'A-001', quantitySold: 4, revenue: 520 },
+  { id: 'm2', name: 'Product B', code: 'B-002', quantitySold: 2, revenue: 300 }
+]
+
+const FINANCE_RECEIVABLES_KEY = 'finance:receivables'
+const FINANCE_CASH_SESSIONS_KEY = 'finance:cash_sessions'
+const FINANCE_CASH_MOVEMENTS_KEY = 'finance:cash_movements'
+const FINANCE_PAYMENTS_KEY = 'finance:payments'
+
+const mockReceivables = [
+  {
+    id: 'r-1',
+    tenant_id: 'local',
+    client_name: 'Panaderia Centro',
+    concept: 'Pedido mayoreo facturado',
+    amount: 1450,
+    due_date: new Date().toISOString().slice(0, 10),
+    status: 'pending',
+    created_at: new Date().toISOString()
+  }
+]
+
+const safeRead = (key, fallback = []) => {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+const safeWrite = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // ignore local storage write errors
+  }
+}
+
 /**
  * Reports store
  * Manages reports and analytics data
  */
 export const useReportsStore = create((set, get) => ({
   dailyTotal: 0,
+  financialSummary: {
+    todayIncome: 0,
+    monthIncome: 0,
+    receivablesTotal: 0,
+    currentCash: 0
+  },
+  receivables: [],
+  cashSession: null,
+  cashMovements: [],
+  cashXCut: {
+    totalSales: 0,
+    totalExpenses: 0,
+    totalAdjustments: 0,
+    currentBalance: 0
+  },
   topProducts: [],
   repeatCustomers: [],
   outOfStockProducts: [],
   monthlySummary: null,
   profitMargin: null,
   leastSoldProducts: [],
+  dailySoldProducts: [],
   loading: false,
   error: null,
+
+  fetchFinancialSummary: async () => {
+    try {
+      const tenantId = useTenantStore.getState().currentTenantId
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+      const monthStart = new Date()
+      monthStart.setDate(1)
+      monthStart.setHours(0, 0, 0, 0)
+
+      if (isSupabaseConfigured() && supabase && tenantId) {
+        const [{ data: todaySales }, { data: monthSales }, { data: pendingReceivables }, { data: openSession }] = await Promise.all([
+          supabase
+            .from('sales')
+            .select('total')
+            .eq('tenant_id', tenantId)
+            .gte('created_at', todayStart.toISOString())
+            .eq('status', 'completed'),
+          supabase
+            .from('sales')
+            .select('total')
+            .eq('tenant_id', tenantId)
+            .gte('created_at', monthStart.toISOString())
+            .eq('status', 'completed'),
+          supabase
+            .from('accounts_receivable')
+            .select('amount')
+            .eq('tenant_id', tenantId)
+            .eq('status', 'pending'),
+          supabase
+            .from('cash_sessions')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('status', 'open')
+            .order('opened_at', { ascending: false })
+            .limit(1)
+        ])
+
+        const todayIncome = (todaySales || []).reduce((sum, row) => sum + Number(row.total || 0), 0)
+        const monthIncome = (monthSales || []).reduce((sum, row) => sum + Number(row.total || 0), 0)
+        const receivablesTotal = (pendingReceivables || []).reduce((sum, row) => sum + Number(row.amount || 0), 0)
+
+        let currentCash = 0
+        const activeSession = openSession?.[0]
+        if (activeSession) {
+          const { data: moves } = await supabase
+            .from('cash_movements')
+            .select('type, amount')
+            .eq('session_id', activeSession.id)
+
+          const sales = (moves || []).filter((m) => m.type === 'sale').reduce((sum, m) => sum + Number(m.amount || 0), 0)
+          const expenses = (moves || []).filter((m) => m.type === 'expense').reduce((sum, m) => sum + Number(m.amount || 0), 0)
+          const adjustments = (moves || []).filter((m) => m.type === 'adjustment').reduce((sum, m) => sum + Number(m.amount || 0), 0)
+          currentCash = Number(activeSession.opening_amount || 0) + sales - expenses + adjustments
+          set({ cashSession: activeSession })
+        }
+
+        set({
+          financialSummary: {
+            todayIncome,
+            monthIncome,
+            receivablesTotal,
+            currentCash
+          }
+        })
+        return
+      }
+
+      const localReceivables = safeRead(FINANCE_RECEIVABLES_KEY, mockReceivables)
+      const localSessions = safeRead(FINANCE_CASH_SESSIONS_KEY, [])
+      const localMoves = safeRead(FINANCE_CASH_MOVEMENTS_KEY, [])
+      const localSales = safeRead('sales', [])
+
+      const todayIso = todayStart.toISOString().slice(0, 10)
+      const monthIso = monthStart.toISOString().slice(0, 7)
+
+      const todayIncome = localSales
+        .filter((sale) => String(sale.created_at || '').slice(0, 10) === todayIso && sale.status === 'completed')
+        .reduce((sum, sale) => sum + Number(sale.total || 0), 0)
+
+      const monthIncome = localSales
+        .filter((sale) => String(sale.created_at || '').slice(0, 7) === monthIso && sale.status === 'completed')
+        .reduce((sum, sale) => sum + Number(sale.total || 0), 0)
+
+      const receivablesTotal = localReceivables
+        .filter((r) => r.status === 'pending')
+        .reduce((sum, r) => sum + Number(r.amount || 0), 0)
+
+      const activeSession = localSessions.find((s) => s.status === 'open') || null
+      const sessionMoves = activeSession ? localMoves.filter((m) => m.session_id === activeSession.id) : []
+      const currentCash = activeSession
+        ? Number(activeSession.opening_amount || 0) + sessionMoves.reduce((sum, m) => {
+          const amount = Number(m.amount || 0)
+          if (m.type === 'sale') return sum + amount
+          if (m.type === 'expense') return sum - amount
+          return sum + amount
+        }, 0)
+        : 0
+
+      set({
+        cashSession: activeSession,
+        financialSummary: {
+          todayIncome,
+          monthIncome,
+          receivablesTotal,
+          currentCash
+        }
+      })
+    } catch (error) {
+      console.warn('Error fetching financial summary:', error.message)
+    }
+  },
+
+  fetchReceivables: async () => {
+    try {
+      const tenantId = useTenantStore.getState().currentTenantId
+      if (isSupabaseConfigured() && supabase && tenantId) {
+        const { data, error } = await supabase
+          .from('accounts_receivable')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        set({ receivables: data || [] })
+        return
+      }
+
+      const local = safeRead(FINANCE_RECEIVABLES_KEY, mockReceivables)
+      set({ receivables: local })
+    } catch (error) {
+      console.warn('Error fetching receivables:', error.message)
+      set({ receivables: mockReceivables })
+    }
+  },
+
+  markReceivableAsPaid: async (receivableId) => {
+    try {
+      const row = get().receivables.find((item) => item.id === receivableId)
+      if (!row || row.status === 'paid') return
+      await get().registerReceivablePayment(receivableId, {
+        amount: Number(row.amount || 0),
+        payment_method: 'cash'
+      })
+    } catch (error) {
+      console.warn('Error marking receivable as paid:', error.message)
+    }
+  },
+
+  registerReceivablePayment: async (receivableId, { amount, payment_method = 'cash' }) => {
+    const tenantId = useTenantStore.getState().currentTenantId || 'local'
+    const userId = useAuthStore.getState().user?.id || null
+    const paymentAmount = Number(amount || 0)
+    if (paymentAmount <= 0) return
+
+    try {
+      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+        const { data: receivable, error: fetchError } = await supabase
+          .from('accounts_receivable')
+          .select('*')
+          .eq('id', receivableId)
+          .single()
+        if (fetchError) throw fetchError
+
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .insert({
+            receivable_id: receivableId,
+            amount: paymentAmount,
+            payment_method,
+            paid_at: new Date().toISOString(),
+            user_id: userId,
+            tenant_id: tenantId
+          })
+        if (paymentError) throw paymentError
+
+        const { data: paymentsData } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('receivable_id', receivableId)
+        const paidSoFar = (paymentsData || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)
+        const status = paidSoFar >= Number(receivable.amount || 0) ? 'paid' : 'pending'
+
+        await supabase
+          .from('accounts_receivable')
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq('id', receivableId)
+
+        if (payment_method === 'cash') {
+          const { data: openSession } = await supabase
+            .from('cash_sessions')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('status', 'open')
+            .order('opened_at', { ascending: false })
+            .limit(1)
+
+          const session = openSession?.[0]
+          if (session) {
+            await supabase.from('cash_movements').insert({
+              tenant_id: tenantId,
+              session_id: session.id,
+              type: 'sale',
+              description: `Pago CxC ${receivable.client_name || ''}`,
+              amount: paymentAmount,
+              created_at: new Date().toISOString(),
+              user_id: userId
+            })
+          }
+        }
+
+        await get().fetchReceivables()
+        await get().fetchFinancialSummary()
+        return
+      }
+
+      const receivables = safeRead(FINANCE_RECEIVABLES_KEY, mockReceivables)
+      const payments = safeRead(FINANCE_PAYMENTS_KEY, [])
+      payments.push({
+        id: `pay-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        receivable_id: receivableId,
+        amount: paymentAmount,
+        payment_method,
+        paid_at: new Date().toISOString(),
+        user_id: userId
+      })
+      safeWrite(FINANCE_PAYMENTS_KEY, payments)
+
+      const updatedReceivables = receivables.map((item) => {
+        if (item.id !== receivableId) return item
+        const paidSoFar = payments
+          .filter((p) => p.receivable_id === receivableId)
+          .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+        return {
+          ...item,
+          status: paidSoFar >= Number(item.amount || 0) ? 'paid' : 'pending',
+          updated_at: new Date().toISOString()
+        }
+      })
+      safeWrite(FINANCE_RECEIVABLES_KEY, updatedReceivables)
+
+      if (payment_method === 'cash') {
+        await get().registerCashMovement({
+          type: 'sale',
+          description: 'Pago de cuenta por cobrar',
+          amount: paymentAmount
+        })
+      }
+
+      set({ receivables: updatedReceivables })
+      await get().fetchFinancialSummary()
+    } catch (error) {
+      console.warn('Error registering receivable payment:', error.message)
+    }
+  },
+
+  fetchCashSession: async () => {
+    try {
+      const tenantId = useTenantStore.getState().currentTenantId || 'local'
+      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+        const { data, error } = await supabase
+          .from('cash_sessions')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .eq('status', 'open')
+          .order('opened_at', { ascending: false })
+          .limit(1)
+        if (error) throw error
+        set({ cashSession: data?.[0] || null })
+        return
+      }
+
+      const sessions = safeRead(FINANCE_CASH_SESSIONS_KEY, [])
+      const session = sessions.find((s) => s.status === 'open') || null
+      set({ cashSession: session })
+    } catch (error) {
+      console.warn('Error fetching cash session:', error.message)
+      set({ cashSession: null })
+    }
+  },
+
+  openCashSession: async (openingAmount = 0) => {
+    const tenantId = useTenantStore.getState().currentTenantId || 'local'
+    const userId = useAuthStore.getState().user?.id || null
+    const amount = Number(openingAmount || 0)
+
+    try {
+      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+        const { data: openData } = await supabase
+          .from('cash_sessions')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('status', 'open')
+          .limit(1)
+        if (openData?.length) return
+
+        await supabase.from('cash_sessions').insert({
+          tenant_id: tenantId,
+          opened_by_user_id: userId,
+          opened_at: new Date().toISOString(),
+          opening_amount: amount,
+          status: 'open'
+        })
+        await get().fetchCashSession()
+        return
+      }
+
+      const sessions = safeRead(FINANCE_CASH_SESSIONS_KEY, [])
+      if (sessions.some((s) => s.status === 'open')) return
+      sessions.unshift({
+        id: `cash-${Date.now()}`,
+        tenant_id: tenantId,
+        opened_by_user_id: userId,
+        opened_at: new Date().toISOString(),
+        opening_amount: amount,
+        closing_amount: null,
+        status: 'open'
+      })
+      safeWrite(FINANCE_CASH_SESSIONS_KEY, sessions)
+      set({ cashSession: sessions[0] })
+    } catch (error) {
+      console.warn('Error opening cash session:', error.message)
+    }
+  },
+
+  fetchCashMovements: async (sessionId = null) => {
+    try {
+      const tenantId = useTenantStore.getState().currentTenantId || 'local'
+      const activeSessionId = sessionId || get().cashSession?.id
+      if (!activeSessionId) {
+        set({ cashMovements: [] })
+        return
+      }
+
+      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+        const { data, error } = await supabase
+          .from('cash_movements')
+          .select('*')
+          .eq('session_id', activeSessionId)
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        set({ cashMovements: data || [] })
+        return
+      }
+
+      const movements = safeRead(FINANCE_CASH_MOVEMENTS_KEY, [])
+      set({
+        cashMovements: movements
+          .filter((m) => m.session_id === activeSessionId)
+          .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
+      })
+    } catch (error) {
+      console.warn('Error fetching cash movements:', error.message)
+      set({ cashMovements: [] })
+    }
+  },
+
+  registerCashMovement: async ({ type = 'adjustment', description = '', amount = 0 }) => {
+    const tenantId = useTenantStore.getState().currentTenantId || 'local'
+    const userId = useAuthStore.getState().user?.id || null
+    const numericAmount = Number(amount || 0)
+    const session = get().cashSession
+    if (!session?.id || numericAmount <= 0) return
+
+    try {
+      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+        await supabase.from('cash_movements').insert({
+          tenant_id: tenantId,
+          session_id: session.id,
+          type,
+          description,
+          amount: numericAmount,
+          created_at: new Date().toISOString(),
+          user_id: userId
+        })
+        await get().fetchCashMovements(session.id)
+        await get().fetchXCut()
+        return
+      }
+
+      const movements = safeRead(FINANCE_CASH_MOVEMENTS_KEY, [])
+      movements.unshift({
+        id: `mov-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        session_id: session.id,
+        type,
+        description,
+        amount: numericAmount,
+        created_at: new Date().toISOString(),
+        user_id: userId
+      })
+      safeWrite(FINANCE_CASH_MOVEMENTS_KEY, movements)
+      await get().fetchCashMovements(session.id)
+      await get().fetchXCut()
+    } catch (error) {
+      console.warn('Error registering cash movement:', error.message)
+    }
+  },
+
+  fetchXCut: async () => {
+    const session = get().cashSession
+    if (!session?.id) {
+      set({ cashXCut: { totalSales: 0, totalExpenses: 0, totalAdjustments: 0, currentBalance: 0 } })
+      return
+    }
+
+    await get().fetchCashMovements(session.id)
+    const moves = get().cashMovements
+    const totalSales = moves.filter((m) => m.type === 'sale').reduce((sum, m) => sum + Number(m.amount || 0), 0)
+    const totalExpenses = moves.filter((m) => m.type === 'expense').reduce((sum, m) => sum + Number(m.amount || 0), 0)
+    const totalAdjustments = moves.filter((m) => m.type === 'adjustment').reduce((sum, m) => sum + Number(m.amount || 0), 0)
+    const currentBalance = Number(session.opening_amount || 0) + totalSales - totalExpenses + totalAdjustments
+    set({ cashXCut: { totalSales, totalExpenses, totalAdjustments, currentBalance } })
+  },
+
+  closeCashSessionZ: async (closingAmount = 0) => {
+    const tenantId = useTenantStore.getState().currentTenantId || 'local'
+    const session = get().cashSession
+    if (!session?.id) return
+
+    try {
+      const amount = Number(closingAmount || 0)
+      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+        await supabase
+          .from('cash_sessions')
+          .update({
+            status: 'closed',
+            closed_at: new Date().toISOString(),
+            closing_amount: amount
+          })
+          .eq('id', session.id)
+        set({ cashSession: null, cashMovements: [] })
+        await get().fetchFinancialSummary()
+        return
+      }
+
+      const sessions = safeRead(FINANCE_CASH_SESSIONS_KEY, [])
+      const updated = sessions.map((item) => {
+        if (item.id !== session.id) return item
+        return {
+          ...item,
+          status: 'closed',
+          closed_at: new Date().toISOString(),
+          closing_amount: amount
+        }
+      })
+      safeWrite(FINANCE_CASH_SESSIONS_KEY, updated)
+      set({ cashSession: null, cashMovements: [] })
+      await get().fetchFinancialSummary()
+    } catch (error) {
+      console.warn('Error closing cash session Z:', error.message)
+    }
+  },
 
   // Fetch daily total
   fetchDailyReport: async (dateRange = null) => {
@@ -82,6 +591,72 @@ export const useReportsStore = create((set, get) => ({
       console.warn('Error fetching daily report, using mock data:', error.message)
       const mockTotal = mockDailySales[mockDailySales.length - 1]?.total || 0
       set({ loading: false, error: null, dailyTotal: mockTotal })
+    }
+  },
+
+  fetchDailySoldProducts: async (dateRange = null) => {
+    try {
+      if (isSupabaseConfigured() && supabase) {
+        let query = supabase
+          .from('sale_items')
+          .select(`
+            product_id,
+            quantity,
+            subtotal,
+            unit_price,
+            products (
+              id,
+              name,
+              code
+            ),
+            sales!inner (
+              created_at
+            )
+          `)
+
+        if (dateRange) {
+          query = query
+            .gte('sales.created_at', `${dateRange.start}T00:00:00.000Z`)
+            .lte('sales.created_at', `${dateRange.end}T23:59:59.999Z`)
+        } else {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          query = query.gte('sales.created_at', today.toISOString())
+        }
+
+        const { data, error } = await query
+        if (error) throw error
+
+        const productMap = {}
+        data?.forEach((item) => {
+          const productId = item.product_id || item.products?.id
+          if (!productId) return
+
+          if (!productMap[productId]) {
+            productMap[productId] = {
+              id: productId,
+              name: item.products?.name || 'Sin nombre',
+              code: item.products?.code || '',
+              quantitySold: 0,
+              revenue: 0
+            }
+          }
+
+          productMap[productId].quantitySold += Number(item.quantity || 0)
+          productMap[productId].revenue += Number(item.subtotal || 0)
+        })
+
+        const sorted = Object.values(productMap)
+          .sort((a, b) => b.quantitySold - a.quantitySold)
+
+        set({ dailySoldProducts: sorted })
+        return
+      }
+
+      set({ dailySoldProducts: mockDailySoldProducts })
+    } catch (error) {
+      console.warn('Error fetching daily sold products, using fallback data:', error.message)
+      set({ dailySoldProducts: mockDailySoldProducts })
     }
   },
 

@@ -163,56 +163,114 @@ const Pending = () => {
             <p className="pending__empty-subtitle">{t('pendingSales.emptySubtitle')}</p>
           </div>
         ) : (
-          <div className="pending__table-card">
-            <table className="pending__table">
-              <thead>
-                <tr>
-                  <th>{t('pendingSales.folio')}</th>
-                  <th>{t('pendingSales.dateTime')}</th>
-                  <th>{t('pendingSales.items')}</th>
-                  <th>{t('pendingSales.total')}</th>
-                  <th>{t('pendingSales.payment')}</th>
-                  <th>{t('pendingSales.status')}</th>
-                  <th>{t('pendingSales.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingSales.map((sale) => (
-                  <tr key={sale.id}>
-                    <td className="pending__folio">{sale.sale_number}</td>
-                    <td className="pending__datetime">{formatDateTime(sale.created_at)}</td>
-                    <td className="pending__items">{sale.sale_items?.length || 0} {t('pendingSales.itemsCount')}</td>
-                    <td className="pending__total">${sale.total.toFixed(2)}</td>
-                    <td className="pending__payment">{sale.payment_method || t('pendingSales.notSet')}</td>
-                    <td className="pending__status">{getStatusBadge(sale.status)}</td>
-                    <td className="pending__actions">
-                      <button
-                        className="pending__action-btn pending__action-btn--resume"
-                        onClick={() => handleResumeSale(sale)}
-                        title={t('pendingSales.resumeTitle')}
-                      >
-                        <FaPlay />
-                      </button>
-                      <button
-                        className="pending__action-btn pending__action-btn--paid"
-                        onClick={() => handleMarkAsPaid(sale)}
-                        title={t('pendingSales.markAsPaidTitle')}
-                      >
-                        <FaCheck />
-                      </button>
-                      <button
-                        className="pending__action-btn pending__action-btn--cancel"
-                        onClick={() => handleCancelSale(sale)}
-                        title={t('pendingSales.cancelTitle')}
-                      >
-                        <FaTimes />
-                      </button>
-                    </td>
+          <>
+            <div className="pending__mobile-list">
+              {pendingSales.map((sale) => (
+                <article key={sale.id} className="pending__mobile-card">
+                  <div className="pending__mobile-top">
+                    <div>
+                      <div className="pending__folio">{sale.sale_number}</div>
+                      <div className="pending__datetime">{formatDateTime(sale.created_at)}</div>
+                    </div>
+                    <div className="pending__status">{getStatusBadge(sale.status)}</div>
+                  </div>
+
+                  <div className="pending__mobile-metrics">
+                    <div className="pending__mobile-metric">
+                      <span className="pending__mobile-label">{t('pendingSales.items')}</span>
+                      <span className="pending__mobile-value">{sale.sale_items?.length || 0} {t('pendingSales.itemsCount')}</span>
+                    </div>
+                    <div className="pending__mobile-metric">
+                      <span className="pending__mobile-label">{t('pendingSales.payment')}</span>
+                      <span className="pending__mobile-value pending__payment">{sale.payment_method || t('pendingSales.notSet')}</span>
+                    </div>
+                    <div className="pending__mobile-metric pending__mobile-metric--total">
+                      <span className="pending__mobile-label">{t('pendingSales.total')}</span>
+                      <span className="pending__total">${sale.total.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <div className="pending__mobile-actions">
+                    <button
+                      className="pending__action-btn pending__action-btn--resume"
+                      onClick={() => handleResumeSale(sale)}
+                      title={t('pendingSales.resumeTitle')}
+                    >
+                      <FaPlay />
+                      <span>{t('pendingSales.resumeTitle')}</span>
+                    </button>
+                    <button
+                      className="pending__action-btn pending__action-btn--paid"
+                      onClick={() => handleMarkAsPaid(sale)}
+                      title={t('pendingSales.markAsPaidTitle')}
+                    >
+                      <FaCheck />
+                      <span>{t('pendingSales.markAsPaidTitle')}</span>
+                    </button>
+                    <button
+                      className="pending__action-btn pending__action-btn--cancel"
+                      onClick={() => handleCancelSale(sale)}
+                      title={t('pendingSales.cancelTitle')}
+                    >
+                      <FaTimes />
+                      <span>{t('pendingSales.cancelTitle')}</span>
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="pending__table-card">
+              <table className="pending__table">
+                <thead>
+                  <tr>
+                    <th>{t('pendingSales.folio')}</th>
+                    <th>{t('pendingSales.dateTime')}</th>
+                    <th>{t('pendingSales.items')}</th>
+                    <th>{t('pendingSales.total')}</th>
+                    <th>{t('pendingSales.payment')}</th>
+                    <th>{t('pendingSales.status')}</th>
+                    <th>{t('pendingSales.actions')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {pendingSales.map((sale) => (
+                    <tr key={sale.id}>
+                      <td className="pending__folio">{sale.sale_number}</td>
+                      <td className="pending__datetime">{formatDateTime(sale.created_at)}</td>
+                      <td className="pending__items">{sale.sale_items?.length || 0} {t('pendingSales.itemsCount')}</td>
+                      <td className="pending__total">${sale.total.toFixed(2)}</td>
+                      <td className="pending__payment">{sale.payment_method || t('pendingSales.notSet')}</td>
+                      <td className="pending__status">{getStatusBadge(sale.status)}</td>
+                      <td className="pending__actions">
+                        <button
+                          className="pending__action-btn pending__action-btn--resume"
+                          onClick={() => handleResumeSale(sale)}
+                          title={t('pendingSales.resumeTitle')}
+                        >
+                          <FaPlay />
+                        </button>
+                        <button
+                          className="pending__action-btn pending__action-btn--paid"
+                          onClick={() => handleMarkAsPaid(sale)}
+                          title={t('pendingSales.markAsPaidTitle')}
+                        >
+                          <FaCheck />
+                        </button>
+                        <button
+                          className="pending__action-btn pending__action-btn--cancel"
+                          onClick={() => handleCancelSale(sale)}
+                          title={t('pendingSales.cancelTitle')}
+                        >
+                          <FaTimes />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

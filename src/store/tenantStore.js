@@ -9,8 +9,56 @@ export const useTenantStore = create((set, get) => ({
   currentTenantId: null,
   currentTenant: null, // { id, name, slug }
   tenants: [],
+  featureFlags: {
+    subscriptions: false
+  },
+  featureFlagsLoading: true,
   loading: false,
   error: null,
+
+  loadFeatureFlags: async (tenantId) => {
+    if (!tenantId) {
+      set({ featureFlags: { subscriptions: false }, featureFlagsLoading: false })
+      return
+    }
+
+    if (!isSupabaseConfigured() || !supabase) {
+      set({ featureFlags: { subscriptions: true }, featureFlagsLoading: false })
+      return
+    }
+
+    set({ featureFlagsLoading: true })
+    try {
+      const { data, error } = await supabase
+        .from('tenant_module_subscriptions')
+        .select('module_key, status, starts_at, ends_at')
+        .eq('tenant_id', tenantId)
+        .eq('module_key', 'subscriptions')
+        .maybeSingle()
+
+      if (error) throw error
+
+      const now = new Date()
+      const startsAt = data?.starts_at ? new Date(data.starts_at) : null
+      const endsAt = data?.ends_at ? new Date(data.ends_at) : null
+      const statusActive = data?.status === 'active' || data?.status === 'trial'
+      const startsOk = !startsAt || startsAt <= now
+      const endsOk = !endsAt || endsAt >= now
+
+      set({
+        featureFlags: {
+          subscriptions: Boolean(data && statusActive && startsOk && endsOk)
+        },
+        featureFlagsLoading: false
+      })
+    } catch (err) {
+      console.error('Error loading tenant feature flags:', err)
+      set({
+        featureFlags: { subscriptions: false },
+        featureFlagsLoading: false
+      })
+    }
+  },
 
   /**
    * Load tenants for the current user (call after login).
@@ -18,11 +66,17 @@ export const useTenantStore = create((set, get) => ({
    */
   loadTenants: async (userId) => {
     if (!userId) {
-      set({ currentTenantId: null, currentTenant: null, tenants: [] })
+      set({
+        currentTenantId: null,
+        currentTenant: null,
+        tenants: [],
+        featureFlags: { subscriptions: false },
+        featureFlagsLoading: false
+      })
       return
     }
 
-    set({ loading: true, error: null })
+    set({ loading: true, error: null, featureFlagsLoading: true })
 
     if (!isSupabaseConfigured() || !supabase) {
       // Mock: single default tenant
@@ -35,6 +89,8 @@ export const useTenantStore = create((set, get) => ({
         currentTenantId: defaultTenant.id,
         currentTenant: defaultTenant,
         tenants: [defaultTenant],
+        featureFlags: { subscriptions: true },
+        featureFlagsLoading: false,
         loading: false
       })
       return
@@ -60,6 +116,8 @@ export const useTenantStore = create((set, get) => ({
           currentTenantId: null,
           currentTenant: null,
           tenants: [],
+          featureFlags: { subscriptions: false },
+          featureFlagsLoading: false,
           loading: false,
           error: 'No tenant assigned. Please contact support or sign up again.'
         })
@@ -67,6 +125,7 @@ export const useTenantStore = create((set, get) => ({
       }
 
       const first = list[0]
+      await get().loadFeatureFlags(first.id)
       set({
         currentTenantId: first.id,
         currentTenant: { id: first.id, name: first.name, slug: first.slug },
@@ -80,6 +139,8 @@ export const useTenantStore = create((set, get) => ({
         currentTenantId: null,
         currentTenant: null,
         tenants: [],
+        featureFlags: { subscriptions: false },
+        featureFlagsLoading: false,
         loading: false,
         error: err.message || 'Failed to load tenant'
       })
@@ -94,6 +155,7 @@ export const useTenantStore = create((set, get) => ({
         currentTenantId: tenantId,
         currentTenant: { id: tenant.id, name: tenant.name, slug: tenant.slug }
       })
+      get().loadFeatureFlags(tenantId)
     }
   },
 
@@ -102,6 +164,8 @@ export const useTenantStore = create((set, get) => ({
       currentTenantId: null,
       currentTenant: null,
       tenants: [],
+      featureFlags: { subscriptions: false },
+      featureFlagsLoading: false,
       error: null
     })
   }

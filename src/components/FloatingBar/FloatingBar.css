@@ -2,8 +2,7 @@
 
 .floating-bar {
   position: fixed;
-  /* Desktop: sit above Windows taskbar; mobile: use safe-area only */
-  bottom: max(env(safe-area-inset-bottom, 0px), 40px);
+  bottom: env(safe-area-inset-bottom, 0px);
   left: 0;
   right: 0;
   z-index: 100;
@@ -17,7 +16,7 @@
 
 @media (max-width: 768px) {
   .floating-bar {
-    bottom: env(safe-area-inset-bottom, 0);
+    bottom: var(--mobile-bottom-nav-height, calc(64px + env(safe-area-inset-bottom, 0px)));
   }
 }
 
@@ -197,6 +196,17 @@
   box-shadow: 0 0 16px var(--neon-glow-soft);
 }
 
+.floating-bar__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.floating-bar__pending-btn-mobile {
+  display: none;
+}
+
 .floating-bar__checkout-btn:hover:not(:disabled) {
   background: rgba(0, 255, 136, 0.25);
   color: var(--text-primary);
@@ -235,6 +245,31 @@
 
 :root[data-theme='light'] .floating-bar__hotkey {
   background: rgba(15, 23, 42, 0.08);
+  color: rgba(15, 23, 42, 0.85);
+}
+
+:root[data-theme='light'] .floating-bar__label,
+:root[data-theme='light'] .floating-bar__subtotal-line,
+:root[data-theme='light'] .floating-bar__total-label {
+  color: rgba(15, 23, 42, 0.78);
+}
+
+:root[data-theme='light'] .floating-bar__items,
+:root[data-theme='light'] .floating-bar__value,
+:root[data-theme='light'] .floating-bar__total {
+  color: #0f172a;
+}
+
+:root[data-theme='light'] .floating-bar__discount-btn {
+  background: rgba(226, 232, 240, 0.9);
+  border-color: rgba(100, 116, 139, 0.45);
+  color: #334155;
+}
+
+:root[data-theme='light'] .floating-bar__discount-btn:hover {
+  background: rgba(203, 213, 225, 0.95);
+  border-color: rgba(71, 85, 105, 0.55);
+  color: #0f172a;
 }
 
 @media (max-width: 768px) {
@@ -255,5 +290,51 @@
 
   .floating-bar__checkout-btn {
     width: 100%;
+  }
+
+  .floating-bar__actions {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .floating-bar__pending-btn-mobile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    width: auto;
+    max-width: 70%;
+    padding: 6px 10px;
+    font-size: 12px;
+    line-height: 1.1;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    background: rgba(148, 163, 184, 0.16);
+    color: rgba(226, 232, 240, 0.9);
+    cursor: pointer;
+  }
+
+  .floating-bar__pending-btn-mobile:hover:not(:disabled) {
+    background: rgba(148, 163, 184, 0.22);
+    border-color: rgba(148, 163, 184, 0.6);
+    color: rgba(241, 245, 249, 0.95);
+  }
+
+  :root[data-theme='light'] .floating-bar__pending-btn-mobile {
+    border-color: rgba(100, 116, 139, 0.55);
+    background: rgba(226, 232, 240, 0.95);
+    color: rgba(51, 65, 85, 0.95);
+  }
+
+  :root[data-theme='light'] .floating-bar__pending-btn-mobile:hover:not(:disabled) {
+    background: rgba(203, 213, 225, 1);
+    border-color: rgba(71, 85, 105, 0.6);
+    color: #0f172a;
+  }
+
+  .floating-bar__pending-btn-mobile:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }

@@ -10,8 +10,7 @@ import { TaxSettings } from '../../components/settings/TaxSettings'
 import { PrinterSettings } from '../../components/settings/PrinterSettings'
 import { FacturacionMXSettings } from '../../components/settings/FacturacionMXSettings'
 import { SystemInfoSettings } from '../../components/settings/SystemInfoSettings'
-import { SyncStatusSettings } from '../../components/settings/SyncStatusSettings'
-import { FiUser, FiMonitor, FiGlobe, FiDollarSign, FiPercent, FiPrinter, FiFileText, FiCpu, FiRefreshCw } from 'react-icons/fi'
+import { FiUser, FiMonitor, FiGlobe, FiDollarSign, FiPercent, FiPrinter, FiFileText, FiCpu } from 'react-icons/fi'
 
 const STORAGE_KEY = 'moneymachine-settings-section'
 
@@ -23,23 +22,16 @@ type SectionId =
   | 'taxes'
   | 'printer'
   | 'facturacion'
-  | 'syncStatus'
   | 'system'
 
 const SHOW_TAX_AND_FACTURACION_SECTIONS = false
 
 export function ConfiguracionPage() {
   const t = useSettingsStore((s) => s.t)
-  const [active, setActive] = useState<SectionId>('account')
+  const [active, setActive] = useState<SectionId>('appearance')
 
   const items: SettingsMenuItem[] = useMemo(
     () => [
-      {
-        id: 'account',
-        title: 'Cuenta',
-        description: 'Sesión y datos del usuario',
-        icon: <FiUser />,
-      },
       {
         id: 'appearance',
         title: 'Apariencia',
@@ -77,10 +69,10 @@ export function ConfiguracionPage() {
         icon: <FiFileText />,
       },
       {
-        id: 'syncStatus',
-        title: 'Sincronización',
-        description: 'Estado de copia local y datos',
-        icon: <FiRefreshCw />,
+        id: 'account',
+        title: 'Cuenta',
+        description: 'Sesión y datos del usuario',
+        icon: <FiUser />,
       },
       {
         id: 'system',
@@ -108,7 +100,7 @@ export function ConfiguracionPage() {
       const saved = localStorage.getItem(STORAGE_KEY) as SectionId | null
       if (!saved) return
       const isVisible = visibleItems.some((i) => i.id === saved)
-      setActive(isVisible ? saved : 'account')
+      setActive(isVisible ? saved : 'appearance')
     } catch {
       // ignore
     }
@@ -117,7 +109,7 @@ export function ConfiguracionPage() {
   useEffect(() => {
     const isVisible = visibleItems.some((i) => i.id === active)
     if (!isVisible) {
-      setActive('account')
+      setActive('appearance')
       return
     }
 
@@ -192,11 +184,6 @@ export function ConfiguracionPage() {
             {SHOW_TAX_AND_FACTURACION_SECTIONS && active === 'facturacion' && (
               <SettingsSection title="Facturación MX" description="Datos fiscales para emitir CFDI en México.">
                 <FacturacionMXSettings />
-              </SettingsSection>
-            )}
-            {active === 'syncStatus' && (
-              <SettingsSection title="Sincronización" description="Estado de tu copia local y sincronización con el servidor.">
-                <SyncStatusSettings />
               </SettingsSection>
             )}
             {active === 'system' && (

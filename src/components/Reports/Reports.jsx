@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { 
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, 
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
-} from 'recharts'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useReportsStore } from '../../store/reportsStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import './Reports.css'
@@ -13,8 +10,11 @@ import './Reports.css'
  */
 const Reports = () => {
   const t = useSettingsStore((s) => s.t)
+  const navigate = useNavigate()
+  const { tabId } = useParams()
   const { 
     dailyTotal, 
+    dailySoldProducts,
     topProducts, 
     repeatCustomers, 
     outOfStockProducts,
@@ -23,6 +23,7 @@ const Reports = () => {
     leastSoldProducts,
     loading,
     fetchDailyReport,
+    fetchDailySoldProducts,
     fetchTopProducts,
     fetchRepeatCustomers,
     fetchOutOfStock,
@@ -37,6 +38,8 @@ const Reports = () => {
     end: new Date().toISOString().split('T')[0]
   })
 
+  const activeTab = tabId || 'dailyTotal'
+
   useEffect(() => {
     loadAllReports()
   }, [selectedPeriod, dateRange])
@@ -44,6 +47,7 @@ const Reports = () => {
   const loadAllReports = async () => {
     await Promise.all([
       fetchDailyReport(selectedPeriod === 'custom' ? dateRange : null),
+      fetchDailySoldProducts(selectedPeriod === 'custom' ? dateRange : null),
       fetchTopProducts(10),
       fetchRepeatCustomers(),
       fetchOutOfStock(),
@@ -53,22 +57,287 @@ const Reports = () => {
     ])
   }
 
-  // Chart colors - Premium palette
-  const COLORS = {
-    primary: '#00ff88',
-    secondary: 'rgba(255, 255, 255, 0.25)',
-    grid: 'rgba(255, 255, 255, 0.06)',
-    text: 'rgba(255, 255, 255, 0.45)',
-    success: '#00ff88',
-    warning: '#93C5FD',
-    accent: '#7CB8FC'
+  const topProduct = topProducts[0]
+  const topCustomer = repeatCustomers[0]
+  const lastDaily = monthlySummary?.dailySales?.slice(-1)?.[0]
+  const paymentMethodsCount = monthlySummary?.paymentMethods?.length || 0
+
+  const getSparklinePath = (values, width = 120, height = 42, padding = 4) => {
+    if (!values || values.length === 0) return ''
+    if (values.length === 1) {
+      const y = height / 2
+      return `M ${padding} ${y} L ${width - padding} ${y}`
+    }
+
+    const min = Math.min(...values)
+    const max = Math.max(...values)
+    const range = max - min || 1
+    const stepX = (width - padding * 2) / (values.length - 1)
+
+    return values
+      .map((value, index) => {
+        const x = padding + index * stepX
+        const normalized = (value - min) / range
+        const y = height - padding - normalized * (height - padding * 2)
+        return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`
+      })
+      .join(' ')
   }
 
-  const pieColors = ['#00ff88', '#33ffa3', '#66ffbb', 'rgba(255, 255, 255, 0.15)']
+  const dailySeries = (monthlySummary?.dailySales || []).map((d) => Number(d.total) || 0).slice(-10)
+  const monthlySeries = dailySeries.reduce((acc, current) => {
+    const prev = acc.length > 0 ? acc[acc.length - 1] : 0
+    acc.push(prev + current)
+    return acc
+  }, [])
+  const topProductsSeries = topProducts.map((p) => Number(p.quantity) || 0).slice(0, 10)
+  const customersSeries = repeatCustomers.map((c) => Number(c.purchaseCount) || 0).slice(0, 10)
+  const leastSoldSeries = leastSoldProducts.map((p) => Number(p.quantitySold) || 0).slice(0, 10)
+  const paymentSeries = (monthlySummary?.paymentMethods || []).map((pm) => Number(pm.value) || 0).slice(0, 10)
+  const outOfStockSeries = Array.from({ length: Math.max(1, Math.min(10, outOfStockProducts.length || 1)) }, (_, idx) => idx + 1)
+
+  const formatCurrency = (value) => `$${Number(value || 0).toFixed(2)}`
+
+  const getMainSeries = () => {
+    switch (activeTab) {
+      case 'dailyTotal':
+      case 'salesTrend':
+        return dailySeries
+      case 'monthlyTotal':
+        return monthlySeries
+      case 'topProducts':
+        return topProductsSeries
+      case 'repeatCustomers':
+        return customersSeries
+      case 'outOfStock':
+        return outOfStockSeries
+      case 'leastSold':
+        return leastSoldSeries
+      case 'paymentMethods':
+        return paymentSeries
+      default:
+        return dailySeries
+    }
+  }
+
+  const mainSeries = getMainSeries()
+
+  const getSeriesStats = (series) => {
+    if (!series || series.length === 0) {
+      return { current: 0, average: 0, min: 0, max: 0 }
+    }
+
+    const sum = series.reduce((acc, value) => acc + Number(value || 0), 0)
+    return {
+      current: Number(series[series.length - 1] || 0),
+      average: sum / series.length,
+      min: Math.min(...series),
+      max: Math.max(...series)
+    }
+  }
+
+  const getPeriodComparison = (series) => {
+    if (!series || series.length < 2) {
+      return { previous: 0, current: 0, delta: 0, deltaPct: 0 }
+    }
+
+    const midpoint = Math.floor(series.length / 2)
+    const previousSlice = series.slice(0, midpoint)
+    const currentSlice = series.slice(midpoint)
+
+    const previous = previousSlice.reduce((acc, value) => acc + Number(value || 0), 0)
+    const current = currentSlice.reduce((acc, value) => acc + Number(value || 0), 0)
+    const delta = current - previous
+    const deltaPct = previous === 0 ? (current > 0 ? 100 : 0) : (delta / previous) * 100
+
+    return { previous, current, delta, deltaPct }
+  }
+
+  const mainStats = getSeriesStats(mainSeries)
+  const mainComparison = getPeriodComparison(mainSeries)
+
+  const formatMetricValue = (value) => {
+    if (activeTab === 'dailyTotal' || activeTab === 'monthlyTotal' || activeTab === 'salesTrend' || activeTab === 'paymentMethods') {
+      return formatCurrency(value)
+    }
+    return Number(value || 0).toFixed(0)
+  }
+
+  const chartWidth = 760
+  const chartHeight = 220
+
+  const reportTiles = [
+    {
+      id: 'dailyTotal',
+      title: t('reports.dailyTotal'),
+      value: `$${Number(dailyTotal || 0).toFixed(2)}`,
+      hint: 'Ver subpestaña diaria',
+      series: dailySeries
+    },
+    {
+      id: 'monthlyTotal',
+      title: t('reports.monthlyTotal'),
+      value: `$${Number(monthlySummary?.total || 0).toFixed(2)}`,
+      hint: 'Ver subpestaña mensual',
+      series: monthlySeries
+    },
+    {
+      id: 'topProducts',
+      title: t('reports.topProducts'),
+      value: topProduct ? topProduct.name : 'Sin datos',
+      hint: 'Ver subpestaña de ranking',
+      series: topProductsSeries
+    },
+    {
+      id: 'repeatCustomers',
+      title: t('reports.repeatCustomers'),
+      value: topCustomer ? `${topCustomer.name} ${topCustomer.lastName || ''}`.trim() : 'Sin datos',
+      hint: 'Ver subpestaña de clientes',
+      series: customersSeries
+    },
+    {
+      id: 'outOfStock',
+      title: t('reports.outOfStockProducts'),
+      value: String(outOfStockProducts?.length || 0),
+      hint: 'Ver subpestaña de stock',
+      series: outOfStockSeries
+    },
+    {
+      id: 'leastSold',
+      title: t('reports.leastSold'),
+      value: String(leastSoldProducts?.length || 0),
+      hint: 'Ver subpestaña de baja salida',
+      series: leastSoldSeries
+    },
+    {
+      id: 'salesTrend',
+      title: t('reports.salesTrend'),
+      value: lastDaily ? `$${Number(lastDaily.total || 0).toFixed(2)}` : 'Sin datos',
+      hint: 'Ver subpestaña de tendencia',
+      series: dailySeries
+    },
+    {
+      id: 'paymentMethods',
+      title: t('reports.paymentMethods'),
+      value: String(paymentMethodsCount),
+      hint: 'Ver subpestaña de métodos',
+      series: paymentSeries
+    }
+  ]
+
+  const activeTile = reportTiles.find((tile) => tile.id === activeTab) || reportTiles[0]
+  const isDetailRoute = Boolean(tabId)
+  const buildReportTabHref = (reportTabId) => `/finanzas/reportes/${encodeURIComponent(reportTabId)}`
+
+  const renderSubtabContent = () => {
+    switch (activeTab) {
+      case 'dailyTotal':
+        return (
+          <div className="reports__detail-block">
+            <p className="reports__detail-value">{formatCurrency(dailyTotal)}</p>
+            <p className="reports__detail-note">Total actual del periodo seleccionado.</p>
+            <div className="reports__detail-subsection">
+              <p className="reports__detail-note">Productos vendidos hoy</p>
+              <ul className="reports__detail-list">
+                {dailySoldProducts.length === 0
+                  ? <li>Sin productos vendidos hoy.</li>
+                  : dailySoldProducts.map((product) => (
+                    <li key={product.id || product.code || product.name}>
+                      {product.name} ({product.code || 'Sin código'}) - {product.quantitySold} pza(s) - {formatCurrency(product.revenue)}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          </div>
+        )
+      case 'monthlyTotal':
+        return (
+          <div className="reports__detail-block">
+            <p className="reports__detail-value">{formatCurrency(monthlySummary?.total || 0)}</p>
+            <p className="reports__detail-note">Acumulado mensual con base en ventas registradas.</p>
+          </div>
+        )
+      case 'topProducts':
+        return (
+          <ul className="reports__detail-list">
+            {topProducts.length === 0 ? <li>Sin datos</li> : topProducts.map((p, idx) => <li key={`${p.name}-${idx}`}>{p.name}: {p.quantity}</li>)}
+          </ul>
+        )
+      case 'repeatCustomers':
+        return (
+          <ul className="reports__detail-list">
+            {repeatCustomers.length === 0 ? <li>{t('reports.noRepeatCustomers')}</li> : repeatCustomers.map((c, idx) => <li key={`${c.id || idx}`}>{c.name} {c.lastName} - {c.purchaseCount} compras</li>)}
+          </ul>
+        )
+      case 'outOfStock':
+        return (
+          <ul className="reports__detail-list">
+            {outOfStockProducts.length === 0 ? <li>{t('reports.allInStock')}</li> : outOfStockProducts.map((p) => <li key={p.id}>{p.code} - {p.name}</li>)}
+          </ul>
+        )
+      case 'leastSold':
+        return (
+          <ul className="reports__detail-list">
+            {leastSoldProducts.length === 0 ? <li>{t('reports.noDataAvailable')}</li> : leastSoldProducts.map((p, idx) => <li key={`${p.id || idx}`}>{p.name} - {p.quantitySold}</li>)}
+          </ul>
+        )
+      case 'salesTrend':
+        return (
+          <ul className="reports__detail-list">
+            {(monthlySummary?.dailySales || []).length === 0
+              ? <li>Sin datos</li>
+              : monthlySummary.dailySales.map((d, idx) => <li key={`${d.date}-${idx}`}>{d.date}: ${Number(d.total || 0).toFixed(2)}</li>)}
+          </ul>
+        )
+      case 'paymentMethods':
+        return (
+          <ul className="reports__detail-list">
+            {(monthlySummary?.paymentMethods || []).length === 0
+              ? <li>Sin datos</li>
+              : monthlySummary.paymentMethods.map((pm, idx) => <li key={`${pm.name}-${idx}`}>{pm.name}: ${Number(pm.value || 0).toFixed(2)}</li>)}
+          </ul>
+        )
+      default:
+        return <p className="reports__detail-value">{Number(profitMargin?.percentage ?? 0).toFixed(1)}%</p>
+    }
+  }
+
+  const renderDetailMetrics = () => {
+    const deltaPositive = mainComparison.delta >= 0
+
+    return (
+      <div className="reports__metrics-grid">
+        <article className="reports__metric-card">
+          <div className="reports__metric-label">Actual</div>
+          <div className="reports__metric-value">{formatMetricValue(mainStats.current)}</div>
+        </article>
+        <article className="reports__metric-card">
+          <div className="reports__metric-label">Promedio</div>
+          <div className="reports__metric-value">{formatMetricValue(mainStats.average)}</div>
+        </article>
+        <article className="reports__metric-card">
+          <div className="reports__metric-label">Pico</div>
+          <div className="reports__metric-value">{formatMetricValue(mainStats.max)}</div>
+        </article>
+        <article className="reports__metric-card">
+          <div className="reports__metric-label">Mínimo</div>
+          <div className="reports__metric-value">{formatMetricValue(mainStats.min)}</div>
+        </article>
+        <article className="reports__metric-card reports__metric-card--comparison">
+          <div className="reports__metric-label">Vs periodo previo</div>
+          <div className={`reports__metric-value ${deltaPositive ? 'reports__metric-value--up' : 'reports__metric-value--down'}`}>
+            {deltaPositive ? '+' : ''}{mainComparison.deltaPct.toFixed(1)}%
+          </div>
+          <div className="reports__metric-subtext">
+            {formatMetricValue(mainComparison.current)} vs {formatMetricValue(mainComparison.previous)}
+          </div>
+        </article>
+      </div>
+    )
+  }
 
   return (
     <div className="reports">
-      {/* Header */}
       <header className="reports__header">
         <div className="reports__header-content">
           <div>
@@ -107,335 +376,65 @@ const Reports = () => {
         </div>
       </header>
 
-      {/* Content */}
       <div className="reports__content">
         {loading ? (
           <div className="reports__loading">{t('reports.loadingReports')}</div>
         ) : (
           <>
-            {/* Summary Cards */}
-            <section className="reports__summary">
-              <div className="reports__summary-card">
-                <div className="reports__summary-label">{t('reports.dailyTotal')}</div>
-                <div className="reports__summary-value">${Number(dailyTotal).toFixed(2)}</div>
-              </div>
-              <div className="reports__summary-card">
-                <div className="reports__summary-label">{t('reports.monthlyTotal')}</div>
-                <div className="reports__summary-value">${Number(monthlySummary?.total ?? 0).toFixed(2)}</div>
-              </div>
-              <div className="reports__summary-card">
-                <div className="reports__summary-label">{t('reports.profitMargin')}</div>
-                <div className="reports__summary-value">{Number(profitMargin?.percentage ?? 0).toFixed(1)}%</div>
-              </div>
-              <div className="reports__summary-card">
-                <div className="reports__summary-label">{t('reports.outOfStock')}</div>
-                <div className="reports__summary-value">{outOfStockProducts?.length || 0}</div>
-              </div>
-            </section>
-
-            {/* Charts Grid */}
-            <section className="reports__charts">
-              {/* Top Products Chart */}
-              <div className="reports__chart-card">
-                <h3 className="reports__chart-title">{t('reports.topProducts')}</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={topProducts} margin={{ top: 10, right: 10, left: 0, bottom: 120 }}>
-                    <CartesianGrid 
-                      strokeDasharray="0" 
-                      stroke={COLORS.grid} 
-                      vertical={false}
-                    />
-                    <XAxis 
-                      dataKey="name" 
-                      stroke="transparent"
-                      fontSize={11}
-                      angle={-90}
-                      textAnchor="end"
-                      interval={0}
-                      tick={{ fill: COLORS.text, textAnchor: 'end' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      stroke="transparent"
-                      fontSize={12}
-                      tick={{ fill: COLORS.text }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        background: 'rgba(18, 18, 26, 0.95)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '12px',
-                        backdropFilter: 'blur(16px)',
-                        color: '#F5F5F7',
-                        padding: '12px 16px'
-                      }}
-                      cursor={{ fill: 'rgba(255, 255, 255, 0.02)' }}
-                    />
-                    <Bar 
-                      dataKey="quantity" 
-                      fill={COLORS.primary} 
-                      radius={[6, 6, 0, 0]}
-                      maxBarSize={60}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Sales Trend Chart */}
-              <div className="reports__chart-card">
-                <h3 className="reports__chart-title">{t('reports.salesTrend')}</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={monthlySummary?.dailySales || []}>
-                    <CartesianGrid 
-                      strokeDasharray="0" 
-                      stroke={COLORS.grid}
-                      vertical={false}
-                    />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="transparent"
-                      fontSize={12}
-                      tick={{ fill: COLORS.text }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      stroke="transparent"
-                      fontSize={12}
-                      tick={{ fill: COLORS.text }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        background: 'rgba(18, 18, 26, 0.95)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '12px',
-                        backdropFilter: 'blur(16px)',
-                        color: '#F5F5F7',
-                        padding: '12px 16px'
-                      }}
-                      cursor={{ stroke: 'rgba(0, 255, 136, 0.3)', strokeWidth: 1 }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="total" 
-                      stroke={COLORS.primary} 
-                      strokeWidth={2.5}
-                      dot={{ 
-                        fill: COLORS.primary, 
-                        r: 4,
-                        strokeWidth: 2,
-                        stroke: 'rgba(11, 11, 15, 0.8)'
-                      }}
-                      activeDot={{ 
-                        r: 6,
-                        fill: COLORS.primary,
-                        stroke: 'rgba(11, 11, 15, 0.8)',
-                        strokeWidth: 2
-                      }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Payment Methods Distribution */}
-              <div className="reports__chart-card">
-                <h3 className="reports__chart-title">{t('reports.paymentMethods')}</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={monthlySummary?.paymentMethods || []}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={{
-                        stroke: 'rgba(255, 255, 255, 0.15)',
-                        strokeWidth: 1
-                      }}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={90}
-                      innerRadius={50}
-                      fill="#8884d8"
-                      dataKey="value"
-                      stroke="rgba(11, 11, 15, 0.8)"
-                      strokeWidth={2}
-                    >
-                      {(monthlySummary?.paymentMethods || []).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{
-                        background: 'rgba(18, 18, 26, 0.95)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '12px',
-                        backdropFilter: 'blur(16px)',
-                        color: '#F5F5F7',
-                        padding: '12px 16px'
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Profit vs Investment */}
-              <div className="reports__chart-card">
-                <h3 className="reports__chart-title">{t('reports.profitVsInvestment')}</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={profitMargin?.breakdown || []}>
-                    <CartesianGrid 
-                      strokeDasharray="0" 
-                      stroke={COLORS.grid}
-                      vertical={false}
-                    />
-                    <XAxis 
-                      dataKey="label" 
-                      stroke="transparent"
-                      fontSize={12}
-                      tick={{ fill: COLORS.text }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      stroke="transparent"
-                      fontSize={12}
-                      tick={{ fill: COLORS.text }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        background: 'rgba(18, 18, 26, 0.95)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '12px',
-                        backdropFilter: 'blur(16px)',
-                        color: '#F5F5F7',
-                        padding: '12px 16px'
-                      }}
-                      cursor={{ fill: 'rgba(255, 255, 255, 0.02)' }}
-                    />
-                    <Legend 
-                      wrapperStyle={{ color: COLORS.text }}
-                      iconType="circle"
-                    />
-                    <Bar 
-                      dataKey="investment" 
-                      fill="rgba(255, 255, 255, 0.12)" 
-                      radius={[0, 0, 0, 0]}
-                    />
-                    <Bar 
-                      dataKey="profit" 
-                      fill={COLORS.primary} 
-                      radius={[6, 6, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-
-            {/* Data Tables */}
-            <section className="reports__tables">
-              {/* Repeat Customers */}
-              <div className="reports__table-card">
-                <h3 className="reports__table-title">{t('reports.repeatCustomers')}</h3>
-                <div className="reports__table-container">
-                  <table className="reports__table">
-                    <thead>
-                      <tr>
-                        <th>{t('reports.customer')}</th>
-                        <th>{t('reports.phone')}</th>
-                        <th>{t('reports.totalPurchases')}</th>
-                        <th>{t('reports.totalSpent')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {repeatCustomers.length === 0 ? (
-                        <tr>
-                          <td colSpan="4" className="reports__empty">{t('reports.noRepeatCustomers')}</td>
-                        </tr>
+            {!isDetailRoute && (
+              <section className="reports__tiles" aria-label="Resumen de reportes">
+                {reportTiles.map((tile) => (
+                  <a
+                    key={tile.id}
+                    href={buildReportTabHref(tile.id)}
+                    className="reports__tile-link"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      navigate(buildReportTabHref(tile.id))
+                    }}
+                  >
+                    <article className="reports__tile">
+                      <h3 className="reports__tile-title">{tile.title}</h3>
+                      {getSparklinePath(tile.series || []) ? (
+                        <svg className="reports__tile-chart" viewBox="0 0 120 42" role="img" aria-label={`Mini grafica de ${tile.title}`}>
+                          <path d={getSparklinePath(tile.series || [])} className="reports__tile-line" />
+                        </svg>
                       ) : (
-                        repeatCustomers.map((customer, index) => (
-                          <tr key={index}>
-                            <td>{customer.name} {customer.lastName}</td>
-                            <td>{customer.phone}</td>
-                            <td>{customer.purchaseCount}</td>
-                            <td>${customer.totalSpent.toFixed(2)}</td>
-                          </tr>
-                        ))
+                        <div className="reports__tile-chart-empty">Sin datos</div>
                       )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                      <p className="reports__tile-value">{tile.value}</p>
+                      <p className="reports__tile-hint">{tile.hint}</p>
+                    </article>
+                  </a>
+                ))}
+              </section>
+            )}
 
-              {/* Out of Stock Products */}
-              <div className="reports__table-card">
-                <h3 className="reports__table-title">{t('reports.outOfStockProducts')}</h3>
-                <div className="reports__table-container">
-                  <table className="reports__table">
-                    <thead>
-                      <tr>
-                        <th>{t('reports.code')}</th>
-                        <th>{t('reports.name')}</th>
-                        <th>{t('reports.lastSale')}</th>
-                        <th>{t('reports.stock')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {outOfStockProducts.length === 0 ? (
-                        <tr>
-                          <td colSpan="4" className="reports__empty">{t('reports.allInStock')}</td>
-                        </tr>
-                      ) : (
-                        outOfStockProducts.map((product) => (
-                          <tr key={product.id}>
-                            <td>{product.code}</td>
-                            <td>{product.name}</td>
-                            <td>{product.lastSaleDate ? new Date(product.lastSaleDate).toLocaleDateString() : t('reports.never')}</td>
-                            <td className="reports__stock-critical">{product.stock}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+            <section className="reports__subtab" aria-label="Subpestaña de reporte">
+              <article className="reports__detail-card">
+                {isDetailRoute && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/reports')}
+                    className="mb-3 rounded-lg border border-[var(--border)] bg-[var(--panel-2)] px-3 py-1 text-xs text-[var(--text)]"
+                  >
+                    Volver a recuadros
+                  </button>
+                )}
+                <h3 className="reports__detail-title">{activeTile.title}</h3>
+                <div className="reports__big-chart-wrap">
+                  {getSparklinePath(mainSeries, chartWidth, chartHeight, 12) ? (
+                    <svg className="reports__big-chart" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`Grafica grande de ${activeTile.title}`}>
+                      <path d={getSparklinePath(mainSeries, chartWidth, chartHeight, 12)} className="reports__big-chart-line" />
+                    </svg>
+                  ) : (
+                    <div className="reports__big-chart-empty">Sin datos suficientes para graficar</div>
+                  )}
                 </div>
-              </div>
 
-              {/* Least Sold Products */}
-              <div className="reports__table-card">
-                <h3 className="reports__table-title">{t('reports.leastSold')}</h3>
-                <div className="reports__table-container">
-                  <table className="reports__table">
-                    <thead>
-                      <tr>
-                        <th>{t('reports.code')}</th>
-                        <th>{t('reports.name')}</th>
-                        <th>{t('reports.quantitySold')}</th>
-                        <th>{t('reports.revenue')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {leastSoldProducts.length === 0 ? (
-                        <tr>
-                          <td colSpan="4" className="reports__empty">{t('reports.noDataAvailable')}</td>
-                        </tr>
-                      ) : (
-                        leastSoldProducts.map((product) => (
-                          <tr key={product.id}>
-                            <td>{product.code}</td>
-                            <td>{product.name}</td>
-                            <td>{product.quantitySold}</td>
-                            <td>${product.revenue.toFixed(2)}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                {renderDetailMetrics()}
+                {renderSubtabContent()}
+              </article>
             </section>
           </>
         )}

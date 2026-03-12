@@ -127,6 +127,10 @@
   position: relative;
 }
 
+.pending__mobile-list {
+  display: none;
+}
+
 .pending__table-card::before {
   content: '';
   position: absolute;
@@ -299,6 +303,10 @@
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 
+.pending__mobile-actions .pending__action-btn span {
+  display: none;
+}
+
 /* Modal Specific Styles */
 .pending__modal {
   max-width: 500px;
@@ -424,5 +432,92 @@
   .pending__table th,
   .pending__table td {
     padding: 14px 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .pending__header {
+    height: auto;
+    padding: var(--spacing-md);
+  }
+
+  .pending__content {
+    padding: var(--spacing-md);
+  }
+
+  .pending__mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pending__mobile-card {
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur-md));
+    -webkit-backdrop-filter: blur(var(--blur-md));
+    padding: 14px;
+    box-shadow: var(--shadow-glass);
+  }
+
+  .pending__mobile-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .pending__mobile-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .pending__mobile-metric {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .pending__mobile-metric--total {
+    grid-column: span 2;
+  }
+
+  .pending__mobile-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .pending__mobile-value {
+    font-size: 13px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pending__mobile-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .pending__mobile-actions .pending__action-btn {
+    width: 100%;
+    height: 40px;
+  }
+
+  .pending__table-card {
+    display: none;
   }
 }

@@ -13,21 +13,42 @@ class SyncQueueService {
     this.isSyncing = false
     this.syncListeners = []
     this.autoSyncEnabled = true
+    this.retryIntervalMs = 60 * 1000
+    this.retrySeriesCount = 5
+    this.retryAttemptsPerSeries = 5
+    this.maxRetryAttempts = this.retrySeriesCount * this.retryAttemptsPerSeries
+    this.retryTimerId = null
   }
 
   /**
    * Initialize sync service
    */
   init() {
+    if (this.retryTimerId) {
+      return
+    }
+
     // Listen for network status changes
     networkService.addListener((isOnline) => {
       if (isOnline && this.autoSyncEnabled) {
-        // Wait a bit before syncing to ensure connection is stable
+        // Keep the reconnect delay short so sync feels immediate.
         setTimeout(() => {
-          this.syncAll()
-        }, 2000)
+          this.syncAll().catch((error) => {
+            console.warn('⚠️ Auto-sync after reconnect failed:', error)
+          })
+        }, 300)
       }
     })
+
+    this.retryTimerId = setInterval(() => {
+      if (!this.autoSyncEnabled || !networkService.checkStatus()) {
+        return
+      }
+
+      this.syncAll().catch((error) => {
+        console.warn('⚠️ Scheduled retry sync failed:', error)
+      })
+    }, this.retryIntervalMs)
 
     console.log('🔄 Sync queue service initialized')
   }
@@ -61,40 +82,63 @@ class SyncQueueService {
    * Queue a create product operation
    */
   async queueCreateProduct(productData) {
-    return localStorageService.addPendingOperation({
+    const operationId = await localStorageService.addPendingOperation({
       type: 'CREATE_PRODUCT',
       data: productData
     })
+    this.syncIfOnlineSoon()
+    return operationId
   }
 
   /**
    * Queue an update product operation
    */
   async queueUpdateProduct(productId, productData) {
-    return localStorageService.addPendingOperation({
+    const operationId = await localStorageService.addPendingOperation({
       type: 'UPDATE_PRODUCT',
       data: { id: productId, ...productData }
     })
+    this.syncIfOnlineSoon()
+    return operationId
   }
 
   /**
    * Queue a delete product operation
    */
   async queueDeleteProduct(productId) {
-    return localStorageService.addPendingOperation({
+    const operationId = await localStorageService.addPendingOperation({
       type: 'DELETE_PRODUCT',
       data: { id: productId }
     })
+    this.syncIfOnlineSoon()
+    return operationId
   }
 
   /**
    * Queue a stock adjustment operation
    */
   async queueStockAdjustment(productId, quantity, type, notes) {
-    return localStorageService.addPendingOperation({
+    const operationId = await localStorageService.addPendingOperation({
       type: 'STOCK_ADJUSTMENT',
       data: { productId, quantity, adjustmentType: type, notes }
     })
+    this.syncIfOnlineSoon()
+    return operationId
+  }
+
+  /**
+   * Trigger sync quickly when online to keep queue near real-time.
+   */
+  syncIfOnlineSoon() {
+    if (!this.autoSyncEnabled || this.isSyncing || !networkService.checkStatus()) {
+      return
+    }
+
+    setTimeout(() => {
+      this.syncAll().catch((error) => {
+        console.warn('⚠️ Immediate sync attempt failed:', error)
+      })
+    }, 150)
   }
 
   /**
@@ -102,7 +146,7 @@ class SyncQueueService {
    */
   async getPendingCount() {
     const operations = await localStorageService.getPendingOperations()
-    return operations.filter(op => op.status === 'pending').length
+    return operations.filter(op => op.status === 'pending' && (op.retry_count || 0) < this.maxRetryAttempts).length
   }
 
   /**
@@ -129,7 +173,13 @@ class SyncQueueService {
 
     try {
       const operations = await localStorageService.getPendingOperations()
-      const pendingOps = operations.filter(op => op.status === 'pending')
+      const now = Date.now()
+      const pendingOps = operations.filter((op) => {
+        if (op.status !== 'pending') return false
+        if ((op.retry_count || 0) >= this.maxRetryAttempts) return false
+        if (op.next_retry_at && op.next_retry_at > now) return false
+        return true
+      })
 
       console.log(`🔄 Starting sync: ${pendingOps.length} operations pending`)
 
@@ -145,9 +195,27 @@ class SyncQueueService {
         } catch (error) {
           console.error(`❌ Failed to sync operation ${operation.id}:`, error)
           failCount++
-          
-          // Mark operation as failed but keep it for retry
-          // You could add retry logic here
+
+          const nextRetryCount = (operation.retry_count || 0) + 1
+          const exhaustedRetries = nextRetryCount >= this.maxRetryAttempts
+          const connectivityFailure = this.isConnectivityError(error)
+
+          if (connectivityFailure) {
+            await localStorageService.updatePendingOperation(operation.id, {
+              status: exhaustedRetries ? 'failed' : 'pending',
+              retry_count: nextRetryCount,
+              next_retry_at: exhaustedRetries ? null : Date.now() + this.retryIntervalMs,
+              last_error: error?.message || String(error)
+            })
+          } else {
+            // Non-connectivity errors are treated as hard failures to avoid infinite retries.
+            await localStorageService.updatePendingOperation(operation.id, {
+              status: 'failed',
+              retry_count: nextRetryCount,
+              next_retry_at: null,
+              last_error: error?.message || String(error)
+            })
+          }
         }
       }
 
@@ -170,6 +238,23 @@ class SyncQueueService {
   }
 
   /**
+   * Determine whether a failure is connectivity-related (safe to retry).
+   */
+  isConnectivityError(error) {
+    if (!networkService.checkStatus()) return true
+
+    const message = String(error?.message || error || '').toLowerCase()
+    return (
+      message.includes('failed to fetch') ||
+      message.includes('networkerror') ||
+      message.includes('network request failed') ||
+      message.includes('load failed') ||
+      message.includes('timeout') ||
+      message.includes('offline')
+    )
+  }
+
+  /**
    * Execute a single pending operation
    */
   async executeOperation(operation) {
@@ -184,11 +269,35 @@ class SyncQueueService {
       case 'CREATE_PRODUCT': {
         const { data: product, error } = await supabase
           .from('products')
-          .insert([{ ...data, tenant_id: tenantId }])
+          .insert([{
+            ...data,
+            tenant_id: tenantId,
+            _local_temp_id: undefined
+          }])
           .select()
           .single()
 
         if (error) throw error
+
+        const localTempId = data?._local_temp_id
+
+        if (localTempId) {
+          await localStorageService.deleteProduct(localTempId)
+
+          const operations = await localStorageService.getPendingOperations()
+          const dependentOps = operations.filter((op) => {
+            if (op.id === operation.id) return false
+            if (op.status !== 'pending') return false
+            return op.data?.id === localTempId || op.data?.productId === localTempId
+          })
+
+          for (const dependentOp of dependentOps) {
+            const nextData = { ...dependentOp.data }
+            if (nextData.id === localTempId) nextData.id = product.id
+            if (nextData.productId === localTempId) nextData.productId = product.id
+            await localStorageService.updatePendingOperation(dependentOp.id, { data: nextData })
+          }
+        }
 
         // Update local storage with the real ID
         await localStorageService.saveProduct(product)

@@ -183,7 +183,10 @@ class LocalStorageService {
     const opWithTimestamp = {
       ...operation,
       timestamp: Date.now(),
-      status: 'pending'
+      status: 'pending',
+      retry_count: 0,
+      next_retry_at: Date.now(),
+      last_error: null
     }
     
     const request = store.add(opWithTimestamp)
@@ -194,6 +197,32 @@ class LocalStorageService {
         resolve(request.result)
       }
       request.onerror = () => reject(request.error)
+    })
+  }
+
+  /**
+   * Update an existing pending operation
+   */
+  async updatePendingOperation(id, updates) {
+    await this.init()
+    const tx = this.db.transaction(STORES.PENDING_OPERATIONS, 'readwrite')
+    const store = tx.objectStore(STORES.PENDING_OPERATIONS)
+    const getRequest = store.get(id)
+
+    return new Promise((resolve, reject) => {
+      getRequest.onsuccess = () => {
+        const existing = getRequest.result
+        if (!existing) {
+          resolve(null)
+          return
+        }
+
+        const putRequest = store.put({ ...existing, ...updates, id })
+        putRequest.onsuccess = () => resolve(putRequest.result)
+        putRequest.onerror = () => reject(putRequest.error)
+      }
+
+      getRequest.onerror = () => reject(getRequest.error)
     })
   }
 

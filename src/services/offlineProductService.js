@@ -204,13 +204,19 @@ export const offlineProductService = {
         } catch (error) {
           console.warn('⚠️ Could not create on server, queued for sync:', error)
           // Queue for sync
-          await syncQueueService.queueCreateProduct(productData)
+          await syncQueueService.queueCreateProduct({
+            ...productData,
+            _local_temp_id: tempId
+          })
           return localProduct
         }
       } else {
         // Offline: queue for sync
         console.log('📴 Offline: product queued for sync')
-        await syncQueueService.queueCreateProduct(productData)
+        await syncQueueService.queueCreateProduct({
+          ...productData,
+          _local_temp_id: tempId
+        })
         return localProduct
       }
     } catch (error) {
@@ -224,11 +230,31 @@ export const offlineProductService = {
    */
   update: async (id, productData) => {
     try {
+      const isTempId = String(id).startsWith('temp_')
       // Update local storage immediately
       const localProduct = await localStorageService.getProduct(id)
       if (localProduct) {
         const updatedProduct = { ...localProduct, ...productData }
         await localStorageService.saveProduct(updatedProduct)
+      }
+
+      if (isTempId) {
+        const operations = await localStorageService.getPendingOperations()
+        const queuedCreate = operations.find((op) => op.status === 'pending' && op.type === 'CREATE_PRODUCT' && op.data?._local_temp_id === id)
+
+        if (queuedCreate) {
+          await localStorageService.updatePendingOperation(queuedCreate.id, {
+            data: {
+              ...queuedCreate.data,
+              ...productData,
+              _local_temp_id: id
+            },
+            next_retry_at: Date.now(),
+            last_error: null
+          })
+        }
+
+        return { ...localProduct, ...productData }
       }
       
       // If online, update on server
@@ -260,6 +286,19 @@ export const offlineProductService = {
    */
   delete: async (id) => {
     try {
+      const isTempId = String(id).startsWith('temp_')
+
+      if (isTempId) {
+        const operations = await localStorageService.getPendingOperations()
+        const queuedCreate = operations.find((op) => op.status === 'pending' && op.type === 'CREATE_PRODUCT' && op.data?._local_temp_id === id)
+        if (queuedCreate) {
+          await localStorageService.removePendingOperation(queuedCreate.id)
+        }
+
+        await localStorageService.deleteProduct(id)
+        return true
+      }
+
       // Mark as deleted locally (or actually delete)
       await localStorageService.deleteProduct(id)
       

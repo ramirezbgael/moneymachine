@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { FaExclamationTriangle } from 'react-icons/fa'
-import { FixedSizeList as List } from 'react-window'
 import { useSaleStore } from '../../store/saleStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import './ItemsList.css'
@@ -31,7 +30,7 @@ const ItemsList = () => {
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [editingIndex, setEditingIndex] = useState(-1)
   const [editingValue, setEditingValue] = useState('')
-  const listRef = useRef(null)
+  const listContainerRef = useRef(null)
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -96,8 +95,10 @@ const ItemsList = () => {
 
   // Scroll selected item into view
   useEffect(() => {
-    if (selectedIndex >= 0 && listRef.current) {
-      listRef.current.scrollToItem(selectedIndex, 'smart')
+    if (selectedIndex < 0 || !listContainerRef.current) return
+    const row = listContainerRef.current.querySelector(`[data-row-index="${selectedIndex}"]`)
+    if (row && typeof row.scrollIntoView === 'function') {
+      row.scrollIntoView({ block: 'nearest' })
     }
   }, [selectedIndex])
 
@@ -123,6 +124,7 @@ const ItemsList = () => {
     return (
       <div
         style={style}
+        data-row-index={index}
         className={`items-list__row items-list__row--stock-${stockLevel} ${isSelected ? 'items-list__row--selected' : ''}`}
         onClick={() => setSelectedIndex(index)}
       >
@@ -249,16 +251,10 @@ const ItemsList = () => {
         <div className="items-list__header-actions">{t('inventory.actions')}</div>
       </div>
       
-      <div className="items-list__virtual-list">
-        <List
-          ref={listRef}
-          height={600}
-          width="100%"
-          itemCount={items.length}
-          itemSize={48}
-        >
-          {Row}
-        </List>
+      <div className="items-list__virtual-list" ref={listContainerRef}>
+        {items.map((_, index) => (
+          <Row key={items[index].id || index} index={index} style={undefined} />
+        ))}
       </div>
     </div>
   )

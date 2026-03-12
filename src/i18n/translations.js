@@ -10,6 +10,7 @@ export const translations = {
       currentSale: 'Current Sale',
       inventory: 'Inventory',
       pending: 'Pending',
+      subscriptions: 'Subscriptions',
       reports: 'Reports',
       settings: 'Settings'
     },
@@ -347,6 +348,7 @@ export const translations = {
       steps: [
         { label: 'Product Code', placeholder: 'Enter product code', ariaLabel: 'Enter product code' },
         { label: 'Product Name', placeholder: 'Enter product name', ariaLabel: 'Enter product name' },
+        { label: 'Product Icon', placeholder: 'Choose a product icon (optional)', ariaLabel: 'Choose a product icon' },
         { label: 'Product Image', placeholder: 'Upload or capture image', ariaLabel: 'Upload or capture product image' },
         { label: 'Barcode', placeholder: 'Enter barcode (optional)', ariaLabel: 'Enter barcode' },
         { label: 'Description', placeholder: 'Enter description (optional)', ariaLabel: 'Enter product description' },
@@ -438,6 +440,7 @@ export const translations = {
       currentSale: 'Venta Actual',
       inventory: 'Inventario',
       pending: 'Pendientes',
+      subscriptions: 'Suscripciones',
       reports: 'Reportes',
       settings: 'Configuración'
     },
@@ -775,6 +778,7 @@ export const translations = {
       steps: [
         { label: 'Código del Producto', placeholder: 'Ingresa el código del producto', ariaLabel: 'Ingresa el código del producto' },
         { label: 'Nombre del Producto', placeholder: 'Ingresa el nombre del producto', ariaLabel: 'Ingresa el nombre del producto' },
+        { label: 'Icono del Producto', placeholder: 'Elige un icono para el producto (opcional)', ariaLabel: 'Elige un icono para el producto' },
         { label: 'Imagen del Producto', placeholder: 'Sube o captura una imagen', ariaLabel: 'Sube o captura la imagen del producto' },
         { label: 'Código de Barras', placeholder: 'Ingresa código de barras (opcional)', ariaLabel: 'Ingresa código de barras' },
         { label: 'Descripción', placeholder: 'Ingresa descripción (opcional)', ariaLabel: 'Ingresa la descripción del producto' },
@@ -866,6 +870,7 @@ export const translations = {
       currentSale: 'Vente Actuelle',
       inventory: 'Inventaire',
       pending: 'En Attente',
+      subscriptions: 'Abonnements',
       reports: 'Rapports',
       settings: 'Paramètres'
     },
@@ -998,6 +1003,7 @@ export const translations = {
       steps: [
         { label: 'Code Produit', placeholder: 'Entrez le code du produit', ariaLabel: 'Entrez le code du produit' },
         { label: 'Nom du Produit', placeholder: 'Entrez le nom du produit', ariaLabel: 'Entrez le nom du produit' },
+        { label: 'Icône du produit', placeholder: 'Choisissez une icône (optionnel)', ariaLabel: 'Choisissez une icône du produit' },
         { label: 'Image du produit', placeholder: 'Téléchargez ou capturez une image', ariaLabel: 'Téléchargez ou capturez l\'image du produit' },
         { label: 'Code-barres', placeholder: 'Entrez le code-barres (optionnel)', ariaLabel: 'Entrez le code-barres' },
         { label: 'Description', placeholder: 'Entrez la description (optionnel)', ariaLabel: 'Entrez la description du produit' },
@@ -1089,6 +1095,7 @@ export const translations = {
       currentSale: 'Aktueller Verkauf',
       inventory: 'Inventar',
       pending: 'Ausstehend',
+      subscriptions: 'Abonnements',
       reports: 'Berichte',
       settings: 'Einstellungen'
     },
@@ -1221,6 +1228,7 @@ export const translations = {
       steps: [
         { label: 'Produktcode', placeholder: 'Produktcode eingeben', ariaLabel: 'Produktcode eingeben' },
         { label: 'Produktname', placeholder: 'Produktname eingeben', ariaLabel: 'Produktname eingeben' },
+        { label: 'Produktsymbol', placeholder: 'Produktsymbol auswahlen (optional)', ariaLabel: 'Produktsymbol auswahlen' },
         { label: 'Produktbild', placeholder: 'Bild hochladen oder aufnehmen', ariaLabel: 'Produktbild hochladen oder aufnehmen' },
         { label: 'Strichcode', placeholder: 'Strichcode eingeben (optional)', ariaLabel: 'Strichcode eingeben' },
         { label: 'Beschreibung', placeholder: 'Beschreibung eingeben (optional)', ariaLabel: 'Produktbeschreibung eingeben' },
