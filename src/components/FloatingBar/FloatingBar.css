@@ -18,7 +18,8 @@
   .floating-bar {
     bottom: calc(
       var(--mobile-bottom-nav-height, calc(64px + env(safe-area-inset-bottom, 0px))) +
-      var(--current-sale-mobile-nav-gap, 0px)
+      var(--current-sale-mobile-nav-gap, 0px) +
+      var(--current-sale-mobile-float-bottom-offset, 0px)
     );
   }
 }
