@@ -16,7 +16,10 @@
 
 @media (max-width: 768px) {
   .floating-bar {
-    bottom: var(--mobile-bottom-nav-height, calc(64px + env(safe-area-inset-bottom, 0px)));
+    bottom: calc(
+      var(--mobile-bottom-nav-height, calc(64px + env(safe-area-inset-bottom, 0px))) +
+      var(--current-sale-mobile-nav-gap, 0px)
+    );
   }
 }
 

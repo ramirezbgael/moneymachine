@@ -2,6 +2,7 @@
 
 .current-sale {
   --current-sale-floating-height: 112px;
+  --current-sale-mobile-nav-gap: 0px;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -109,6 +110,7 @@
 @media (max-width: 768px) {
   .current-sale {
     --current-sale-floating-height: 176px;
+    --current-sale-mobile-nav-gap: 12px;
   }
 
   .current-sale__header {
@@ -143,6 +145,7 @@
     padding-bottom: calc(
       var(--current-sale-floating-height) +
       var(--mobile-bottom-nav-height, calc(64px + env(safe-area-inset-bottom, 0px))) +
+      var(--current-sale-mobile-nav-gap) +
       var(--spacing-md)
     );
   }
