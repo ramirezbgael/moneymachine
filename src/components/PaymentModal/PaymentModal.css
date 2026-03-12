@@ -310,3 +310,17 @@
   background: color-mix(in srgb, var(--accent-primary) 10%, white);
   color: color-mix(in srgb, var(--accent-primary) 70%, #0f172a);
 }
+
+@media (max-width: 768px) {
+  .payment-modal {
+    height: calc(100dvh - var(--mobile-bottom-nav-height, 0px));
+    max-height: calc(100dvh - var(--mobile-bottom-nav-height, 0px));
+  }
+
+  .payment-modal .modal__footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom, 0px));
+  }
+}
