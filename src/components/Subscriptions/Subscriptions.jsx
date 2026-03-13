@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FaEdit, FaPhoneAlt, FaPlus } from 'react-icons/fa'
 import { useSubscriptionStore } from '../../store/subscriptionStore'
 import PrintModal from '../PrintModal/PrintModal'
@@ -77,14 +78,13 @@ const PAYMENT_METHODS = [
 ]
 
 const Subscriptions = () => {
+  const navigate = useNavigate()
   const {
     customers,
     subscriptionPlans,
     loading,
     addCustomer,
-    updateCustomer,
     renewCustomer,
-    cancelCustomer,
     loadCustomers,
     loadSubscriptionPlans,
     saveSubscriptionPlans
@@ -107,9 +107,6 @@ const Subscriptions = () => {
   const [subscribersSearch, setSubscribersSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [listSort, setListSort] = useState({ key: 'renewalDate', direction: 'asc' })
-  const [editingCustomerId, setEditingCustomerId] = useState(null)
-  const [editForm, setEditForm] = useState({ name: '', phone: '', monthlyFee: '' })
-  const [editSaving, setEditSaving] = useState(false)
   const [renewPaymentMethod, setRenewPaymentMethod] = useState('cash')
   const [renewSubmitting, setRenewSubmitting] = useState(false)
   const [renewType, setRenewType] = useState('add_months')
@@ -243,40 +240,6 @@ const Subscriptions = () => {
     })
   }, [customers, listSort.direction, listSort.key, statusFilter, subscribersSearch])
 
-  const openEditModal = (customer) => {
-    setEditingCustomerId(customer.id)
-    setEditForm({
-      name: customer.name || '',
-      phone: customer.phone || '',
-      monthlyFee: String(customer.monthlyFee || subscriptionPlans[0] || '')
-    })
-  }
-
-  const closeEditModal = () => {
-    if (editSaving) return
-    setEditingCustomerId(null)
-  }
-
-  const handleSaveEdit = async () => {
-    if (!editingCustomerId) return
-    const normalizedName = editForm.name.trim()
-    if (normalizedName.length < 3) return
-    if (editForm.phone && editForm.phone.length !== 10) return
-
-    setEditSaving(true)
-    try {
-      await updateCustomer(editingCustomerId, {
-        name: normalizedName,
-        phone: editForm.phone,
-        monthlyFee: editForm.monthlyFee
-      })
-      setEditingCustomerId(null)
-    } finally {
-      setEditSaving(false)
-    }
-  }
-
-  const editingCustomer = customers.find((customer) => customer.id === editingCustomerId)
   const selectedCustomer = customers.find((customer) => customer.id === selectedId)
   const renewConfig = renewType === 'renewal'
     ? { title: 'Cobrar mensualidad', subtitle: 'Registra el cobro y extiende la próxima renovación un mes.', actionLabel: 'Cobrar mensualidad', totalMonths: 1 }
@@ -321,36 +284,64 @@ const Subscriptions = () => {
   const selectedSortLabel = SORT_OPTIONS.find((option) => option.id === listSort.key)?.label || 'Próxima renovación'
 
   return (
-    <div className="subscriptions-page text-[var(--text)]">
+    <div className="subscriptions-page min-h-screen flex flex-col h-full text-[var(--text)]">
       <header className="subscriptions-page__header">
-        <div>
-          <h1 className="subscriptions-page__title">Suscripciones</h1>
-          <p className="subscriptions-page__subtitle">
-            Administra clientes recurrentes, mensualidades y renovaciones desde un panel más claro para operación diaria.
-          </p>
-        </div>
+        <h1 className="subscriptions-page__title">Suscripciones</h1>
       </header>
 
-      <section className="subscriptions-summary-bar" aria-label="Resumen de suscripciones">
-        <span><strong>Activas:</strong> {summary.active}</span>
-        <span><strong>Por vencer:</strong> {summary.dueSoon}</span>
-        <span><strong>Vencidas:</strong> {summary.expired}</span>
-        <span><strong>Ingreso mensual:</strong> {formatMoney(summary.estimatedRevenue)}</span>
+      <section className="subscriptions-compact-kpis hidden md:flex" aria-label="Resumen de suscripciones">
+        <span>Activas <strong>{summary.active}</strong></span>
+        <span>Por vencer <strong>{summary.dueSoon}</strong></span>
+        <span>Vencidas <strong>{summary.expired}</strong></span>
+        <span>Ingreso <strong>{formatMoney(summary.estimatedRevenue)}</strong></span>
       </section>
 
       <section className="subscriptions-page__content">
         <article className="subscriptions-panel subscriptions-panel--list subscriptions-panel--dashboard">
-          <div className="subscriptions-panel__header subscriptions-panel__header--list">
-            <div>
-              <h2 className="subscriptions-panel__title">Clientes con suscripción</h2>
-              <p className="subscriptions-panel__subcopy">Cobros, renovación y seguimiento rápido desde una sola vista.</p>
-            </div>
+          <div className="subscriptions-panel__header subscriptions-panel__header--list hidden md:flex">
+            <h2 className="subscriptions-panel__title">Lista de suscriptores</h2>
             <span className="subscriptions-panel__counter">{visibleCustomers.length} / {customers.length} cliente(s)</span>
           </div>
 
-          <div className="subscriptions-list-toolbar subscriptions-list-toolbar--single-row">
-            <input type="text" value={subscribersSearch} onChange={(e) => setSubscribersSearch(e.target.value)} className="subscriptions-list-search" placeholder="Buscar por nombre o teléfono" />
+          <div className="subscriptions-list-search-wrap subscriptions-list-search-wrap--desktop">
+            <input type="text" value={subscribersSearch} onChange={(e) => setSubscribersSearch(e.target.value)} className="subscriptions-list-search" placeholder="Buscar suscriptor..." />
+          </div>
 
+          <div className="subscriptions-mobile-sort md:hidden" aria-label="Ordenar suscriptores en móvil">
+            <div className="subscriptions-sort-group" role="tablist" aria-label="Orden por campo">
+              <button
+                type="button"
+                className={`subscriptions-sort-btn ${listSort.key === 'name' ? 'subscriptions-sort-btn--active' : ''}`}
+                onClick={() => setListSort((prev) => ({ ...prev, key: 'name' }))}
+              >
+                A-Z
+              </button>
+              <button
+                type="button"
+                className={`subscriptions-sort-btn ${listSort.key === 'renewalDate' ? 'subscriptions-sort-btn--active' : ''}`}
+                onClick={() => setListSort((prev) => ({ ...prev, key: 'renewalDate' }))}
+              >
+                Fecha
+              </button>
+              <button
+                type="button"
+                className={`subscriptions-sort-btn ${listSort.key === 'price' ? 'subscriptions-sort-btn--active' : ''}`}
+                onClick={() => setListSort((prev) => ({ ...prev, key: 'price' }))}
+              >
+                Monto
+              </button>
+            </div>
+            <button
+              type="button"
+              className="subscriptions-sort-btn subscriptions-sort-btn--active"
+              onClick={() => setListSort((prev) => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
+              aria-label="Cambiar dirección de orden"
+            >
+              {listSort.direction === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
+
+          <div className="subscriptions-list-toolbar subscriptions-list-advanced hidden md:grid">
             <div className="subscriptions-filter-group" role="tablist" aria-label="Filtrar suscripciones">
               {FILTERS.map((filter) => (
                 <button key={filter.id} type="button" className={`subscriptions-filter-btn ${statusFilter === filter.id ? 'subscriptions-filter-btn--active' : ''}`} onClick={() => setStatusFilter(filter.id)}>
@@ -388,7 +379,19 @@ const Subscriptions = () => {
                   : `${customer.daysLeft} días`
 
                 return (
-                  <article key={customer.id} className={`subscriptions-customer ${isSelected ? 'subscriptions-customer--selected' : ''}`}>
+                  <article
+                    key={customer.id}
+                    className={`subscriptions-customer ${isSelected ? 'subscriptions-customer--selected' : ''} cursor-pointer`}
+                    onClick={() => navigate(`/suscripciones/${customer.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        navigate(`/suscripciones/${customer.id}`)
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
                     <span className={`subscriptions-customer__dot subscriptions-customer__dot--${status.tone}`} title={status.label} aria-label={status.label} />
 
                     <div className="subscriptions-customer__identity">
@@ -405,7 +408,10 @@ const Subscriptions = () => {
                     <div className="subscriptions-customer__actions">
                       <button
                         type="button"
-                        onClick={() => openRenewModal(customer, 'renewal')}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          openRenewModal(customer, 'renewal')
+                        }}
                         className="subscriptions-action subscriptions-action--renew"
                         title="Cobrar mensualidad"
                         aria-label="Cobrar mensualidad"
@@ -414,10 +420,13 @@ const Subscriptions = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => openEditModal(customer)}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          navigate(`/suscripciones/${customer.id}`)
+                        }}
                         className="subscriptions-action subscriptions-action--edit"
-                        title="Editar suscripción"
-                        aria-label="Editar suscripción"
+                        title="Ver detalle y editar"
+                        aria-label="Ver detalle y editar"
                       >
                         <FaEdit aria-hidden="true" />
                       </button>
@@ -583,43 +592,6 @@ const Subscriptions = () => {
               <button type="button" className="subscriptions-modal-btn" onClick={() => setSelectedId(null)} disabled={renewSubmitting}>Cancelar</button>
               <button type="button" className="subscriptions-modal-btn subscriptions-modal-btn--primary" onClick={handleConfirmRenew} disabled={renewSubmitting}>
                 {renewSubmitting ? 'Procesando...' : renewConfig.actionLabel}
-              </button>
-            </div>
-          </article>
-        </section>
-      )}
-
-      {editingCustomer && (
-        <section className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm grid place-items-center p-4" onClick={closeEditModal}>
-          <article className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold">Editar suscriptor</h3>
-            <p className="text-sm text-[var(--text-secondary)] mt-1">Modifica nombre, teléfono o mensualidad.</p>
-
-            <div className="mt-4 space-y-3">
-              <label className="subscriptions-modal-label">
-                Nombre
-                <input type="text" value={editForm.name} onChange={(e) => setEditForm((prev) => ({ ...prev, name: sanitizeName(e.target.value) }))} className="subscriptions-modal-input" minLength={3} maxLength={80} />
-              </label>
-
-              <label className="subscriptions-modal-label">
-                Teléfono
-                <input type="text" value={editForm.phone} onChange={(e) => setEditForm((prev) => ({ ...prev, phone: sanitizePhone(e.target.value) }))} className="subscriptions-modal-input" inputMode="numeric" pattern="[0-9]{10}" minLength={10} maxLength={10} placeholder="Opcional (10 dígitos)" />
-              </label>
-
-              <label className="subscriptions-modal-label">
-                Mensualidad
-                <select value={editForm.monthlyFee} onChange={(e) => setEditForm((prev) => ({ ...prev, monthlyFee: e.target.value }))} className="subscriptions-modal-input">
-                  {subscriptionPlans.map((plan) => (
-                    <option key={plan} value={String(plan)}>{formatMoney(plan)} / mes</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="mt-5 flex gap-2 justify-end">
-              <button type="button" className="subscriptions-modal-btn" onClick={closeEditModal} disabled={editSaving}>Cancelar</button>
-              <button type="button" className="subscriptions-modal-btn subscriptions-modal-btn--primary" onClick={handleSaveEdit} disabled={editSaving}>
-                {editSaving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
           </article>

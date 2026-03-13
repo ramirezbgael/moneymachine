@@ -146,7 +146,11 @@ const Layout = () => {
 
   const overflowModuleIds = new Set(moreModuleItems.map((item) => item.id))
   const directModuleIds = new Set(menuItems.map((item) => item.id))
-  const activeMoreModuleId = moreModuleItems.find((item) => location.pathname.startsWith(item.path))?.id || null
+  const activeMoreModuleId = moreModuleItems.find((item) => {
+    if (location.pathname.startsWith(item.path)) return true
+    if (item.id === 'subscriptions' && location.pathname.startsWith('/suscripciones')) return true
+    return false
+  })?.id || null
 
   const mobileTabItems = menuItems
 
@@ -154,7 +158,7 @@ const Layout = () => {
     if (location.pathname.startsWith('/inventory')) return directModuleIds.has('inventory') ? 'inventory' : 'more'
     if (location.pathname.startsWith('/inventario')) return directModuleIds.has('inventory') ? 'inventory' : 'more'
     if (location.pathname.startsWith('/pending')) return directModuleIds.has('pending') ? 'pending' : 'more'
-    if (location.pathname.startsWith('/subscriptions')) return directModuleIds.has('subscriptions') ? 'subscriptions' : 'more'
+    if (location.pathname.startsWith('/subscriptions') || location.pathname.startsWith('/suscripciones')) return directModuleIds.has('subscriptions') ? 'subscriptions' : 'more'
     if (location.pathname.startsWith('/finance') || location.pathname.startsWith('/finanzas') || location.pathname.startsWith('/reports')) {
       return directModuleIds.has('finance') ? 'finance' : 'more'
     }
@@ -177,6 +181,8 @@ const Layout = () => {
     location.pathname.startsWith('/caja') ||
     location.pathname.startsWith('/inventory') ||
     location.pathname.startsWith('/inventario') ||
+    location.pathname.startsWith('/subscriptions') ||
+    location.pathname.startsWith('/suscripciones') ||
     location.pathname.startsWith('/configuracion') ||
     location.pathname.startsWith('/finance') ||
     location.pathname.startsWith('/finanzas') ||

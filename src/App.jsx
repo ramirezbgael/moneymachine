@@ -13,6 +13,7 @@ import CajaModule from './components/Caja/CajaModule'
 import Subscriptions from './components/Subscriptions/Subscriptions'
 import { ConfiguracionPage } from './pages/configuracion/ConfiguracionPage'
 import CheckoutPage from './pages/checkout/CheckoutPage'
+import SubscriptionClientPage from './pages/subscriptions/SubscriptionClientPage'
 import Login from './components/Auth/Login'
 import Register from './components/Auth/Register'
 import { useAuthStore } from './store/authStore'
@@ -73,6 +74,11 @@ const LegacyInventoryProductRedirect = () => {
   return <Navigate to={id ? `/inventory/product/${id}` : '/inventory'} replace />
 }
 
+const PublicSubscriptionCheckRedirect = () => {
+  const { id } = useParams()
+  return <Navigate to={id ? `/suscripciones/${id}` : '/subscriptions'} replace />
+}
+
 function App() {
   // Initialize offline services
   useEffect(() => {
@@ -91,6 +97,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/check/:id" element={<PublicSubscriptionCheckRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route
@@ -115,6 +122,22 @@ function App() {
             element={
               <FeatureRoute featureKey="subscriptions">
                 <Subscriptions />
+              </FeatureRoute>
+            }
+          />
+          <Route
+            path="subscriptions/:id"
+            element={
+              <FeatureRoute featureKey="subscriptions">
+                <SubscriptionClientPage />
+              </FeatureRoute>
+            }
+          />
+          <Route
+            path="suscripciones/:id"
+            element={
+              <FeatureRoute featureKey="subscriptions">
+                <SubscriptionClientPage />
               </FeatureRoute>
             }
           />

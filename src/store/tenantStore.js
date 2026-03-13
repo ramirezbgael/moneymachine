@@ -10,7 +10,7 @@ export const useTenantStore = create((set, get) => ({
   currentTenant: null, // { id, name, slug }
   tenants: [],
   featureFlags: {
-    subscriptions: false
+    subscriptions: true
   },
   featureFlagsLoading: true,
   loading: false,
@@ -18,7 +18,7 @@ export const useTenantStore = create((set, get) => ({
 
   loadFeatureFlags: async (tenantId) => {
     if (!tenantId) {
-      set({ featureFlags: { subscriptions: false }, featureFlagsLoading: false })
+      set({ featureFlags: { subscriptions: true }, featureFlagsLoading: false })
       return
     }
 
@@ -44,17 +44,19 @@ export const useTenantStore = create((set, get) => ({
       const statusActive = data?.status === 'active' || data?.status === 'trial'
       const startsOk = !startsAt || startsAt <= now
       const endsOk = !endsAt || endsAt >= now
+      const hasModuleConfig = Boolean(data)
 
       set({
         featureFlags: {
-          subscriptions: Boolean(data && statusActive && startsOk && endsOk)
+          // Legacy fallback: if module row doesn't exist yet, keep subscriptions visible.
+          subscriptions: hasModuleConfig ? Boolean(statusActive && startsOk && endsOk) : true
         },
         featureFlagsLoading: false
       })
     } catch (err) {
       console.error('Error loading tenant feature flags:', err)
       set({
-        featureFlags: { subscriptions: false },
+        featureFlags: { subscriptions: true },
         featureFlagsLoading: false
       })
     }
@@ -70,7 +72,7 @@ export const useTenantStore = create((set, get) => ({
         currentTenantId: null,
         currentTenant: null,
         tenants: [],
-        featureFlags: { subscriptions: false },
+        featureFlags: { subscriptions: true },
         featureFlagsLoading: false
       })
       return
@@ -116,7 +118,7 @@ export const useTenantStore = create((set, get) => ({
           currentTenantId: null,
           currentTenant: null,
           tenants: [],
-          featureFlags: { subscriptions: false },
+          featureFlags: { subscriptions: true },
           featureFlagsLoading: false,
           loading: false,
           error: 'No tenant assigned. Please contact support or sign up again.'
@@ -139,7 +141,7 @@ export const useTenantStore = create((set, get) => ({
         currentTenantId: null,
         currentTenant: null,
         tenants: [],
-        featureFlags: { subscriptions: false },
+        featureFlags: { subscriptions: true },
         featureFlagsLoading: false,
         loading: false,
         error: err.message || 'Failed to load tenant'
@@ -164,7 +166,7 @@ export const useTenantStore = create((set, get) => ({
       currentTenantId: null,
       currentTenant: null,
       tenants: [],
-      featureFlags: { subscriptions: false },
+      featureFlags: { subscriptions: true },
       featureFlagsLoading: false,
       error: null
     })

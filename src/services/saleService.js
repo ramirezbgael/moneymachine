@@ -5,6 +5,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { productService } from './productService'
 import { useTenantStore } from '../store/tenantStore'
+import { useReportsStore } from '../store/reportsStore'
 
 /**
  * Generate sale number
@@ -13,6 +14,19 @@ const generateSaleNumber = () => {
   const date = new Date()
   const random = Math.floor(Math.random() * 1000)
   return `SALE-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${random}`
+}
+
+const registerCashSaleMovement = async ({ saleNumber, total, paymentMethod, status, sessionId }) => {
+  if (status !== 'completed' || paymentMethod !== 'cash' || !sessionId) return
+
+  const { cashSession, registerCashMovement } = useReportsStore.getState()
+  if (!cashSession?.id || cashSession.id !== sessionId) return
+
+  await registerCashMovement({
+    type: 'sale',
+    description: `Venta ${saleNumber}`,
+    amount: total
+  })
 }
 
 /**
@@ -112,7 +126,7 @@ export const processSale = async (saleData) => {
         }
       }
 
-      return {
+      const processedSale = {
         ...saleRecord,
         sale_number: saleNumber,
         items: items.map(item => ({
@@ -123,6 +137,10 @@ export const processSale = async (saleData) => {
           }
         }))
       }
+
+      await registerCashSaleMovement({ saleNumber, total, paymentMethod, status, sessionId })
+
+      return processedSale
     } else {
       // Mock mode: Update local product data (only if completing)
       if (status === 'completed') {
@@ -164,6 +182,8 @@ export const processSale = async (saleData) => {
       const savedSales = JSON.parse(localStorage.getItem('sales') || '[]')
       savedSales.push(mockSale)
       localStorage.setItem('sales', JSON.stringify(savedSales))
+
+      await registerCashSaleMovement({ saleNumber, total, paymentMethod, status, sessionId })
 
       return mockSale
     }
