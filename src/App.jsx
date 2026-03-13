@@ -14,6 +14,7 @@ import Subscriptions from './components/Subscriptions/Subscriptions'
 import { ConfiguracionPage } from './pages/configuracion/ConfiguracionPage'
 import CheckoutPage from './pages/checkout/CheckoutPage'
 import SubscriptionClientPage from './pages/subscriptions/SubscriptionClientPage'
+import PublicCheckPage from './pages/subscriptions/PublicCheckPage'
 import Login from './components/Auth/Login'
 import Register from './components/Auth/Register'
 import { useAuthStore } from './store/authStore'
@@ -97,7 +98,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/check/:id" element={<PublicSubscriptionCheckRedirect />} />
+        <Route path="/check/:id" element={<PublicCheckPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route
