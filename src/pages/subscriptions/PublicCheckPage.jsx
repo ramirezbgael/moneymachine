@@ -15,6 +15,7 @@
  */
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { QRCodeCanvas } from 'qrcode.react'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 
 const calculateDaysLeft = (endDate) => {
@@ -165,6 +166,21 @@ export default function PublicCheckPage() {
 
             {/* ID */}
             <p className="break-all text-center font-mono text-[10px] text-zinc-600">{customer.id}</p>
+
+                    {/* QR Code */}
+                    <div className="mt-5 flex flex-col items-center gap-3">
+                      <div className="rounded-[16px] bg-white p-3 shadow-lg">
+                        <QRCodeCanvas
+                          value={`${window.location.origin}/check/${customer.id}`}
+                          size={180}
+                          includeMargin={false}
+                          bgColor="#ffffff"
+                          fgColor="#000000"
+                          level="H"
+                        />
+                      </div>
+                      <p className="text-center text-xs text-zinc-600">Muestra este código en el negocio</p>
+                    </div>
           </div>
         </div>
 
