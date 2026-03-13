@@ -15,11 +15,15 @@
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
+  position: relative;
+  z-index: 0;
 }
 
 .items-list__empty-message {
   text-align: center;
   color: var(--text-secondary);
+  position: relative;
+  z-index: 0;
 }
 
 .items-list__empty-message p {
@@ -281,14 +285,19 @@
   }
 
   .items-list__qty-btn {
-    width: 28px;
-    height: 28px;
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
   }
 
   .items-list__quantity-value {
-    min-width: 42px;
-    padding: 4px 8px;
+    min-width: 56px;
+    min-height: 48px;
+    padding: 10px 12px;
     font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .items-list__subtotal {
@@ -301,8 +310,8 @@
   .items-list__remove-btn {
     grid-area: remove;
     justify-self: end;
-    width: 28px;
-    height: 28px;
-    font-size: 20px;
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
   }
 }

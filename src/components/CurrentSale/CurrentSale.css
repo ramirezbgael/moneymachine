@@ -109,10 +109,13 @@
 @media (max-width: 768px) {
   .current-sale {
     --current-sale-floating-height: 176px;
+    gap: 0;
   }
 
   .current-sale__header {
-    padding: var(--spacing-md);
+    display: block;
+    padding: 8px 12px;
+    min-height: auto;
   }
 
   .current-sale__header-content {
@@ -123,7 +126,12 @@
   }
 
   .current-sale__title {
-    font-size: 20px;
+    font-size: 16px;
+  }
+
+  .current-sale__datetime {
+    font-size: 12px;
+    margin-top: 2px;
   }
 
   .current-sale__header-actions {
@@ -131,12 +139,23 @@
   }
 
   .current-sale__search {
-    padding: var(--spacing-md);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    padding: 10px 12px;
+    background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .current-sale__items {
+    position: relative;
+    z-index: 0;
   }
 
   .current-sale__items {
     padding-left: var(--spacing-md);
     padding-right: var(--spacing-md);
+    padding-top: 8px;
   }
 
   .current-sale__items {

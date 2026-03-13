@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { FaCashRegister, FaBox, FaClock, FaChartBar, FaCog, FaUserClock } from 'react-icons/fa'
+import { FaCashRegister, FaBox, FaClock, FaChartBar, FaCog, FaUserClock, FaEllipsisH } from 'react-icons/fa'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useTenantStore } from '../../store/tenantStore'
 import { useAuthStore } from '../../store/authStore'
@@ -17,14 +17,20 @@ const Layout = () => {
   const location = useLocation()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [showMoreModules, setShowMoreModules] = useState(false)
   const [setupBusinessName, setSetupBusinessName] = useState('')
   const [setupLoading, setSetupLoading] = useState(false)
   const [setupError, setSetupError] = useState('')
 
   const user = useAuthStore(state => state.user)
   const subscriptionsEnabled = useTenantStore(state => state.featureFlags?.subscriptions)
+  const navModuleOrder = useSettingsStore(state => state.navModuleOrder)
   const { currentTenantId, currentTenant, loading: tenantLoading, error: tenantError, loadTenants } = useTenantStore()
   const signOut = useAuthStore(state => state.signOut)
+
+  useEffect(() => {
+    setShowMoreModules(false)
+  }, [location.pathname])
 
   const handleCreateBusiness = async () => {
     const name = setupBusinessName.trim()
@@ -98,28 +104,63 @@ const Layout = () => {
     )
   }
 
-  const menuItems = [
-    { path: '/', label: t('nav.currentSale'), icon: FaCashRegister, id: 'sale' },
-    { path: '/inventory', label: t('nav.inventory'), icon: FaBox, id: 'inventory' },
-    { path: '/pending', label: t('nav.pending'), icon: FaClock, id: 'pending' },
-    { path: '/finanzas', label: 'Finanzas', icon: FaChartBar, id: 'finance' },
-    { path: '/configuracion', label: t('nav.settings'), icon: FaCog, id: 'settings' }
+  const fixedMenuItems = [
+    { path: '/', label: t('nav.currentSale'), icon: FaCashRegister, id: 'sale' }
   ]
 
-  if (subscriptionsEnabled) {
-    menuItems.splice(3, 0, {
-      path: '/subscriptions',
-      label: t('nav.subscriptions'),
-      icon: FaUserClock,
-      id: 'subscriptions'
+  const reorderableMenuItems = [
+    { path: '/inventory', label: t('nav.inventory'), icon: FaBox, id: 'inventory' },
+    { path: '/finance', label: 'Finanzas', icon: FaChartBar, id: 'finance' },
+    { path: '/pending', label: t('nav.pending'), icon: FaClock, id: 'pending' },
+    ...(subscriptionsEnabled
+      ? [{ path: '/subscriptions', label: t('nav.subscriptions'), icon: FaUserClock, id: 'subscriptions' }]
+      : []),
+    { path: '/settings', label: t('nav.settings'), icon: FaCog, id: 'settings' }
+  ]
+
+  const menuOrderMap = new Map((navModuleOrder || []).map((id, idx) => [id, idx]))
+  const orderedModules = reorderableMenuItems
+    .map((item, originalIdx) => ({ item, originalIdx }))
+    .sort((a, b) => {
+      const aOrder = menuOrderMap.has(a.item.id) ? menuOrderMap.get(a.item.id) : 999
+      const bOrder = menuOrderMap.has(b.item.id) ? menuOrderMap.get(b.item.id) : 999
+      if (aOrder === bOrder) return a.originalIdx - b.originalIdx
+      return aOrder - bOrder
     })
-  }
+    .map(({ item }) => item)
+
+  const visiblePrimaryModules = orderedModules.slice(0, 2)
+  const overflowOrderedModules = orderedModules.slice(2)
+
+  const pendingModuleItem = reorderableMenuItems.find((item) => item.id === 'pending') || null
+  const moreModuleItems = [
+    pendingModuleItem,
+    ...overflowOrderedModules.filter((item) => item.id !== 'pending')
+  ].filter(Boolean)
+
+  const menuItems = [
+    ...fixedMenuItems,
+    ...visiblePrimaryModules,
+    { path: '/modules', label: 'Más módulos', icon: FaEllipsisH, id: 'more', type: 'more' }
+  ]
+
+  const overflowModuleIds = new Set(moreModuleItems.map((item) => item.id))
+  const directModuleIds = new Set(menuItems.map((item) => item.id))
+  const activeMoreModuleId = moreModuleItems.find((item) => location.pathname.startsWith(item.path))?.id || null
+
+  const mobileTabItems = menuItems
 
   const getActiveId = () => {
-    if (location.pathname.startsWith('/inventario')) return 'inventory'
-    if (location.pathname.startsWith('/pending')) return 'pending'
-    if (location.pathname.startsWith('/subscriptions')) return 'subscriptions'
-    if (location.pathname.startsWith('/finanzas') || location.pathname.startsWith('/reports')) return 'finance'
+    if (location.pathname.startsWith('/inventory')) return directModuleIds.has('inventory') ? 'inventory' : 'more'
+    if (location.pathname.startsWith('/inventario')) return directModuleIds.has('inventory') ? 'inventory' : 'more'
+    if (location.pathname.startsWith('/pending')) return directModuleIds.has('pending') ? 'pending' : 'more'
+    if (location.pathname.startsWith('/subscriptions')) return directModuleIds.has('subscriptions') ? 'subscriptions' : 'more'
+    if (location.pathname.startsWith('/finance') || location.pathname.startsWith('/finanzas') || location.pathname.startsWith('/reports')) {
+      return directModuleIds.has('finance') ? 'finance' : 'more'
+    }
+    if (location.pathname.startsWith('/settings') || location.pathname.startsWith('/configuracion')) {
+      return overflowModuleIds.has('settings') ? 'more' : 'settings'
+    }
     if (location.pathname === '/') return 'sale'
     // Check for exact match first, then startsWith
     const exactMatch = menuItems.find(item => location.pathname === item.path)
@@ -132,15 +173,32 @@ const Layout = () => {
 
   const activeId = getActiveId()
   const allowMobileScroll =
+    location.pathname.startsWith('/cash-register') ||
+    location.pathname.startsWith('/caja') ||
     location.pathname.startsWith('/inventory') ||
     location.pathname.startsWith('/inventario') ||
-    location.pathname.startsWith('/configuracion')
+    location.pathname.startsWith('/configuracion') ||
+    location.pathname.startsWith('/finance') ||
+    location.pathname.startsWith('/finanzas') ||
+    location.pathname.startsWith('/settings') 
+    
 
   const isMobileViewport = () => window.matchMedia('(max-width: 768px)').matches
 
   const handleNavigation = (path) => {
     navigate(path)
     setMobileSidebarOpen(false)
+    setShowMoreModules(false)
+  }
+
+  const handleMoreModulesToggle = () => {
+    if (!moreModuleItems.length) return
+    if (!isMobileViewport() && sidebarCollapsed) {
+      setSidebarCollapsed(false)
+      setShowMoreModules(true)
+      return
+    }
+    setShowMoreModules((current) => !current)
   }
 
   const handleSidebarToggle = () => {
@@ -151,8 +209,13 @@ const Layout = () => {
     setSidebarCollapsed(!sidebarCollapsed)
   }
 
+  const sidebarOffset = mobileSidebarOpen ? 0 : (sidebarCollapsed ? 64 : 240)
+
   return (
-    <div className={`layout ${mobileSidebarOpen ? 'layout--mobile-nav-open' : ''}`}>
+    <div
+      className={`layout ${mobileSidebarOpen ? 'layout--mobile-nav-open' : ''}`}
+      style={{ '--layout-sidebar-offset': `${sidebarOffset}px` }}
+    >
       {/* Sidebar - Zone 1 */}
       <aside
         className={`layout__sidebar ${sidebarCollapsed && !mobileSidebarOpen ? 'layout__sidebar--collapsed' : ''} ${
@@ -175,6 +238,52 @@ const Layout = () => {
             {menuItems.map((item) => {
               const IconComponent = item.icon
               const isActive = activeId === item.id
+
+              if (item.type === 'more') {
+                const isExpanded = showMoreModules || Boolean(activeMoreModuleId)
+                return (
+                  <li key={item.id} className="sidebar__menu-group">
+                    <button
+                      className={`sidebar__item ${isActive ? 'sidebar__item--active' : ''}`}
+                      onClick={handleMoreModulesToggle}
+                      title={sidebarCollapsed ? item.label : undefined}
+                      disabled={!moreModuleItems.length}
+                    >
+                      <span className="sidebar__icon">
+                        <IconComponent />
+                      </span>
+                      {!sidebarCollapsed && (
+                        <>
+                          <span className="sidebar__label">{item.label}</span>
+                        </>
+                      )}
+                    </button>
+
+                    {!sidebarCollapsed && isExpanded && moreModuleItems.length > 0 && (
+                      <div className="sidebar__subnav">
+                        {moreModuleItems.map((subItem) => {
+                          const SubIcon = subItem.icon
+                          const isSubActive = activeMoreModuleId === subItem.id
+                          return (
+                            <button
+                              key={subItem.id}
+                              type="button"
+                              className={`sidebar__subitem ${isSubActive ? 'sidebar__subitem--active' : ''}`}
+                              onClick={() => handleNavigation(subItem.path)}
+                            >
+                              <span className="sidebar__subitem-icon">
+                                <SubIcon />
+                              </span>
+                              <span className="sidebar__subitem-label">{subItem.label}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </li>
+                )
+              }
+
               return (
                 <li key={item.id}>
                   <button
@@ -211,17 +320,6 @@ const Layout = () => {
 
       {/* Main Content - Zone 2 */}
       <main className={`layout__main ${allowMobileScroll ? 'layout__main--mobile-scroll' : ''}`}>
-        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-white/10">
-          <button
-            type="button"
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="layout__mobile-menu-btn"
-            aria-label="Abrir menú"
-          >
-            ☰
-          </button>
-          <div className="text-sm text-[var(--text)]/70">{currentTenant?.name || 'Moneymachine'}</div>
-        </div>
         <Outlet />
       </main>
 
@@ -232,9 +330,10 @@ const Layout = () => {
 
       {/* Bottom nav for mobile */}
       <nav className="layout__bottom-nav md:hidden">
-        {menuItems.map((item) => {
+        {mobileTabItems.map((item) => {
           const IconComponent = item.icon
           const isActive = activeId === item.id
+          const isMoreButton = item.type === 'more'
           return (
             <button
               key={item.id}
@@ -242,15 +341,45 @@ const Layout = () => {
               className={`layout__bottom-nav-btn ${
                 isActive ? 'layout__bottom-nav-btn--active' : ''
               }`}
-              onClick={() => handleNavigation(item.path)}
+              onClick={() => (isMoreButton ? handleMoreModulesToggle() : handleNavigation(item.path))}
+              aria-label={item.label}
+              title={item.label}
+              disabled={isMoreButton && !moreModuleItems.length}
             >
               <span className="layout__bottom-nav-btn-icon">
                 <IconComponent />
               </span>
-              <span>{item.label}</span>
             </button>
           )
         })}
+
+        {showMoreModules && moreModuleItems.length > 0 && (
+          <div className="layout__bottom-nav-sheet">
+            <div className="layout__bottom-nav-sheet-head">
+              <span>Más módulos</span>
+              <button type="button" onClick={() => setShowMoreModules(false)} aria-label="Cerrar más módulos">Cerrar</button>
+            </div>
+            <div className="layout__bottom-nav-sheet-list">
+              {moreModuleItems.map((item) => {
+                const IconComponent = item.icon
+                const isSubActive = activeMoreModuleId === item.id
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`layout__bottom-nav-sheet-item ${isSubActive ? 'layout__bottom-nav-sheet-item--active' : ''}`}
+                    onClick={() => handleNavigation(item.path)}
+                  >
+                    <span className="layout__bottom-nav-sheet-item-icon">
+                      <IconComponent />
+                    </span>
+                    <span>{item.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </nav>
     </div>
   )

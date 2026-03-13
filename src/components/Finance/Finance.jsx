@@ -1,21 +1,58 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { FaChartLine, FaCashRegister, FaFileInvoiceDollar, FaChartBar, FaHistory, FaFileExport, FaSearch, FaArrowRight } from 'react-icons/fa'
 import { useReportsStore } from '../../store/reportsStore'
 import './Finance.css'
 
-const SECTIONS = [
-  { id: 'resumen', label: 'Resumen financiero' },
-  { id: 'cxc', label: 'Cuentas por cobrar' },
-  { id: 'caja', label: 'Caja' },
-  { id: 'reportes', label: 'Reportes' }
-]
-
 const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`
+
+const HUB_CARDS = [
+  {
+    id: 'caja',
+    title: 'Caja',
+    description: 'Abrir caja, registrar movimientos y realizar cortes de caja.',
+    icon: FaCashRegister,
+    to: '/cash-register'
+  },
+  {
+    id: 'receivables',
+    title: 'Cuentas por cobrar',
+    description: 'Gestionar ventas pendientes y pagos de clientes.',
+    icon: FaFileInvoiceDollar,
+    to: '/finance/receivables'
+  },
+  {
+    id: 'reports',
+    title: 'Reportes',
+    description: 'Analizar ventas por día, producto o periodo.',
+    icon: FaChartBar,
+    to: '/finance/reports'
+  },
+  {
+    id: 'cuts',
+    title: 'Historial de cortes',
+    description: 'Revisar cortes de caja anteriores.',
+    icon: FaHistory,
+    to: '/cash-register/historial'
+  },
+  {
+    id: 'export',
+    title: 'Exportar datos',
+    description: 'Exportar reportes financieros a Excel o CSV.',
+    icon: FaFileExport,
+    to: '/finance/export'
+  }
+]
 
 const Finance = () => {
   const navigate = useNavigate()
   const { sectionId } = useParams()
-  const activeSection = sectionId || 'resumen'
+  const activeSection = ({
+    cxc: 'receivables',
+    cortes: 'cuts',
+    exportar: 'export',
+    reportes: 'reports'
+  }[sectionId] || sectionId || 'home')
 
   const {
     loading,
@@ -36,24 +73,28 @@ const Finance = () => {
     markReceivableAsPaid
   } = useReportsStore()
 
+  const [quickSearch, setQuickSearch] = useState('')
   const [newMovement, setNewMovement] = useState({ type: 'adjustment', description: '', amount: '' })
 
   useEffect(() => {
+    if (activeSection === 'home') return
     fetchFinancialSummary()
     fetchReceivables()
     fetchCashSession()
   }, [
+    activeSection,
     fetchFinancialSummary,
     fetchReceivables,
     fetchCashSession
   ])
 
   useEffect(() => {
+    if (activeSection === 'home') return
     if (cashSession?.id) {
       fetchCashMovements(cashSession.id)
       fetchXCut()
     }
-  }, [cashSession?.id, fetchCashMovements, fetchXCut])
+  }, [activeSection, cashSession?.id, fetchCashMovements, fetchXCut])
 
   const openAmount = async () => {
     const raw = window.prompt('Monto de apertura de caja', '0')
@@ -90,27 +131,6 @@ const Finance = () => {
     await fetchXCut()
     await fetchFinancialSummary()
   }
-
-  const renderResumen = () => (
-    <section className="finance-grid finance-grid--summary">
-      <article className="finance-card">
-        <h3>Ingresos hoy</h3>
-        <p>{formatMoney(financialSummary?.todayIncome)}</p>
-      </article>
-      <article className="finance-card">
-        <h3>Ingresos del mes</h3>
-        <p>{formatMoney(financialSummary?.monthIncome)}</p>
-      </article>
-      <article className="finance-card">
-        <h3>Cuentas por cobrar</h3>
-        <p>{formatMoney(financialSummary?.receivablesTotal)}</p>
-      </article>
-      <article className="finance-card">
-        <h3>Caja actual</h3>
-        <p>{formatMoney(financialSummary?.currentCash)}</p>
-      </article>
-    </section>
-  )
 
   const renderCxc = () => (
     <section className="finance-table-wrap">
@@ -264,41 +284,149 @@ const Finance = () => {
     </section>
   )
 
+  const renderCortes = () => (
+    <section className="finance-card finance-card--block finance-card--wide">
+      <h3>Historial de cortes</h3>
+      <table className="finance-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Monto</th>
+            <th>Descripción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {cashMovements.length === 0 && (
+            <tr>
+              <td colSpan={4} className="finance-empty">Sin historial disponible.</td>
+            </tr>
+          )}
+          {cashMovements.map((m) => (
+            <tr key={m.id}>
+              <td>{String(m.created_at || '').replace('T', ' ').slice(0, 16)}</td>
+              <td>{m.type || 'corte'}</td>
+              <td>{formatMoney(m.amount)}</td>
+              <td>{m.description || '-'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  )
+
+  const handleExportCsv = () => {
+    const rows = [
+      ['fecha', 'tipo', 'descripcion', 'monto'],
+      ...(cashMovements || []).map((m) => [
+        String(m.created_at || '').replace('T', ' ').slice(0, 16),
+        m.type || '',
+        m.description || '',
+        String(Number(m.amount || 0).toFixed(2))
+      ])
+    ]
+
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `finanzas_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const renderExportar = () => (
+    <section className="finance-card finance-card--block">
+      <h3>Exportar datos financieros</h3>
+      <p className="finance-subtle">Descarga los movimientos financieros actuales en formato CSV.</p>
+      <div className="finance-actions">
+        <button type="button" onClick={handleExportCsv}>Exportar CSV</button>
+      </div>
+    </section>
+  )
+
+  const filteredCards = HUB_CARDS.filter((card) => {
+    const q = quickSearch.trim().toLowerCase()
+    if (!q) return true
+    return card.title.toLowerCase().includes(q) || card.description.toLowerCase().includes(q)
+  })
+
+  const renderHub = () => (
+    <>
+      <div className="finance-quick-search">
+        <FaSearch className="finance-quick-search__icon" />
+        <input
+          type="text"
+          value={quickSearch}
+          onChange={(e) => setQuickSearch(e.target.value)}
+          placeholder="Buscar modulo o reporte financiero..."
+          aria-label="Busqueda rapida financiera"
+        />
+      </div>
+
+      <section className="finance-hub-grid">
+        {filteredCards.map((card) => {
+          const Icon = card.icon
+          return (
+            <button
+              key={card.id}
+              type="button"
+              className="finance-hub-card"
+              onClick={() => navigate(card.to)}
+            >
+              <Icon className="finance-hub-card__icon" />
+              <h3>{card.title}</h3>
+              <p>{card.description}</p>
+            </button>
+          )
+        })}
+      </section>
+
+      <section className="finance-hub-actions">
+        <button type="button" onClick={() => navigate('/cash-register/movimientos')}>
+          Ver movimientos <FaArrowRight />
+        </button>
+        <button type="button" onClick={() => navigate('/cash-register/gastos')}>
+          Registrar gasto <FaArrowRight />
+        </button>
+        <button type="button" onClick={() => navigate('/cash-register/ingresos')}>
+          Registrar ingreso <FaArrowRight />
+        </button>
+      </section>
+    </>
+  )
+
   return (
     <div className="finance-page">
       <header className="finance-header">
         <div>
           <h1>Finanzas</h1>
-          <p>Gestion financiera integral: resumen, cuentas por cobrar, caja y reportes.</p>
+          <p>Gestion financiera integral del negocio</p>
         </div>
+        {activeSection !== 'home' && (
+          <div className="finance-actions">
+            <button type="button" onClick={() => navigate('/finance')}>Volver al hub</button>
+          </div>
+        )}
       </header>
 
-      <nav className="finance-tabs">
-        {SECTIONS.map((section) => (
-          <button
-            key={section.id}
-            type="button"
-            className={activeSection === section.id ? 'is-active' : ''}
-            onClick={() => navigate(section.id === 'reportes' ? '/finanzas/reportes' : `/finanzas/${section.id}`)}
-          >
-            {section.label}
-          </button>
-        ))}
-      </nav>
-
-      {loading ? (
+      {loading && activeSection !== 'home' ? (
         <div className="finance-loading">Cargando datos financieros...</div>
       ) : (
         <>
-          {activeSection === 'resumen' && renderResumen()}
-          {activeSection === 'cxc' && renderCxc()}
-          {activeSection === 'caja' && renderCaja()}
-          {activeSection === 'reportes' && (
+          {activeSection === 'home' && renderHub()}
+          {activeSection === 'receivables' && renderCxc()}
+          {activeSection === 'cuts' && renderCortes()}
+          {activeSection === 'export' && renderExportar()}
+          {activeSection === 'reports' && (
             <section className="finance-card finance-card--block">
               <h3>Reportes</h3>
               <p className="finance-subtle">Seccion movida a la vista analitica completa.</p>
               <div className="finance-actions">
-                <button type="button" onClick={() => navigate('/finanzas/reportes')}>Abrir reportes</button>
+                <button type="button" onClick={() => navigate('/finance/reports')}>Abrir reportes</button>
               </div>
             </section>
           )}

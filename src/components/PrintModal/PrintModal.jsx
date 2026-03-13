@@ -66,7 +66,7 @@ const PrintModal = ({ sale, onConfirm, onCancel }) => {
   }
 
   return (
-    <div className="modal-overlay" onClick={handleConfirm}>
+    <div className="modal-overlay modal-overlay--print" onClick={handleConfirm}>
       <div
         className="modal print-modal"
         onClick={(e) => e.stopPropagation()}

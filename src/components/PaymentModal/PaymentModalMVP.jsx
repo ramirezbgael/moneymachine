@@ -23,13 +23,27 @@ const PaymentModalMVP = ({ onComplete, onCancel }) => {
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState('')
+  const [cashReceived, setCashReceived] = useState('')
 
   const { subtotal, discountAmount, total, itemCount } = getTotals()
+  const cashReceivedAmount = Number(cashReceived || 0)
+  const cashChange = cashReceivedAmount - total
+  const isCashPayment = paymentMethod === 'cash'
+  const isCashEnough = !isCashPayment || (Number.isFinite(cashReceivedAmount) && cashReceivedAmount >= total)
   const paymentMethods = [
     { id: 'cash', label: t('payment.cash') },
     { id: 'card', label: t('payment.card') },
     { id: 'transfer', label: t('payment.transfer') }
   ]
+
+  useEffect(() => {
+    if (paymentMethod === 'cash') {
+      setCashReceived(total > 0 ? total.toFixed(2) : '')
+    } else {
+      setCashReceived('')
+      setError('')
+    }
+  }, [paymentMethod, total])
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -62,6 +76,11 @@ const PaymentModalMVP = ({ onComplete, onCancel }) => {
       return
     }
 
+    if (isCashPayment && !isCashEnough) {
+      setError('El monto recibido debe ser mayor o igual al total.')
+      return
+    }
+
     setIsProcessing(true)
     setError('')
 
@@ -75,7 +94,9 @@ const PaymentModalMVP = ({ onComplete, onCancel }) => {
         receiptType: 'ticket', // MVP: only tickets
         customer: null, // MVP: no customer management
         userId: user?.id || null,
-        cashier: user?.email || 'system'
+        cashier: user?.email || 'system',
+        cashReceived: isCashPayment ? Number(cashReceivedAmount.toFixed(2)) : null,
+        cashChange: isCashPayment ? Number(Math.max(cashChange, 0).toFixed(2)) : null
       }
 
       const processedSale = await processSale(saleData)
@@ -96,7 +117,7 @@ const PaymentModalMVP = ({ onComplete, onCancel }) => {
   }
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay modal-overlay--payment" onClick={onCancel}>
       <div
         className="modal payment-modal"
         onClick={(e) => e.stopPropagation()}
@@ -139,6 +160,49 @@ const PaymentModalMVP = ({ onComplete, onCancel }) => {
             </div>
           </div>
 
+          {isCashPayment && (
+            <div className="payment-modal__section payment-modal__cash-section">
+              <label className="payment-modal__cash-label" htmlFor="cash-received-input">Monto recibido</label>
+              <div className="payment-modal__cash-input-wrap">
+                <span>$</span>
+                <input
+                  id="cash-received-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  className="payment-modal__cash-input"
+                  value={cashReceived}
+                  onChange={(e) => {
+                    setCashReceived(e.target.value)
+                    setError('')
+                  }}
+                />
+              </div>
+
+              <div className="payment-modal__cash-quick-actions">
+                {[20, 50, 100, 200, 500, 1000].map((amount) => (
+                  <button
+                    key={amount}
+                    type="button"
+                    className="payment-modal__cash-chip"
+                    onClick={() => {
+                      setCashReceived(amount.toFixed(2))
+                      setError('')
+                    }}
+                  >
+                    ${amount}
+                  </button>
+                ))}
+              </div>
+
+              <div className={`payment-modal__cash-change ${isCashEnough ? 'payment-modal__cash-change--ok' : 'payment-modal__cash-change--missing'}`}>
+                <span>Cambio</span>
+                <strong>${(isCashEnough ? cashChange : 0).toFixed(2)}</strong>
+              </div>
+            </div>
+          )}
+
           {/* Error Display */}
           {error && (
             <div className="payment-modal__error">
@@ -158,7 +222,7 @@ const PaymentModalMVP = ({ onComplete, onCancel }) => {
           <button
             className="modal__btn modal__btn--primary"
             onClick={handleProcessPayment}
-            disabled={isProcessing || items.length === 0}
+            disabled={isProcessing || items.length === 0 || !isCashEnough}
           >
             {isProcessing ? t('payment.processing') : (
               <>

@@ -83,6 +83,65 @@ const calculateDaysLeft = (endDate) => {
   return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }
 
+const parseSubscriptionSaleNotes = (notes) => {
+  const raw = String(notes || '')
+  if (!raw.toLowerCase().startsWith('subscription:')) return null
+
+  const parts = raw.split(';').map((part) => part.trim()).filter(Boolean)
+  const parsed = {}
+
+  parts.forEach((part) => {
+    const separatorIndex = part.indexOf(':')
+    if (separatorIndex === -1) return
+    const key = part.slice(0, separatorIndex).trim().toLowerCase()
+    const value = part.slice(separatorIndex + 1).trim()
+    parsed[key] = value
+  })
+
+  return parsed
+}
+
+const mapHistoryEntry = (entry) => ({
+  id: entry.id,
+  amount: Number(entry.amount || 0),
+  date: entry.date || entry.created_at || new Date().toISOString(),
+  months: Math.max(1, Number(entry.months) || 1),
+  paymentMethod: entry.paymentMethod || entry.payment_method || 'cash',
+  kind: entry.kind || entry.type || 'renewal'
+})
+
+const buildSubscriptionSaleNotes = ({ customerId, customerName, months, kind }) => (
+  `subscription:${kind}; customer_id:${customerId || ''}; customer:${customerName}; months:${months}`
+)
+
+const buildPaymentHistoryMap = (salesRows = []) => {
+  return salesRows.reduce((acc, sale) => {
+    const parsed = parseSubscriptionSaleNotes(sale.notes)
+    if (!parsed) return acc
+
+    const keyById = parsed.customer_id || null
+    const keyByName = (parsed.customer || '').trim().toLowerCase()
+    const historyEntry = mapHistoryEntry({
+      id: sale.id,
+      amount: sale.total,
+      date: sale.created_at,
+      months: parsed.months,
+      paymentMethod: sale.payment_method,
+      kind: parsed.subscription || parsed.kind || 'renewal'
+    })
+
+    if (keyById) {
+      acc.byId[keyById] = [...(acc.byId[keyById] || []), historyEntry]
+    }
+
+    if (keyByName) {
+      acc.byName[keyByName] = [...(acc.byName[keyByName] || []), historyEntry]
+    }
+
+    return acc
+  }, { byId: {}, byName: {} })
+}
+
 const mapDbCustomer = (row) => ({
   id: row.id,
   tenant_id: row.tenant_id,
@@ -98,15 +157,20 @@ const mapDbCustomer = (row) => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   cancelledAt: row.cancelled_at,
-  lastPaymentAt: row.last_payment_at
+  lastPaymentAt: row.last_payment_at,
+  paymentHistory: []
 })
 
 const normalizeCustomer = (customer) => {
   const daysLeft = calculateDaysLeft(customer.endDate)
   const isCancelled = customer.status === 'cancelled'
+  const paymentHistory = (customer.paymentHistory || customer.sales || [])
+    .map(mapHistoryEntry)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   return {
     ...customer,
+    paymentHistory,
     daysLeft,
     isExpired: !isCancelled && daysLeft < 0,
     isDueSoon: !isCancelled && daysLeft >= 0 && daysLeft <= 7
@@ -221,7 +285,29 @@ export const useSubscriptionStore = create((set, get) => ({
 
         if (error) throw error
 
-        set({ customers: (data || []).map(mapDbCustomer).map(normalizeCustomer), loading: false })
+        let historyMap = { byId: {}, byName: {} }
+        try {
+          const { data: salesData, error: salesError } = await supabase
+            .from('sales')
+            .select('id, total, created_at, notes, payment_method')
+            .eq('tenant_id', tenantId)
+            .ilike('notes', 'subscription:%')
+            .order('created_at', { ascending: false })
+
+          if (salesError) throw salesError
+          historyMap = buildPaymentHistoryMap(salesData || [])
+        } catch (salesError) {
+          console.warn('Error loading subscription payment history:', salesError)
+        }
+
+        const normalizedCustomers = (data || [])
+          .map(mapDbCustomer)
+          .map((customer) => normalizeCustomer({
+            ...customer,
+            paymentHistory: historyMap.byId[customer.id] || historyMap.byName[(customer.name || '').trim().toLowerCase()] || []
+          }))
+
+        set({ customers: normalizedCustomers, loading: false })
         return
       }
 
@@ -257,13 +343,14 @@ export const useSubscriptionStore = create((set, get) => ({
       totalPaid: monthlyFeeNum * monthsNum,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
-      sales: [
+      paymentHistory: [
         {
           id: `sale-${Date.now()}`,
-          type: 'new_subscription',
+          kind: 'new_subscription',
           months: monthsNum,
           amount: monthlyFeeNum * monthsNum,
-          date: now.toISOString()
+          date: now.toISOString(),
+          paymentMethod
         }
       ]
     }
@@ -298,6 +385,7 @@ export const useSubscriptionStore = create((set, get) => ({
         await get().registerSubscriptionSale({
           tenantId,
           userId,
+          customerId: data.id,
           customerName: data.name,
           amount: monthlyFeeNum * monthsNum,
           months: monthsNum,
@@ -350,6 +438,7 @@ export const useSubscriptionStore = create((set, get) => ({
         await get().registerSubscriptionSale({
           tenantId,
           userId,
+          customerId: customer.id,
           customerName: customer.name,
           amount,
           months: monthsNum,
@@ -377,15 +466,16 @@ export const useSubscriptionStore = create((set, get) => ({
         monthsPurchased: (Number(customer.monthsPurchased) || 0) + monthsNum,
         totalPaid: (Number(customer.totalPaid) || 0) + amount,
         updatedAt: now.toISOString(),
-        sales: [
+        paymentHistory: [
           {
             id: `sale-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            type,
+            kind: type,
             months: monthsNum,
             amount,
-            date: now.toISOString()
+            date: now.toISOString(),
+            paymentMethod
           },
-          ...(customer.sales || [])
+          ...(customer.paymentHistory || customer.sales || [])
         ]
       })
     })
@@ -476,12 +566,12 @@ export const useSubscriptionStore = create((set, get) => ({
     set({ customers: updated })
   },
 
-  registerSubscriptionSale: async ({ tenantId, userId, customerName, amount, months, kind, paymentMethod = 'cash' }) => {
+  registerSubscriptionSale: async ({ tenantId, userId, customerId, customerName, amount, months, kind, paymentMethod = 'cash' }) => {
     if (!isSupabaseConfigured() || !supabase || !tenantId) return
 
     try {
       const saleNumber = generateSaleNumber()
-      const notes = `subscription:${kind}; customer:${customerName}; months:${months}`
+      const notes = buildSubscriptionSaleNotes({ customerId, customerName, months, kind })
 
       const { error } = await supabase
         .from('sales')

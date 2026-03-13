@@ -6,6 +6,19 @@
 -- ============================================
 
 -- ============================================
+-- 0. VIEW: Daily Sales Total (canonical metric)
+-- ============================================
+CREATE OR REPLACE VIEW daily_sales_total AS
+SELECT
+  tenant_id,
+  COALESCE(SUM(total), 0)::NUMERIC(12,2) AS total
+FROM sales
+WHERE status = 'completed'
+  AND payment_method IN ('cash', 'card', 'transfer')
+  AND created_at >= DATE_TRUNC('day', NOW())
+GROUP BY tenant_id;
+
+-- ============================================
 -- 1. VIEW: Daily Sales Summary
 -- ============================================
 CREATE OR REPLACE VIEW daily_sales_summary AS
@@ -18,6 +31,8 @@ SELECT
   SUM(CASE WHEN payment_method = 'transfer' THEN total ELSE 0 END) as transfer_revenue,
   COUNT(DISTINCT customer_id) as unique_customers
 FROM sales
+WHERE status = 'completed'
+  AND payment_method IN ('cash', 'card', 'transfer')
 GROUP BY DATE(created_at)
 ORDER BY sale_date DESC;
 
@@ -139,7 +154,10 @@ BEGIN
     COALESCE(SUM(CASE WHEN payment_method = 'transfer' THEN total ELSE 0 END), 0) as transfer_revenue,
     COUNT(DISTINCT customer_id)::BIGINT as unique_customers
   FROM sales
-  WHERE DATE(created_at) = report_date;
+  WHERE status = 'completed'
+    AND payment_method IN ('cash', 'card', 'transfer')
+    AND created_at >= report_date::timestamp
+    AND created_at < (report_date::timestamp + INTERVAL '1 day');
 END;
 $$ LANGUAGE plpgsql;
 

@@ -123,8 +123,8 @@ export function ConfiguracionPage() {
   const currentItem = visibleItems.find((i) => i.id === active) ?? visibleItems[0]
 
   return (
-    <div className="min-h-full bg-[var(--bg)] text-[var(--text)] p-6">
-      <div className="max-w-6xl mx-auto flex flex-col gap-6">
+    <div className="h-full min-h-0 overflow-y-auto overscroll-y-contain bg-[var(--bg)] text-[var(--text)]">
+      <div className="max-w-6xl mx-auto flex flex-col gap-6 p-6">
         <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-[var(--text)]">{t('settings.title')}</h1>

@@ -299,7 +299,7 @@ export function InventoryNewPage() {
                   variant="secondary"
                   onClick={() => {
                     if (existingProductChoice) {
-                      navigate(`/inventory/producto/${existingProductChoice.productId}`)
+                      navigate(`/inventory/product/${existingProductChoice.productId}`)
                     }
                     setShowExistingModal(false)
                     setExistingProductChoice(null)

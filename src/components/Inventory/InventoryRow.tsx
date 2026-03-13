@@ -102,7 +102,7 @@ export function InventoryRow({ product, onAddedToOrder }: InventoryRowProps) {
   return (
     <>
       <div
-        onClick={() => navigate(`/inventory/producto/${product.id}`)}
+        onClick={() => navigate(`/inventory/product/${product.id}`)}
         className={`flex items-center gap-2 rounded-xl bg-[var(--panel)]/35 py-2.5 px-3 transition-all duration-200 hover:bg-[var(--panel)]/60 hover:shadow-lg hover:shadow-[var(--accent)]/10 backdrop-blur-sm cursor-pointer ${menuOpen ? 'relative z-[9990]' : ''}`}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -166,7 +166,7 @@ export function InventoryRow({ product, onAddedToOrder }: InventoryRowProps) {
                 className="w-full text-left px-4 py-3 text-sm font-medium text-[var(--text)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent)] transition-colors"
                 onClick={() => {
                   setMenuOpen(false)
-                  navigate(`/inventory/producto/${product.id}`)
+                  navigate(`/inventory/product/${product.id}`)
                 }}
               >
                 Ver detalles
@@ -176,7 +176,7 @@ export function InventoryRow({ product, onAddedToOrder }: InventoryRowProps) {
                 className="w-full text-left px-4 py-3 text-sm font-medium text-[var(--text)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent)] transition-colors"
                 onClick={() => {
                   setMenuOpen(false)
-                  navigate(`/inventory/producto/${product.id}`)
+                  navigate(`/inventory/product/${product.id}`)
                 }}
               >
                 Editar

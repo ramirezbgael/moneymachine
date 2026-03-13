@@ -37,6 +37,12 @@ const FINANCE_RECEIVABLES_KEY = 'finance:receivables'
 const FINANCE_CASH_SESSIONS_KEY = 'finance:cash_sessions'
 const FINANCE_CASH_MOVEMENTS_KEY = 'finance:cash_movements'
 const FINANCE_PAYMENTS_KEY = 'finance:payments'
+const DAILY_ALLOWED_PAYMENT_METHODS = ['cash', 'card', 'transfer']
+
+const isMissingFinanceSchemaError = (error) => {
+  const text = String(error?.message || error?.details || error?.hint || '').toLowerCase()
+  return text.includes('could not find the table') || text.includes('relation') || text.includes('schema cache')
+}
 
 const mockReceivables = [
   {
@@ -68,12 +74,50 @@ const safeWrite = (key, value) => {
   }
 }
 
+const getDayRangeFromDateRange = (dateRange = null) => {
+  if (dateRange?.start && dateRange?.end) {
+    const start = new Date(dateRange.start)
+    const end = new Date(dateRange.end)
+    start.setHours(0, 0, 0, 0)
+    end.setHours(23, 59, 59, 999)
+    return {
+      startIso: start.toISOString(),
+      endIso: end.toISOString()
+    }
+  }
+
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  return {
+    startIso: todayStart.toISOString(),
+    endIso: null
+  }
+}
+
+const normalizePaymentMethod = (value) => String(value || '').trim().toLowerCase()
+
+const isSaleInRange = (sale, startIso, endIso) => {
+  const createdAt = String(sale?.created_at || '')
+  if (!createdAt) return false
+  if (createdAt < startIso) return false
+  if (endIso && createdAt > endIso) return false
+  return true
+}
+
+const calculateSalesTotal = (sales = []) => {
+  return sales.reduce((sum, sale) => sum + Number(sale?.total || 0), 0)
+}
+
+const countTickets = (sales = []) => sales.length
+
 /**
  * Reports store
  * Manages reports and analytics data
  */
 export const useReportsStore = create((set, get) => ({
+  financeBackendReady: null,
   dailyTotal: 0,
+  dailyTickets: 0,
   financialSummary: {
     todayIncome: 0,
     monthIncome: 0,
@@ -82,6 +126,7 @@ export const useReportsStore = create((set, get) => ({
   },
   receivables: [],
   cashSession: null,
+  cashSessionsHistory: [],
   cashMovements: [],
   cashXCut: {
     totalSales: 0,
@@ -99,49 +144,120 @@ export const useReportsStore = create((set, get) => ({
   loading: false,
   error: null,
 
+  ensureFinanceBackend: async () => {
+    const cached = get().financeBackendReady
+    if (cached === true || cached === false) return cached
+
+    const tenantId = useTenantStore.getState().currentTenantId
+    if (!tenantId || tenantId === 'local') {
+      return false
+    }
+
+    if (!isSupabaseConfigured() || !supabase) {
+      return false
+    }
+
+    try {
+      const { error } = await supabase
+        .from('cash_sessions')
+        .select('id')
+        .limit(1)
+
+      if (error) {
+        if (isMissingFinanceSchemaError(error)) {
+          console.warn('Finance schema not found in Supabase, using local fallback.')
+          set({ financeBackendReady: false })
+          return false
+        }
+      }
+
+      set({ financeBackendReady: true })
+      return true
+    } catch (error) {
+      if (isMissingFinanceSchemaError(error)) {
+        console.warn('Finance schema not found in Supabase, using local fallback.')
+        set({ financeBackendReady: false })
+        return false
+      }
+      set({ financeBackendReady: false })
+      return false
+    }
+  },
+
+  fetchUnifiedDailySalesTotal: async (dateRange = null) => {
+    const tenantId = useTenantStore.getState().currentTenantId
+    const { startIso, endIso } = getDayRangeFromDateRange(dateRange)
+
+    if (isSupabaseConfigured() && supabase && tenantId) {
+      let query = supabase
+        .from('sales')
+        .select('total')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'completed')
+        .in('payment_method', DAILY_ALLOWED_PAYMENT_METHODS)
+        .gte('created_at', startIso)
+
+      if (endIso) {
+        query = query.lte('created_at', endIso)
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+      return calculateSalesTotal(data || [])
+    }
+
+    const localSales = safeRead('sales', [])
+    const filtered = localSales.filter((sale) => {
+      const method = normalizePaymentMethod(sale.payment_method || sale.paymentMethod)
+      return sale.status === 'completed' && DAILY_ALLOWED_PAYMENT_METHODS.includes(method) && isSaleInRange(sale, startIso, endIso)
+    })
+    return calculateSalesTotal(filtered)
+  },
+
   fetchFinancialSummary: async () => {
     try {
       const tenantId = useTenantStore.getState().currentTenantId
-      const todayStart = new Date()
-      todayStart.setHours(0, 0, 0, 0)
       const monthStart = new Date()
       monthStart.setDate(1)
       monthStart.setHours(0, 0, 0, 0)
 
+      const canUseFinanceBackend = await get().ensureFinanceBackend()
       if (isSupabaseConfigured() && supabase && tenantId) {
-        const [{ data: todaySales }, { data: monthSales }, { data: pendingReceivables }, { data: openSession }] = await Promise.all([
-          supabase
-            .from('sales')
-            .select('total')
-            .eq('tenant_id', tenantId)
-            .gte('created_at', todayStart.toISOString())
-            .eq('status', 'completed'),
+        const [todayIncome, { data: monthSales }] = await Promise.all([
+          get().fetchUnifiedDailySalesTotal(),
           supabase
             .from('sales')
             .select('total')
             .eq('tenant_id', tenantId)
             .gte('created_at', monthStart.toISOString())
             .eq('status', 'completed'),
-          supabase
-            .from('accounts_receivable')
-            .select('amount')
-            .eq('tenant_id', tenantId)
-            .eq('status', 'pending'),
-          supabase
-            .from('cash_sessions')
-            .select('*')
-            .eq('tenant_id', tenantId)
-            .eq('status', 'open')
-            .order('opened_at', { ascending: false })
-            .limit(1)
         ])
 
-        const todayIncome = (todaySales || []).reduce((sum, row) => sum + Number(row.total || 0), 0)
         const monthIncome = (monthSales || []).reduce((sum, row) => sum + Number(row.total || 0), 0)
-        const receivablesTotal = (pendingReceivables || []).reduce((sum, row) => sum + Number(row.amount || 0), 0)
-
+        let receivablesTotal = 0
         let currentCash = 0
-        const activeSession = openSession?.[0]
+        let activeSession = null
+
+        if (canUseFinanceBackend) {
+          const [{ data: pendingReceivables }, { data: openSession }] = await Promise.all([
+            supabase
+              .from('accounts_receivable')
+              .select('amount')
+              .eq('tenant_id', tenantId)
+              .eq('status', 'pending'),
+            supabase
+              .from('cash_sessions')
+              .select('*')
+              .eq('tenant_id', tenantId)
+              .eq('status', 'open')
+              .order('opened_at', { ascending: false })
+              .limit(1)
+          ])
+
+          receivablesTotal = (pendingReceivables || []).reduce((sum, row) => sum + Number(row.amount || 0), 0)
+          activeSession = openSession?.[0] || null
+        }
+
         if (activeSession) {
           const { data: moves } = await supabase
             .from('cash_movements')
@@ -153,6 +269,8 @@ export const useReportsStore = create((set, get) => ({
           const adjustments = (moves || []).filter((m) => m.type === 'adjustment').reduce((sum, m) => sum + Number(m.amount || 0), 0)
           currentCash = Number(activeSession.opening_amount || 0) + sales - expenses + adjustments
           set({ cashSession: activeSession })
+        } else {
+          set({ cashSession: null })
         }
 
         set({
@@ -171,12 +289,9 @@ export const useReportsStore = create((set, get) => ({
       const localMoves = safeRead(FINANCE_CASH_MOVEMENTS_KEY, [])
       const localSales = safeRead('sales', [])
 
-      const todayIso = todayStart.toISOString().slice(0, 10)
       const monthIso = monthStart.toISOString().slice(0, 7)
 
-      const todayIncome = localSales
-        .filter((sale) => String(sale.created_at || '').slice(0, 10) === todayIso && sale.status === 'completed')
-        .reduce((sum, sale) => sum + Number(sale.total || 0), 0)
+      const todayIncome = await get().fetchUnifiedDailySalesTotal()
 
       const monthIncome = localSales
         .filter((sale) => String(sale.created_at || '').slice(0, 7) === monthIso && sale.status === 'completed')
@@ -214,7 +329,8 @@ export const useReportsStore = create((set, get) => ({
   fetchReceivables: async () => {
     try {
       const tenantId = useTenantStore.getState().currentTenantId
-      if (isSupabaseConfigured() && supabase && tenantId) {
+      const canUseFinanceBackend = await get().ensureFinanceBackend()
+      if (canUseFinanceBackend && tenantId) {
         const { data, error } = await supabase
           .from('accounts_receivable')
           .select('*')
@@ -253,7 +369,8 @@ export const useReportsStore = create((set, get) => ({
     if (paymentAmount <= 0) return
 
     try {
-      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+      const canUseFinanceBackend = await get().ensureFinanceBackend()
+      if (canUseFinanceBackend && tenantId !== 'local') {
         const { data: receivable, error: fetchError } = await supabase
           .from('accounts_receivable')
           .select('*')
@@ -356,7 +473,8 @@ export const useReportsStore = create((set, get) => ({
   fetchCashSession: async () => {
     try {
       const tenantId = useTenantStore.getState().currentTenantId || 'local'
-      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+      const canUseFinanceBackend = await get().ensureFinanceBackend()
+      if (canUseFinanceBackend && tenantId !== 'local') {
         const { data, error } = await supabase
           .from('cash_sessions')
           .select('*')
@@ -378,13 +496,39 @@ export const useReportsStore = create((set, get) => ({
     }
   },
 
+  fetchCashSessionsHistory: async () => {
+    try {
+      const tenantId = useTenantStore.getState().currentTenantId || 'local'
+      const canUseFinanceBackend = await get().ensureFinanceBackend()
+      if (canUseFinanceBackend && tenantId !== 'local') {
+        const { data, error } = await supabase
+          .from('cash_sessions')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .order('opened_at', { ascending: false })
+          .limit(200)
+        if (error) throw error
+        set({ cashSessionsHistory: data || [] })
+        return
+      }
+
+      const sessions = safeRead(FINANCE_CASH_SESSIONS_KEY, [])
+      const ordered = [...sessions].sort((a, b) => String(b.opened_at || '').localeCompare(String(a.opened_at || '')))
+      set({ cashSessionsHistory: ordered })
+    } catch (error) {
+      console.warn('Error fetching cash sessions history:', error.message)
+      set({ cashSessionsHistory: [] })
+    }
+  },
+
   openCashSession: async (openingAmount = 0) => {
     const tenantId = useTenantStore.getState().currentTenantId || 'local'
     const userId = useAuthStore.getState().user?.id || null
     const amount = Number(openingAmount || 0)
 
     try {
-      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+      const canUseFinanceBackend = await get().ensureFinanceBackend()
+      if (canUseFinanceBackend && tenantId !== 'local') {
         const { data: openData } = await supabase
           .from('cash_sessions')
           .select('id')
@@ -431,7 +575,8 @@ export const useReportsStore = create((set, get) => ({
         return
       }
 
-      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+      const canUseFinanceBackend = await get().ensureFinanceBackend()
+      if (canUseFinanceBackend && tenantId !== 'local') {
         const { data, error } = await supabase
           .from('cash_movements')
           .select('*')
@@ -462,7 +607,8 @@ export const useReportsStore = create((set, get) => ({
     if (!session?.id || numericAmount <= 0) return
 
     try {
-      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+      const canUseFinanceBackend = await get().ensureFinanceBackend()
+      if (canUseFinanceBackend && tenantId !== 'local') {
         await supabase.from('cash_movements').insert({
           tenant_id: tenantId,
           session_id: session.id,
@@ -518,7 +664,8 @@ export const useReportsStore = create((set, get) => ({
 
     try {
       const amount = Number(closingAmount || 0)
-      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+      const canUseFinanceBackend = await get().ensureFinanceBackend()
+      if (canUseFinanceBackend && tenantId !== 'local') {
         await supabase
           .from('cash_sessions')
           .update({
@@ -554,43 +701,49 @@ export const useReportsStore = create((set, get) => ({
   fetchDailyReport: async (dateRange = null) => {
     set({ loading: true, error: null })
     try {
-      if (isSupabaseConfigured() && supabase) {
+      const tenantId = useTenantStore.getState().currentTenantId
+      const { startIso, endIso } = getDayRangeFromDateRange(dateRange)
+
+      if (isSupabaseConfigured() && supabase && tenantId) {
         let query = supabase
           .from('sales')
           .select('total')
+          .eq('tenant_id', tenantId)
+          .eq('status', 'completed')
+          .in('payment_method', DAILY_ALLOWED_PAYMENT_METHODS)
+          .gte('created_at', startIso)
 
-        if (dateRange) {
-          query = query
-            .gte('created_at', dateRange.start)
-            .lte('created_at', dateRange.end)
-        } else {
-          const today = new Date()
-          today.setHours(0, 0, 0, 0)
-          query = query.gte('created_at', today.toISOString())
+        if (endIso) {
+          query = query.lte('created_at', endIso)
         }
 
         const { data, error } = await query
+        if (error) throw error
 
-        if (error) {
-          console.warn('Supabase error, using mock data:', error.message)
-          // Use mock data on error
-          const mockTotal = mockDailySales[mockDailySales.length - 1]?.total || 0
-          set({ dailyTotal: mockTotal, loading: false })
-          return
-        }
-
-        const total = data?.reduce((sum, sale) => sum + parseFloat(sale.total || 0), 0) || 0
-
-        set({ dailyTotal: Math.round(total * 100) / 100, loading: false })
-      } else {
-        // Mock data when not configured
-        const mockTotal = mockDailySales[mockDailySales.length - 1]?.total || 0
-        set({ dailyTotal: mockTotal, loading: false })
+        const rows = data || []
+        const total = calculateSalesTotal(rows)
+        set({
+          dailyTotal: Math.round(Number(total || 0) * 100) / 100,
+          dailyTickets: countTickets(rows),
+          loading: false
+        })
+        return
       }
+
+      const localSales = safeRead('sales', [])
+      const filtered = localSales.filter((sale) => {
+        const method = normalizePaymentMethod(sale.payment_method || sale.paymentMethod)
+        return sale.status === 'completed' && DAILY_ALLOWED_PAYMENT_METHODS.includes(method) && isSaleInRange(sale, startIso, endIso)
+      })
+      const total = calculateSalesTotal(filtered)
+      set({
+        dailyTotal: Math.round(Number(total || 0) * 100) / 100,
+        dailyTickets: countTickets(filtered),
+        loading: false
+      })
     } catch (error) {
-      console.warn('Error fetching daily report, using mock data:', error.message)
-      const mockTotal = mockDailySales[mockDailySales.length - 1]?.total || 0
-      set({ loading: false, error: null, dailyTotal: mockTotal })
+      console.warn('Error fetching daily report:', error.message)
+      set({ loading: false, error: null, dailyTotal: 0, dailyTickets: 0 })
     }
   },
 
@@ -610,9 +763,13 @@ export const useReportsStore = create((set, get) => ({
               code
             ),
             sales!inner (
-              created_at
+              created_at,
+              status,
+              payment_method
             )
           `)
+          .eq('sales.status', 'completed')
+          .in('sales.payment_method', DAILY_ALLOWED_PAYMENT_METHODS)
 
         if (dateRange) {
           query = query

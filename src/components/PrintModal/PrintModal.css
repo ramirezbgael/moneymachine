@@ -265,3 +265,30 @@
   background: rgba(15, 23, 42, 0.12);
   color: #0f172a;
 }
+
+@media (max-width: 768px) {
+  .modal-overlay--print {
+    align-items: flex-start;
+    padding-top: 12px;
+    padding-bottom: calc(var(--mobile-bottom-nav-height, 0px) + 12px);
+  }
+
+  .print-modal {
+    width: calc(100% - 16px);
+    max-width: 100%;
+    max-height: calc(100dvh - var(--mobile-bottom-nav-height, 0px) - 24px);
+    border-radius: var(--radius-xl);
+  }
+
+  .print-modal .modal__content {
+    padding-top: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+  }
+
+  .print-modal .modal__footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom, 0px));
+  }
+}

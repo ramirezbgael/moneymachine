@@ -192,4 +192,8 @@
   .modal__footer {
     padding: var(--spacing-md);
   }
+
+  .modal__btn {
+    min-height: 48px;
+  }
 }

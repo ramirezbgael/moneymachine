@@ -1,6 +1,28 @@
 import { create } from 'zustand'
 import { t as translate } from '../i18n/translations'
 
+const DEFAULT_NAV_MODULE_ORDER = ['inventory', 'finance', 'pending', 'subscriptions', 'settings']
+const NAV_MODULE_ORDER_ALLOWED = new Set(DEFAULT_NAV_MODULE_ORDER)
+
+const sanitizeNavModuleOrder = (order) => {
+  if (!Array.isArray(order)) return [...DEFAULT_NAV_MODULE_ORDER]
+
+  const seen = new Set()
+  const normalized = []
+
+  order.forEach((id) => {
+    if (!NAV_MODULE_ORDER_ALLOWED.has(id) || seen.has(id)) return
+    seen.add(id)
+    normalized.push(id)
+  })
+
+  DEFAULT_NAV_MODULE_ORDER.forEach((id) => {
+    if (!seen.has(id)) normalized.push(id)
+  })
+
+  return normalized
+}
+
 /**
  * Settings store
  * Manages application settings and preferences
@@ -26,6 +48,27 @@ export const useSettingsStore = create((set, get) => {
     }
   }
 
+  const getPersistedSettings = (state, overrides = {}) => ({
+    theme: state.theme,
+    language: state.language,
+    currency: state.currency,
+    taxRate: state.taxRate,
+    printerName: state.printerName,
+    printerWidth: state.printerWidth,
+    autoPrint: state.autoPrint,
+    ticketTemplate: state.ticketTemplate,
+    ticketFooterLines: state.ticketFooterLines,
+    businessName: state.businessName,
+    ticketIcon: state.ticketIcon,
+    businessLogo: state.businessLogo,
+    ticketPrintLogo: state.ticketPrintLogo,
+    showFeaturedProducts: state.showFeaturedProducts,
+    showPendingModule: state.showPendingModule,
+    showSubscriptionsModule: state.showSubscriptionsModule,
+    navModuleOrder: state.navModuleOrder,
+    ...overrides
+  })
+
   const initialSettings = loadSettings()
 
   return {
@@ -44,48 +87,36 @@ export const useSettingsStore = create((set, get) => {
     businessLogo: initialSettings.businessLogo || '',
     ticketPrintLogo: initialSettings.ticketPrintLogo !== false,
     showFeaturedProducts: initialSettings.showFeaturedProducts !== false,
+    showPendingModule: initialSettings.showPendingModule !== false,
+    showSubscriptionsModule: initialSettings.showSubscriptionsModule !== false,
+    navModuleOrder: sanitizeNavModuleOrder(initialSettings.navModuleOrder),
 
     // Toggle featured products panel
     setShowFeaturedProducts: (value) => {
       set({ showFeaturedProducts: value })
       const currentState = get()
-      const settingsToSave = {
-        theme: currentState.theme,
-        language: currentState.language,
-        currency: currentState.currency,
-        taxRate: currentState.taxRate,
-        printerName: currentState.printerName,
-        printerWidth: currentState.printerWidth,
-        autoPrint: currentState.autoPrint,
-        ticketTemplate: currentState.ticketTemplate,
-        ticketFooterLines: currentState.ticketFooterLines,
-        businessName: currentState.businessName,
-        ticketIcon: currentState.ticketIcon,
-        businessLogo: currentState.businessLogo,
-        ticketPrintLogo: currentState.ticketPrintLogo,
-        showFeaturedProducts: value
-      }
-      saveSettings(settingsToSave)
+      saveSettings(getPersistedSettings(currentState, { showFeaturedProducts: value }))
+    },
+    setShowPendingModule: (value) => {
+      set({ showPendingModule: value })
+      const currentState = get()
+      saveSettings(getPersistedSettings(currentState, { showPendingModule: value }))
+    },
+    setShowSubscriptionsModule: (value) => {
+      set({ showSubscriptionsModule: value })
+      const currentState = get()
+      saveSettings(getPersistedSettings(currentState, { showSubscriptionsModule: value }))
+    },
+    setNavModuleOrder: (order) => {
+      const nextOrder = sanitizeNavModuleOrder(order)
+      set({ navModuleOrder: nextOrder })
+      const currentState = get()
+      saveSettings(getPersistedSettings(currentState, { navModuleOrder: nextOrder }))
     },
     setTheme: (theme) => {
       set({ theme })
       const currentState = get()
-      const settingsToSave = {
-        theme: currentState.theme,
-        language: currentState.language,
-        currency: currentState.currency,
-        taxRate: currentState.taxRate,
-        printerName: currentState.printerName,
-        printerWidth: currentState.printerWidth,
-        autoPrint: currentState.autoPrint,
-        ticketTemplate: currentState.ticketTemplate,
-        ticketFooterLines: currentState.ticketFooterLines,
-        businessName: currentState.businessName,
-        ticketIcon: currentState.ticketIcon,
-        businessLogo: currentState.businessLogo,
-        ticketPrintLogo: currentState.ticketPrintLogo
-      }
-      saveSettings(settingsToSave)
+      saveSettings(getPersistedSettings(currentState))
       
       // Apply theme to document
       if (theme === 'light') {
@@ -99,44 +130,14 @@ export const useSettingsStore = create((set, get) => {
     setLanguage: (language) => {
       set({ language })
       const currentState = get()
-      const settingsToSave = {
-        theme: currentState.theme,
-        language: currentState.language,
-        currency: currentState.currency,
-        taxRate: currentState.taxRate,
-        printerName: currentState.printerName,
-        printerWidth: currentState.printerWidth,
-        autoPrint: currentState.autoPrint,
-        ticketTemplate: currentState.ticketTemplate,
-        ticketFooterLines: currentState.ticketFooterLines,
-        businessName: currentState.businessName,
-        ticketIcon: currentState.ticketIcon,
-        businessLogo: currentState.businessLogo,
-        ticketPrintLogo: currentState.ticketPrintLogo
-      }
-      saveSettings(settingsToSave)
+      saveSettings(getPersistedSettings(currentState))
     },
 
     // Update currency
     setCurrency: (currency) => {
       set({ currency })
       const currentState = get()
-      const settingsToSave = {
-        theme: currentState.theme,
-        language: currentState.language,
-        currency: currentState.currency,
-        taxRate: currentState.taxRate,
-        printerName: currentState.printerName,
-        printerWidth: currentState.printerWidth,
-        autoPrint: currentState.autoPrint,
-        ticketTemplate: currentState.ticketTemplate,
-        ticketFooterLines: currentState.ticketFooterLines,
-        businessName: currentState.businessName,
-        ticketIcon: currentState.ticketIcon,
-        businessLogo: currentState.businessLogo,
-        ticketPrintLogo: currentState.ticketPrintLogo
-      }
-      saveSettings(settingsToSave)
+      saveSettings(getPersistedSettings(currentState))
     },
 
     // Update tax rate
@@ -144,44 +145,14 @@ export const useSettingsStore = create((set, get) => {
       const taxRateNum = parseFloat(taxRate) || 0
       set({ taxRate: taxRateNum })
       const currentState = get()
-      const settingsToSave = {
-        theme: currentState.theme,
-        language: currentState.language,
-        currency: currentState.currency,
-        taxRate: currentState.taxRate,
-        printerName: currentState.printerName,
-        printerWidth: currentState.printerWidth,
-        autoPrint: currentState.autoPrint,
-        ticketTemplate: currentState.ticketTemplate,
-        ticketFooterLines: currentState.ticketFooterLines,
-        businessName: currentState.businessName,
-        ticketIcon: currentState.ticketIcon,
-        businessLogo: currentState.businessLogo,
-        ticketPrintLogo: currentState.ticketPrintLogo
-      }
-      saveSettings(settingsToSave)
+      saveSettings(getPersistedSettings(currentState))
     },
 
     // Update printer settings
     setPrinterSettings: (settings) => {
       set(settings)
       const currentState = get()
-      const settingsToSave = {
-        theme: currentState.theme,
-        language: currentState.language,
-        currency: currentState.currency,
-        taxRate: currentState.taxRate,
-        printerName: currentState.printerName,
-        printerWidth: currentState.printerWidth,
-        autoPrint: currentState.autoPrint,
-        ticketTemplate: currentState.ticketTemplate,
-        ticketFooterLines: currentState.ticketFooterLines,
-        businessName: currentState.businessName,
-        ticketIcon: currentState.ticketIcon,
-        businessLogo: currentState.businessLogo,
-        ticketPrintLogo: currentState.ticketPrintLogo
-      }
-      saveSettings(settingsToSave)
+      saveSettings(getPersistedSettings(currentState))
     },
 
     initTheme: () => {

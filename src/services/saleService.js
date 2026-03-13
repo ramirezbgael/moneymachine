@@ -31,6 +31,8 @@ export const processSale = async (saleData) => {
     receiptType = 'ticket',
     customer = null,
     userId = null,
+    registerId = null,
+    sessionId = null,
     status = 'completed' // 'completed' or 'pending'
   } = saleData
 
@@ -67,6 +69,8 @@ export const processSale = async (saleData) => {
           receipt_type: receiptType,
           customer_id: customer?.id || null,
           user_id: userId,
+          register_id: registerId,
+          session_id: sessionId,
           status: status
         }])
         .select()
@@ -143,6 +147,8 @@ export const processSale = async (saleData) => {
         receipt_type: receiptType,
         customer_id: customer?.id || null,
         user_id: userId,
+        register_id: registerId,
+        session_id: sessionId,
         status: status,
         created_at: new Date().toISOString(),
         sale_items: items.map(item => ({

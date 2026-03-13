@@ -95,7 +95,7 @@ export function InventarioPage() {
   const handleSelectProduct = (productId: string | number) => {
     setShowAutocomplete(false)
     setHighlightedIndex(-1)
-    navigate(`/inventory/producto/${productId}`)
+    navigate(`/inventory/product/${productId}`)
   }
 
   const filtered = products.filter((p) => {
@@ -376,7 +376,7 @@ export function InventarioPage() {
             {/* Secondary actions */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 pt-6 pb-8 md:pb-4 border-t border-[var(--border)]/30">
               <button
-                onClick={() => navigate('/inventory/pedidos')}
+                onClick={() => navigate('/inventory/orders')}
                 className="flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--panel)]/45 px-3 py-2.5 text-sm text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]/40 transition-colors"
               >
                 <FaShoppingCart className="w-4 h-4" />
@@ -390,7 +390,7 @@ export function InventarioPage() {
                 Imprimir códigos de barras
               </button>
               <button
-                onClick={() => navigate('/inventario/nuevo')}
+                onClick={() => navigate('/inventory/new')}
                 className="flex items-center justify-center gap-2 rounded-xl border border-[var(--accent)]/35 bg-[var(--accent)]/10 px-3 py-2.5 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/15 transition-colors"
               >
                 <FaBoxes className="w-4 h-4" />
@@ -494,7 +494,7 @@ export function InventarioPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate('/inventory/pedidos')}
+                  onClick={() => navigate('/inventory/orders')}
                   className="flex items-center justify-center w-10 h-10 rounded-lg text-[var(--muted)] hover:text-[var(--accent)] hover:bg-[var(--panel)]/80 transition-all hover:shadow-md border border-[var(--border)]/30"
                   aria-label="Ver pedido"
                 >
@@ -577,7 +577,7 @@ export function InventarioPage() {
               )}
               <button
                 type="button"
-                onClick={() => navigate('/inventario/nuevo')}
+                onClick={() => navigate('/inventory/new')}
                 className="inline-flex items-center gap-2 rounded-lg border border-[var(--accent)]/35 bg-[var(--accent)]/10 px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/15 transition-colors"
               >
                 <FaBoxes className="w-3 h-3" />

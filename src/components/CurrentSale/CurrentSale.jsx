@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ProductSearch from '../ProductSearch/ProductSearch'
 import ItemsList from '../ItemsList/ItemsList'
 import FloatingBar from '../FloatingBar/FloatingBar'
-import PaymentModalMVP from '../PaymentModal/PaymentModalMVP'
-import PrintModal from '../PrintModal/PrintModal'
 import QuickAddProductModal from '../QuickAddProductModal/QuickAddProductModal'
 import FeaturedProducts from '../FeaturedProducts/FeaturedProducts'
 import { useSettingsStore } from '../../store/settingsStore'
@@ -17,16 +16,14 @@ import './CurrentSale.css'
  * Single screen layout optimized for keyboard and barcode scanner
  */
 const CurrentSale = () => {
+  const navigate = useNavigate()
   const t = useSettingsStore(state => state.t)
   const language = useSettingsStore(state => state.language)
   const showFeaturedProducts = useSettingsStore(state => state.showFeaturedProducts)
   const { items, getTotals, clearSale } = useSaleStore()
   const { user } = useAuthStore()
   
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [showPrintModal, setShowPrintModal] = useState(false)
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
-  const [processedSale, setProcessedSale] = useState(null)
   const [currentDateTime, setCurrentDateTime] = useState(new Date())
   const [savingPending, setSavingPending] = useState(false)
 
@@ -37,29 +34,6 @@ const CurrentSale = () => {
     }, 60000)
     return () => clearInterval(interval)
   }, [])
-
-  const handlePaymentComplete = (saleData) => {
-    setProcessedSale(saleData)
-    setShowPaymentModal(false)
-    setShowPrintModal(true)
-  }
-
-  const handlePrintComplete = (shouldPrint) => {
-    if (shouldPrint && processedSale) {
-      // Handle print logic here
-      console.log('Printing ticket:', processedSale)
-    }
-    setShowPrintModal(false)
-    setProcessedSale(null)
-    
-    // Refocus search input for immediate next sale
-    setTimeout(() => {
-      const searchInput = document.querySelector('.product-search__input')
-      if (searchInput) {
-        searchInput.focus()
-      }
-    }, 100)
-  }
 
   const handleQuickAddProduct = (productData) => {
     setShowQuickAddModal(false)
@@ -171,27 +145,10 @@ const CurrentSale = () => {
 
       {/* Floating Bar - Fixed Bottom */}
       <FloatingBar
-        onCheckout={() => setShowPaymentModal(true)}
+        onCheckout={() => navigate('/checkout')}
         onSavePending={handleSaveAsPending}
         savingPending={savingPending}
       />
-
-      {/* Payment modal */}
-      {showPaymentModal && (
-        <PaymentModalMVP
-          onComplete={handlePaymentComplete}
-          onCancel={() => setShowPaymentModal(false)}
-        />
-      )}
-
-      {/* Print confirmation modal */}
-      {showPrintModal && (
-        <PrintModal
-          sale={processedSale}
-          onConfirm={handlePrintComplete}
-          onCancel={() => handlePrintComplete(false)}
-        />
-      )}
 
       {/* Quick add product modal */}
       {showQuickAddModal && (
