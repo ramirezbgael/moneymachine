@@ -108,7 +108,7 @@
 
 @media (max-width: 768px) {
   .current-sale {
-    --current-sale-floating-height: 176px;
+    --current-sale-floating-height: 228px;
     gap: 0;
   }
 

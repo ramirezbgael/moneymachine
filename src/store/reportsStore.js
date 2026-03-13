@@ -44,14 +44,26 @@ const isMissingFinanceSchemaError = (error) => {
   return text.includes('could not find the table') || text.includes('relation') || text.includes('schema cache')
 }
 
+const isMissingColumnOrRelationError = (error) => {
+  const text = String(error?.message || error?.details || error?.hint || '').toLowerCase()
+  return text.includes('column') ||
+    text.includes('foreign key') ||
+    text.includes('relationship') ||
+    text.includes('does not exist') ||
+    text.includes('schema cache')
+}
+
 const mockReceivables = [
   {
     id: 'r-1',
     tenant_id: 'local',
+    client_id: null,
     client_name: 'Panaderia Centro',
     concept: 'Pedido mayoreo facturado',
     amount: 1450,
+    issue_date: new Date().toISOString().slice(0, 10),
     due_date: new Date().toISOString().slice(0, 10),
+    notes: '',
     status: 'pending',
     created_at: new Date().toISOString()
   }
@@ -116,6 +128,7 @@ const countTickets = (sales = []) => sales.length
  */
 export const useReportsStore = create((set, get) => ({
   financeBackendReady: null,
+  receivablesJoinReady: null,
   dailyTotal: 0,
   dailyTickets: 0,
   financialSummary: {
@@ -221,7 +234,6 @@ export const useReportsStore = create((set, get) => ({
       monthStart.setDate(1)
       monthStart.setHours(0, 0, 0, 0)
 
-      const canUseFinanceBackend = await get().ensureFinanceBackend()
       if (isSupabaseConfigured() && supabase && tenantId) {
         const [todayIncome, { data: monthSales }] = await Promise.all([
           get().fetchUnifiedDailySalesTotal(),
@@ -238,23 +250,26 @@ export const useReportsStore = create((set, get) => ({
         let currentCash = 0
         let activeSession = null
 
-        if (canUseFinanceBackend) {
-          const [{ data: pendingReceivables }, { data: openSession }] = await Promise.all([
-            supabase
-              .from('accounts_receivable')
-              .select('amount')
-              .eq('tenant_id', tenantId)
-              .eq('status', 'pending'),
-            supabase
-              .from('cash_sessions')
-              .select('*')
-              .eq('tenant_id', tenantId)
-              .eq('status', 'open')
-              .order('opened_at', { ascending: false })
-              .limit(1)
-          ])
+        const { data: pendingReceivables, error: pendingError } = await supabase
+          .from('accounts_receivable')
+          .select('amount')
+          .eq('tenant_id', tenantId)
+          .eq('status', 'pending')
 
+        if (!pendingError) {
           receivablesTotal = (pendingReceivables || []).reduce((sum, row) => sum + Number(row.amount || 0), 0)
+        }
+
+        const canUseFinanceBackend = await get().ensureFinanceBackend()
+        if (canUseFinanceBackend) {
+          const { data: openSession } = await supabase
+            .from('cash_sessions')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('status', 'open')
+            .order('opened_at', { ascending: false })
+            .limit(1)
+
           activeSession = openSession?.[0] || null
         }
 
@@ -327,25 +342,161 @@ export const useReportsStore = create((set, get) => ({
   },
 
   fetchReceivables: async () => {
+    const requestedTenantId = useTenantStore.getState().currentTenantId
+
+    const isStaleRequest = () => {
+      const liveTenantId = useTenantStore.getState().currentTenantId
+      return String(liveTenantId || '') !== String(requestedTenantId || '')
+    }
+
+    const getLocalReceivablesBackup = () => {
+      const local = safeRead(FINANCE_RECEIVABLES_KEY, mockReceivables)
+      if (!requestedTenantId) return local
+
+      const exactTenantRows = local.filter((row) => String(row?.tenant_id || '') === String(requestedTenantId))
+      if (exactTenantRows.length > 0) return exactTenantRows
+
+      // Migration safety: previously some rows were stored under "local" before tenant finished loading.
+      if (requestedTenantId !== 'local') {
+        const legacyLocalRows = local.filter((row) => String(row?.tenant_id || '') === 'local')
+        if (legacyLocalRows.length > 0) return legacyLocalRows
+      }
+
+      return local
+    }
+
     try {
-      const tenantId = useTenantStore.getState().currentTenantId
-      const canUseFinanceBackend = await get().ensureFinanceBackend()
-      if (canUseFinanceBackend && tenantId) {
+      // If tenant is still resolving, avoid clobbering state with local fallback.
+      if (!requestedTenantId) {
+        return
+      }
+
+      if (isSupabaseConfigured() && supabase && requestedTenantId !== 'local') {
+        const canTryJoined = get().receivablesJoinReady !== false
+
+        if (canTryJoined) {
+          const { data: joinedData, error: joinedError } = await supabase
+            .from('accounts_receivable')
+            .select('*, finance_customers(id, name, phone, email)')
+            .eq('tenant_id', requestedTenantId)
+            .order('created_at', { ascending: false })
+
+          if (!joinedError) {
+            if (isStaleRequest()) return
+            const rows = joinedData || []
+            if (rows.length > 0) {
+              set({ receivables: rows, receivablesJoinReady: true })
+            } else {
+              const backupRows = getLocalReceivablesBackup()
+              set({ receivables: backupRows, receivablesJoinReady: true })
+            }
+            return
+          }
+
+          if (!isMissingColumnOrRelationError(joinedError) && !isMissingFinanceSchemaError(joinedError)) {
+            throw joinedError
+          }
+
+          if (isMissingColumnOrRelationError(joinedError)) {
+            set({ receivablesJoinReady: false })
+          }
+        }
+
         const { data, error } = await supabase
           .from('accounts_receivable')
           .select('*')
-          .eq('tenant_id', tenantId)
+          .eq('tenant_id', requestedTenantId)
           .order('created_at', { ascending: false })
         if (error) throw error
-        set({ receivables: data || [] })
+        if (isStaleRequest()) return
+        const rows = data || []
+        if (rows.length > 0) {
+          set({ receivables: rows })
+        } else {
+          set({ receivables: getLocalReceivablesBackup() })
+        }
+        return
+      }
+
+      const local = getLocalReceivablesBackup()
+      if (isStaleRequest()) return
+      set({ receivables: local })
+    } catch (error) {
+      console.warn('Error fetching receivables:', error.message)
+      if (isStaleRequest()) return
+      set({ receivables: getLocalReceivablesBackup() })
+    }
+  },
+
+  createReceivable: async ({ client_id = null, client_name = '', concept, amount, issue_date, due_date, notes = '' }) => {
+    const tenantId = useTenantStore.getState().currentTenantId || 'local'
+    const safeAmount = Number(amount || 0)
+    if (!concept || !String(concept).trim() || safeAmount <= 0) {
+      throw new Error('Concepto y monto son obligatorios.')
+    }
+
+    const payload = {
+      tenant_id: tenantId,
+      client_id: client_id || null,
+      client_name: String(client_name || 'Cliente').trim(),
+      concept: String(concept).trim(),
+      amount: safeAmount,
+      issue_date: issue_date || new Date().toISOString().slice(0, 10),
+      due_date: due_date || null,
+      notes: String(notes || '').trim(),
+      status: 'pending'
+    }
+
+    try {
+      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
+        const { error: insertError } = await supabase
+          .from('accounts_receivable')
+          .insert(payload)
+
+        if (insertError) {
+          if (isMissingFinanceSchemaError(insertError)) {
+            set({ financeBackendReady: false })
+            throw insertError
+          }
+          if (!isMissingColumnOrRelationError(insertError)) throw insertError
+
+          const legacyPayload = {
+            tenant_id: tenantId,
+            client_name: payload.client_name,
+            concept: payload.concept,
+            amount: payload.amount,
+            due_date: payload.due_date,
+            status: 'pending'
+          }
+
+          const { error: legacyError } = await supabase
+            .from('accounts_receivable')
+            .insert(legacyPayload)
+
+          if (legacyError) throw legacyError
+        }
+
+        await get().fetchReceivables()
+        await get().fetchFinancialSummary()
         return
       }
 
       const local = safeRead(FINANCE_RECEIVABLES_KEY, mockReceivables)
-      set({ receivables: local })
+      const next = [
+        {
+          id: `r-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          ...payload,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        ...local
+      ]
+      safeWrite(FINANCE_RECEIVABLES_KEY, next)
+      set({ receivables: next })
+      await get().fetchFinancialSummary()
     } catch (error) {
-      console.warn('Error fetching receivables:', error.message)
-      set({ receivables: mockReceivables })
+      console.warn('Error creating receivable:', error.message)
+      throw error
     }
   },
 
@@ -369,20 +520,43 @@ export const useReportsStore = create((set, get) => ({
     if (paymentAmount <= 0) return
 
     try {
-      const canUseFinanceBackend = await get().ensureFinanceBackend()
-      if (canUseFinanceBackend && tenantId !== 'local') {
+      if (isSupabaseConfigured() && supabase && tenantId !== 'local') {
         const { data: receivable, error: fetchError } = await supabase
           .from('accounts_receivable')
           .select('*')
           .eq('id', receivableId)
           .single()
-        if (fetchError) throw fetchError
+        if (fetchError) {
+          if (isMissingFinanceSchemaError(fetchError)) {
+            set({ financeBackendReady: false })
+            throw fetchError
+          }
+          throw fetchError
+        }
+
+        const totalDue = Number(receivable.amount || 0)
+        const { data: existingPayments, error: paymentsFetchError } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('receivable_id', receivableId)
+        if (paymentsFetchError) throw paymentsFetchError
+
+        const paidSoFarBefore = (existingPayments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)
+        const remainingBefore = Math.max(0, totalDue - paidSoFarBefore)
+        if (remainingBefore <= 0) {
+          throw new Error('Esta cuenta ya está liquidada.')
+        }
+
+        const appliedAmount = Math.min(paymentAmount, remainingBefore)
+        if (appliedAmount <= 0) {
+          throw new Error('Monto inválido para aplicar a la cuenta.')
+        }
 
         const { error: paymentError } = await supabase
           .from('payments')
           .insert({
             receivable_id: receivableId,
-            amount: paymentAmount,
+            amount: appliedAmount,
             payment_method,
             paid_at: new Date().toISOString(),
             user_id: userId,
@@ -395,7 +569,7 @@ export const useReportsStore = create((set, get) => ({
           .select('amount')
           .eq('receivable_id', receivableId)
         const paidSoFar = (paymentsData || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)
-        const status = paidSoFar >= Number(receivable.amount || 0) ? 'paid' : 'pending'
+        const status = paidSoFar >= totalDue ? 'paid' : 'pending'
 
         await supabase
           .from('accounts_receivable')
@@ -418,7 +592,7 @@ export const useReportsStore = create((set, get) => ({
               session_id: session.id,
               type: 'sale',
               description: `Pago CxC ${receivable.client_name || ''}`,
-              amount: paymentAmount,
+              amount: appliedAmount,
               created_at: new Date().toISOString(),
               user_id: userId
             })
@@ -427,15 +601,35 @@ export const useReportsStore = create((set, get) => ({
 
         await get().fetchReceivables()
         await get().fetchFinancialSummary()
-        return
+        return {
+          appliedAmount,
+          paidSoFar,
+          remaining: Math.max(0, totalDue - paidSoFar),
+          status
+        }
       }
 
       const receivables = safeRead(FINANCE_RECEIVABLES_KEY, mockReceivables)
       const payments = safeRead(FINANCE_PAYMENTS_KEY, [])
+      const targetReceivable = receivables.find((item) => item.id === receivableId)
+      const totalDue = Number(targetReceivable?.amount || 0)
+      const paidSoFarBefore = payments
+        .filter((p) => p.receivable_id === receivableId)
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+      const remainingBefore = Math.max(0, totalDue - paidSoFarBefore)
+      if (remainingBefore <= 0) {
+        throw new Error('Esta cuenta ya está liquidada.')
+      }
+
+      const appliedAmount = Math.min(paymentAmount, remainingBefore)
+      if (appliedAmount <= 0) {
+        throw new Error('Monto inválido para aplicar a la cuenta.')
+      }
+
       payments.push({
         id: `pay-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         receivable_id: receivableId,
-        amount: paymentAmount,
+        amount: appliedAmount,
         payment_method,
         paid_at: new Date().toISOString(),
         user_id: userId
@@ -459,14 +653,96 @@ export const useReportsStore = create((set, get) => ({
         await get().registerCashMovement({
           type: 'sale',
           description: 'Pago de cuenta por cobrar',
-          amount: paymentAmount
+          amount: appliedAmount
         })
       }
 
       set({ receivables: updatedReceivables })
       await get().fetchFinancialSummary()
+      const paidSoFar = payments
+        .filter((p) => p.receivable_id === receivableId)
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+
+      return {
+        appliedAmount,
+        paidSoFar,
+        remaining: Math.max(0, totalDue - paidSoFar),
+        status: paidSoFar >= totalDue ? 'paid' : 'pending'
+      }
     } catch (error) {
+      if (isMissingFinanceSchemaError(error)) {
+        set({ financeBackendReady: false })
+
+        const receivables = safeRead(FINANCE_RECEIVABLES_KEY, mockReceivables)
+        const payments = safeRead(FINANCE_PAYMENTS_KEY, [])
+        const targetReceivable = receivables.find((item) => item.id === receivableId)
+
+        if (!targetReceivable) {
+          throw new Error('No se encontró la cuenta por cobrar.')
+        }
+
+        const totalDue = Number(targetReceivable.amount || 0)
+        const paidSoFarBefore = payments
+          .filter((p) => p.receivable_id === receivableId)
+          .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+        const remainingBefore = Math.max(0, totalDue - paidSoFarBefore)
+        if (remainingBefore <= 0) {
+          throw new Error('Esta cuenta ya está liquidada.')
+        }
+
+        const appliedAmount = Math.min(paymentAmount, remainingBefore)
+        if (appliedAmount <= 0) {
+          throw new Error('Monto inválido para aplicar a la cuenta.')
+        }
+
+        payments.push({
+          id: `pay-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          receivable_id: receivableId,
+          amount: appliedAmount,
+          payment_method,
+          paid_at: new Date().toISOString(),
+          user_id: userId
+        })
+        safeWrite(FINANCE_PAYMENTS_KEY, payments)
+
+        const updatedReceivables = receivables.map((item) => {
+          if (item.id !== receivableId) return item
+          const paidSoFar = payments
+            .filter((p) => p.receivable_id === receivableId)
+            .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+          return {
+            ...item,
+            status: paidSoFar >= Number(item.amount || 0) ? 'paid' : 'pending',
+            updated_at: new Date().toISOString()
+          }
+        })
+        safeWrite(FINANCE_RECEIVABLES_KEY, updatedReceivables)
+
+        if (payment_method === 'cash') {
+          await get().registerCashMovement({
+            type: 'sale',
+            description: 'Pago de cuenta por cobrar',
+            amount: appliedAmount
+          })
+        }
+
+        set({ receivables: updatedReceivables })
+        await get().fetchFinancialSummary()
+
+        const paidSoFar = payments
+          .filter((p) => p.receivable_id === receivableId)
+          .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+
+        return {
+          appliedAmount,
+          paidSoFar,
+          remaining: Math.max(0, totalDue - paidSoFar),
+          status: paidSoFar >= totalDue ? 'paid' : 'pending'
+        }
+      }
+
       console.warn('Error registering receivable payment:', error.message)
+      throw error
     }
   },
 

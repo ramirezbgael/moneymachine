@@ -17,7 +17,7 @@
 @media (max-width: 768px) {
   .floating-bar {
     left: 0;
-    bottom: var(--mobile-bottom-nav-height, calc(64px + env(safe-area-inset-bottom, 0px)));
+    bottom: calc(var(--mobile-bottom-nav-height, calc(64px + env(safe-area-inset-bottom, 0px))) + 10px);
   }
 }
 
@@ -292,7 +292,9 @@
   }
 
   .floating-bar__content {
-    gap: 10px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
   }
 
@@ -312,6 +314,10 @@
     margin-top: 0;
     padding-top: 0;
     border-top: none;
+  }
+
+  .floating-bar__total-amount {
+    font-size: 24px;
   }
 
   .floating-bar__checkout-btn {

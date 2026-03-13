@@ -120,8 +120,8 @@ export default function PublicCheckPage() {
   const statusIcon = isCancelled ? '⊘' : isExpired ? '✕' : '✓'
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 p-4">
-      <div className="w-full max-w-sm">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-5 pt-8 pb-14 sm:px-8 sm:pt-12 sm:pb-20">
+      <div className="w-full max-w-sm md:max-w-md">
         {/* Card */}
         <div className="overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-900 shadow-2xl">
           {/* Header strip */}
@@ -184,7 +184,7 @@ export default function PublicCheckPage() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-zinc-600">
+        <p className="mt-8 text-center text-xs text-zinc-600">
           Escanea el QR para verificar tu suscripción · MoneyMachine POS
         </p>
       </div>

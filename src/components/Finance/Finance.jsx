@@ -2,9 +2,26 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { FaChartLine, FaCashRegister, FaFileInvoiceDollar, FaChartBar, FaHistory, FaFileExport, FaSearch, FaArrowRight } from 'react-icons/fa'
 import { useReportsStore } from '../../store/reportsStore'
+import { useTenantStore } from '../../store/tenantStore'
 import './Finance.css'
 
 const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`
+
+const formatShortDate = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10)
+  return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+const isReceivableOverdue = (row) => {
+  if (row?.status === 'paid' || !row?.due_date) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const dueDate = new Date(row.due_date)
+  dueDate.setHours(0, 0, 0, 0)
+  return dueDate < today
+}
 
 const HUB_CARDS = [
   {
@@ -47,6 +64,7 @@ const HUB_CARDS = [
 const Finance = () => {
   const navigate = useNavigate()
   const { sectionId } = useParams()
+  const currentTenantId = useTenantStore((state) => state.currentTenantId)
   const activeSection = ({
     cxc: 'receivables',
     cortes: 'cuts',
@@ -69,8 +87,7 @@ const Finance = () => {
     openCashSession,
     closeCashSessionZ,
     registerCashMovement,
-    registerReceivablePayment,
-    markReceivableAsPaid
+    registerReceivablePayment
   } = useReportsStore()
 
   const [quickSearch, setQuickSearch] = useState('')
@@ -78,11 +95,13 @@ const Finance = () => {
 
   useEffect(() => {
     if (activeSection === 'home') return
+    if (!currentTenantId) return
     fetchFinancialSummary()
     fetchReceivables()
     fetchCashSession()
   }, [
     activeSection,
+    currentTenantId,
     fetchFinancialSummary,
     fetchReceivables,
     fetchCashSession
@@ -133,75 +152,90 @@ const Finance = () => {
   }
 
   const renderCxc = () => (
-    <section className="finance-table-wrap">
-      <table className="finance-table">
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Concepto</th>
-            <th>Monto</th>
-            <th>Fecha</th>
-            <th>Fecha de vencimiento</th>
-            <th>Estado</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
-        <tbody>
-          {receivables.length === 0 && (
-            <tr>
-              <td colSpan={7} className="finance-empty">Sin cuentas por cobrar.</td>
-            </tr>
-          )}
-          {receivables.map((row) => (
-            <tr key={row.id}>
-              <td>{row.client_name}</td>
-              <td>{row.concept}</td>
-              <td>{formatMoney(row.amount)}</td>
-              <td>{String(row.created_at || '').slice(0, 10)}</td>
-              <td>{String(row.due_date || '').slice(0, 10)}</td>
-              <td>
-                <span className={`finance-status finance-status--${row.status === 'paid' ? 'paid' : 'pending'}`}>
-                  {row.status === 'paid' ? 'Pagado' : 'Pendiente'}
-                </span>
-              </td>
-              <td>
-                <div className="finance-actions">
-                  <button type="button" onClick={() => markReceivableAsPaid(row.id)} disabled={row.status === 'paid'}>
-                    Marcar pagado
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.alert(
-                        `Cliente: ${row.client_name}\nConcepto: ${row.concept}\nMonto: ${formatMoney(row.amount)}\nVence: ${String(row.due_date || '').slice(0, 10)}`
-                      )
-                    }}
-                  >
-                    Ver detalle
-                  </button>
-                  <button
-                    type="button"
-                    disabled={row.status === 'paid'}
-                    onClick={async () => {
-                      const rawAmount = window.prompt('Monto a registrar', String(row.amount || 0))
-                      if (rawAmount == null) return
-                      const amount = Number(rawAmount)
-                      if (!Number.isFinite(amount) || amount <= 0) return
-                      const method = window.prompt('Metodo de pago (cash/card/transfer)', 'cash') || 'cash'
-                      await registerReceivablePayment(row.id, { amount, payment_method: method })
-                      await fetchReceivables()
-                      await fetchFinancialSummary()
-                      await fetchCashSession()
-                    }}
-                  >
-                    Registrar pago
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <section className="finance-receivables-section" aria-label="Lista de cuentas por cobrar">
+      <header className="finance-receivables-header">
+        <div>
+          <h2>Cuentas por cobrar</h2>
+          <p>Gestiona deudas activas y pagos por cliente.</p>
+        </div>
+        <button type="button" onClick={() => navigate('/finanzas/nueva-deuda')}>+ Nueva deuda</button>
+      </header>
+
+      <div className="finance-receivables-list">
+      {receivables.length === 0 && (
+        <article className="finance-receivable-card finance-receivable-card--empty">
+          <p className="finance-empty">Sin cuentas por cobrar.</p>
+        </article>
+      )}
+
+      {receivables.map((row) => {
+        const isPaid = row.status === 'paid'
+        const isOverdue = isReceivableOverdue(row)
+        const statusVariant = isPaid ? 'paid' : (isOverdue ? 'overdue' : 'pending')
+        const statusLabel = isPaid ? 'Pagado' : (isOverdue ? 'Vencido' : 'Pendiente')
+        const linkedClientId = row.client_id || row.finance_customers?.id || null
+        const linkedClientName = row.finance_customers?.name || row.client_name || 'Cliente sin nombre'
+
+        return (
+          <article key={row.id} className="finance-receivable-card">
+            <div className="finance-receivable-card__top">
+              <div className="finance-receivable-card__meta">
+                <h3>{linkedClientName}</h3>
+                <p>{row.concept || 'Sin concepto'}</p>
+                <span>Vence: {formatShortDate(row.due_date)}</span>
+              </div>
+
+              <div className="finance-receivable-card__amount-wrap">
+                <p className="finance-receivable-card__amount">{formatMoney(row.amount)}</p>
+                <span className={`finance-status finance-status--${statusVariant}`}>{statusLabel}</span>
+              </div>
+            </div>
+
+            <div className="finance-receivable-card__actions">
+              <button
+                type="button"
+                disabled={isPaid}
+                onClick={async () => {
+                  const total = Number(row.amount || 0)
+                  const remaining = row.status === 'paid' ? 0 : total
+                  const rawAmount = window.prompt('Monto a registrar', String(remaining.toFixed(2)))
+                  if (rawAmount == null) return
+                  const amount = Number(rawAmount)
+                  if (!Number.isFinite(amount) || amount <= 0) return
+                  const method = window.prompt('Metodo de pago (cash/card/transfer)', 'cash') || 'cash'
+                  try {
+                    await registerReceivablePayment(row.id, { amount, payment_method: method })
+                    await fetchReceivables()
+                    await fetchFinancialSummary()
+                    await fetchCashSession()
+                  } catch (error) {
+                    window.alert(error?.message || 'No se pudo registrar el pago.')
+                  }
+                }}
+              >
+                Registrar pago
+              </button>
+              <button
+                type="button"
+                className="finance-receivable-card__detail-btn"
+                onClick={() => navigate(`/finance/receivables/${row.id}`)}
+              >
+                Ver detalle
+              </button>
+              {linkedClientId && (
+                <button
+                  type="button"
+                  className="finance-receivable-card__detail-btn"
+                  onClick={() => navigate(`/clientes/${linkedClientId}`)}
+                >
+                  Ver cliente
+                </button>
+              )}
+            </div>
+          </article>
+        )
+      })}
+      </div>
     </section>
   )
 

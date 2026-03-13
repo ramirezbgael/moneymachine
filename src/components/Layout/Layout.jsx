@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { FaCashRegister, FaBox, FaClock, FaChartBar, FaCog, FaUserClock, FaEllipsisH } from 'react-icons/fa'
+import { FaCashRegister, FaBox, FaClock, FaChartBar, FaCog, FaUserClock, FaUsers, FaEllipsisH } from 'react-icons/fa'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useTenantStore } from '../../store/tenantStore'
 import { useAuthStore } from '../../store/authStore'
@@ -110,6 +110,7 @@ const Layout = () => {
 
   const reorderableMenuItems = [
     { path: '/inventory', label: t('nav.inventory'), icon: FaBox, id: 'inventory' },
+    { path: '/clientes', label: t('nav.customers') || 'Clientes', icon: FaUsers, id: 'customers' },
     { path: '/finance', label: 'Finanzas', icon: FaChartBar, id: 'finance' },
     { path: '/pending', label: t('nav.pending'), icon: FaClock, id: 'pending' },
     ...(subscriptionsEnabled
@@ -158,6 +159,9 @@ const Layout = () => {
     if (location.pathname.startsWith('/inventory')) return directModuleIds.has('inventory') ? 'inventory' : 'more'
     if (location.pathname.startsWith('/inventario')) return directModuleIds.has('inventory') ? 'inventory' : 'more'
     if (location.pathname.startsWith('/pending')) return directModuleIds.has('pending') ? 'pending' : 'more'
+    if (location.pathname.startsWith('/customers') || location.pathname.startsWith('/clientes')) {
+      return directModuleIds.has('customers') ? 'customers' : 'more'
+    }
     if (location.pathname.startsWith('/subscriptions') || location.pathname.startsWith('/suscripciones')) return directModuleIds.has('subscriptions') ? 'subscriptions' : 'more'
     if (location.pathname.startsWith('/finance') || location.pathname.startsWith('/finanzas') || location.pathname.startsWith('/reports')) {
       return directModuleIds.has('finance') ? 'finance' : 'more'
@@ -183,6 +187,8 @@ const Layout = () => {
     location.pathname.startsWith('/inventario') ||
     location.pathname.startsWith('/subscriptions') ||
     location.pathname.startsWith('/suscripciones') ||
+    location.pathname.startsWith('/customers') ||
+    location.pathname.startsWith('/clientes') ||
     location.pathname.startsWith('/configuracion') ||
     location.pathname.startsWith('/finance') ||
     location.pathname.startsWith('/finanzas') ||

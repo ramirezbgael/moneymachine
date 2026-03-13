@@ -3,8 +3,17 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { QRCodeCanvas } from 'qrcode.react'
 import { FaArrowLeft, FaDownload, FaEdit, FaPhoneAlt, FaPrint, FaSave, FaTimes, FaWhatsapp } from 'react-icons/fa'
 import { useSubscriptionStore } from '../../store/subscriptionStore'
+import { isSupabaseConfigured, supabase } from '../../lib/supabase'
+import './SubscriptionClientPage.css'
 
 const dateFormatter = new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+const dateTimeFormatter = new Intl.DateTimeFormat('es-MX', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+})
 
 const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`
 
@@ -12,6 +21,14 @@ const formatRenewalDate = (value) => {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? 'Sin fecha' : dateFormatter.format(date)
 }
+
+const formatDateTime = (value) => {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Sin registro' : dateTimeFormatter.format(date)
+}
+
+const resolveCheckinAt = (entry) => entry?.checkin_at || entry?.checked_in_at || entry?.entry_at || entry?.created_at || null
+const resolveCheckoutAt = (entry) => entry?.checkout_at || entry?.checked_out_at || entry?.exit_at || null
 
 const sanitizeName = (value) => value
   .replace(/[^a-zA-Z0-9\s.'-]/g, '')
@@ -29,10 +46,10 @@ const normalizeWhatsAppPhone = (value) => {
 }
 
 const getStatusMeta = (customer) => {
-  if (customer.status === 'cancelled') return { label: 'Cancelada', tone: 'text-zinc-300 bg-zinc-800 border-zinc-700' }
-  if (customer.daysLeft < 0) return { label: 'Vencida', tone: 'text-red-300 bg-red-500/10 border-red-500/30' }
-  if (customer.daysLeft <= 7) return { label: 'Por vencer', tone: 'text-amber-300 bg-amber-500/10 border-amber-500/30' }
-  return { label: 'Activa', tone: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30' }
+  if (customer.status === 'cancelled') return { label: 'Cancelada', tone: 'subscription-status--neutral' }
+  if (customer.daysLeft < 0) return { label: 'Vencida', tone: 'subscription-status--danger' }
+  if (customer.daysLeft <= 7) return { label: 'Por vencer', tone: 'subscription-status--warn' }
+  return { label: 'Activa', tone: 'subscription-status--ok' }
 }
 
 const getAppBaseUrl = () => {
@@ -59,6 +76,9 @@ const SubscriptionClientPage = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [feedback, setFeedback] = useState('')
   const [editForm, setEditForm] = useState({ name: '', phone: '', monthlyFee: '' })
+  const [checkins, setCheckins] = useState([])
+  const [checkinsLoading, setCheckinsLoading] = useState(false)
+  const [checkinsError, setCheckinsError] = useState('')
 
   useEffect(() => {
     loadCustomers()
@@ -85,6 +105,87 @@ const SubscriptionClientPage = () => {
       monthlyFee: String(customer.monthlyFee || availablePlans[0] || '')
     })
   }, [availablePlans, customer])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchCheckins = async () => {
+      if (!customer?.id || !isSupabaseConfigured() || !supabase) {
+        if (!cancelled) {
+          setCheckins([])
+          setCheckinsError('')
+        }
+        return
+      }
+
+      if (!cancelled) {
+        setCheckinsLoading(true)
+        setCheckinsError('')
+      }
+
+      try {
+        const tableNames = ['gym_checkins', 'checkins']
+        const filterColumns = ['cliente_id', 'customer_id', 'subscription_customer_id', 'subscriber_id']
+        const orderColumns = ['checkin_at', 'checked_in_at', 'created_at', 'entry_at']
+
+        let foundData = null
+        let lastError = null
+
+        for (const tableName of tableNames) {
+          for (const filterColumn of filterColumns) {
+            for (const orderColumn of orderColumns) {
+              const { data, error } = await supabase
+                .from(tableName)
+                .select('*')
+                .eq(filterColumn, customer.id)
+                .order(orderColumn, { ascending: false })
+                .limit(20)
+
+              if (!error) {
+                foundData = data || []
+                break
+              }
+
+              lastError = error
+              const message = String(error.message || '').toLowerCase()
+              const recoverable =
+                message.includes('column') ||
+                message.includes('does not exist') ||
+                message.includes('schema cache') ||
+                message.includes('could not find the table')
+
+              if (!recoverable) {
+                throw error
+              }
+            }
+
+            if (foundData) break
+          }
+
+          if (foundData) break
+        }
+
+        if (!foundData && lastError) {
+          throw lastError
+        }
+
+        if (!cancelled) setCheckins(foundData || [])
+      } catch (error) {
+        console.error('Error loading checkins:', error)
+        if (!cancelled) {
+          setCheckins([])
+          setCheckinsError('No se pudo cargar el historial de accesos.')
+        }
+      } finally {
+        if (!cancelled) setCheckinsLoading(false)
+      }
+    }
+
+    fetchCheckins()
+    return () => {
+      cancelled = true
+    }
+  }, [customer?.id])
 
   const getQrCanvas = () => qrWrapperRef.current?.querySelector('canvas') || null
 
@@ -171,45 +272,47 @@ const SubscriptionClientPage = () => {
   }
 
   if (loading && !customer) {
-    return <div className="min-h-screen bg-[#050816] px-4 py-6 text-zinc-100">Cargando cliente...</div>
+    return <div className="subscription-client-page">Cargando cliente...</div>
   }
 
   if (!customer) {
     return (
-      <div className="min-h-screen bg-[#050816] px-4 py-6 text-zinc-100">
-        <div className="mx-auto max-w-3xl rounded-[28px] border border-zinc-800 bg-zinc-950/80 p-6">
-          <button type="button" onClick={() => navigate('/subscriptions')} className="mb-6 inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white">
+      <div className="subscription-client-page">
+        <div className="subscription-client-shell">
+        <div className="subscription-panel">
+          <button type="button" onClick={() => navigate('/subscriptions')} className="subscription-back" style={{ marginBottom: '24px' }}>
             <FaArrowLeft />
             Volver a suscripciones
           </button>
-          <h1 className="text-2xl font-semibold text-white">Cliente no encontrado</h1>
-          <p className="mt-2 text-zinc-400">No existe un suscriptor con ese identificador o aún no se ha cargado en este tenant.</p>
+          <h1 className="subscription-customer-name" style={{ marginTop: 0, fontSize: '2rem' }}>Cliente no encontrado</h1>
+          <p className="subscription-note" style={{ marginTop: '8px' }}>No existe un suscriptor con ese identificador o aún no se ha cargado en este tenant.</p>
+        </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#050816] px-4 py-4 text-white sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl space-y-5">
-        <div className="flex items-center justify-between rounded-[28px] border border-zinc-800 bg-zinc-950/85 px-4 py-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur">
-          <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white">
+    <div className="subscription-client-page">
+      <div className="subscription-client-shell">
+        <div className="subscription-topbar">
+          <button type="button" onClick={() => navigate(-1)} className="subscription-back">
             <FaArrowLeft />
             Regresar
           </button>
-          <h1 className="text-lg font-semibold text-emerald-400">Cliente</h1>
-          <span className={`rounded-full border px-3 py-1 text-xs font-medium ${status.tone}`}>{status.label}</span>
+          <h1 className="subscription-title-chip">Cliente</h1>
+          <span className={`subscription-status ${status.tone}`}>{status.label}</span>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-          <section className="space-y-5">
-            <article className="overflow-hidden rounded-[28px] border border-zinc-800 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_45%),linear-gradient(180deg,_rgba(24,24,27,0.98),_rgba(9,9,11,0.98))] p-5">
-              <div className="flex items-start justify-between gap-4">
+        <div className="subscription-grid">
+          <section className="subscription-client-shell" style={{ maxWidth: 'none', margin: 0, gap: '20px' }}>
+            <article className="subscription-panel subscription-panel--hero">
+              <div className="subscription-panel-head">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Suscriptor</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">{customer.name}</h2>
-                  <p className="mt-2 flex items-center gap-2 text-sm text-zinc-400">
-                    <FaPhoneAlt className="text-emerald-400" />
+                  <p className="subscription-overline">Suscriptor</p>
+                  <h2 className="subscription-customer-name">{customer.name}</h2>
+                  <p className="subscription-customer-phone">
+                    <FaPhoneAlt className="subscription-phone-icon" />
                     {customer.phone || 'Sin teléfono registrado'}
                   </p>
                 </div>
@@ -219,93 +322,93 @@ const SubscriptionClientPage = () => {
                     setIsEditing((current) => !current)
                     setFeedback('')
                   }}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-emerald-500/40 hover:text-white"
+                  className="subscription-edit-btn"
                 >
                   {isEditing ? <FaTimes /> : <FaEdit />}
                   {isEditing ? 'Cerrar edición' : 'Editar cliente'}
                 </button>
               </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-zinc-800 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Mensualidad</p>
-                  <p className="mt-2 text-2xl font-semibold text-emerald-400">{formatMoney(customer.monthlyFee)}</p>
+              <div className="subscription-metrics-grid">
+                <div className="subscription-metric">
+                  <p className="subscription-label">Mensualidad</p>
+                  <p className="subscription-metric-value subscription-metric-value--accent">{formatMoney(customer.monthlyFee)}</p>
                 </div>
-                <div className="rounded-2xl border border-zinc-800 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Próxima renovación</p>
-                  <p className="mt-2 text-lg font-semibold text-white">{formatRenewalDate(customer.endDate)}</p>
-                  <p className="mt-1 text-sm text-zinc-400">{customer.daysLeft >= 0 ? `${customer.daysLeft} día(s) restantes` : `Vencida hace ${Math.abs(customer.daysLeft)} día(s)`}</p>
+                <div className="subscription-metric">
+                  <p className="subscription-label">Próxima renovación</p>
+                  <p className="subscription-metric-value" style={{ fontSize: '1.2rem' }}>{formatRenewalDate(customer.endDate)}</p>
+                  <p className="subscription-mini-copy">{customer.daysLeft >= 0 ? `${customer.daysLeft} día(s) restantes` : `Vencida hace ${Math.abs(customer.daysLeft)} día(s)`}</p>
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Inicio</p>
-                  <p className="mt-2 text-sm text-zinc-200">{formatRenewalDate(customer.startDate)}</p>
+              <div className="subscription-stats-grid">
+                <div className="subscription-stat">
+                  <p className="subscription-label">Inicio</p>
+                  <p className="subscription-stat-value">{formatRenewalDate(customer.startDate)}</p>
                 </div>
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Meses pagados</p>
-                  <p className="mt-2 text-sm text-zinc-200">{Number(customer.monthsPurchased || 0)}</p>
+                <div className="subscription-stat">
+                  <p className="subscription-label">Meses pagados</p>
+                  <p className="subscription-stat-value">{Number(customer.monthsPurchased || 0)}</p>
                 </div>
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Total pagado</p>
-                  <p className="mt-2 text-sm text-zinc-200">{formatMoney(customer.totalPaid)}</p>
+                <div className="subscription-stat">
+                  <p className="subscription-label">Total pagado</p>
+                  <p className="subscription-stat-value">{formatMoney(customer.totalPaid)}</p>
                 </div>
               </div>
             </article>
 
-            <article className="rounded-[28px] border border-zinc-800 bg-zinc-950/90 p-5">
-              <div className="flex items-center justify-between gap-3">
+            <article className="subscription-panel">
+              <div className="subscription-panel-head">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Acciones del QR</p>
-                  <h3 className="mt-1 text-lg font-semibold text-white">Código QR de acceso</h3>
+                  <p className="subscription-label">Acciones del QR</p>
+                  <h3 className="subscription-stat-value" style={{ marginTop: '4px', fontSize: '1.15rem' }}>Código QR de acceso</h3>
                 </div>
-                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">Único por suscriptor</span>
+                <span className="subscription-pill">Único por suscriptor</span>
               </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <button type="button" onClick={handleSendWhatsapp} disabled={!whatsappPhone} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 font-medium text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500">
+              <div className="subscription-actions-grid">
+                <button type="button" onClick={handleSendWhatsapp} disabled={!whatsappPhone} className="subscription-accent-btn inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
                   <FaWhatsapp />
                   Enviar por WhatsApp
                 </button>
-                <button type="button" onClick={handleDownloadQr} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800">
+                <button type="button" onClick={handleDownloadQr} className="subscription-ghost-btn inline-flex items-center justify-center gap-2">
                   <FaDownload />
                   Descargar QR
                 </button>
-                <button type="button" onClick={handlePrintQr} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800">
+                <button type="button" onClick={handlePrintQr} className="subscription-ghost-btn inline-flex items-center justify-center gap-2">
                   <FaPrint />
                   Imprimir QR
                 </button>
-                <button type="button" onClick={() => setIsEditing(true)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800">
+                <button type="button" onClick={() => setIsEditing(true)} className="subscription-ghost-btn inline-flex items-center justify-center gap-2">
                   <FaEdit />
                   Editar cliente
                 </button>
               </div>
 
-              {!whatsappPhone && <p className="mt-3 text-sm text-zinc-500">Agrega un teléfono válido para habilitar WhatsApp.</p>}
+              {!whatsappPhone && <p className="subscription-note" style={{ marginTop: '12px' }}>Agrega un teléfono válido para habilitar WhatsApp.</p>}
             </article>
 
             {isEditing && (
-              <article className="rounded-[28px] border border-zinc-800 bg-zinc-950/90 p-5">
-                <div className="flex items-center justify-between gap-3">
+              <article className="subscription-panel">
+                <div className="subscription-panel-head">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Edición</p>
-                    <h3 className="mt-1 text-lg font-semibold text-white">Modificar datos del cliente</h3>
+                    <p className="subscription-label">Edición</p>
+                    <h3 className="subscription-stat-value" style={{ marginTop: '4px', fontSize: '1.15rem' }}>Modificar datos del cliente</h3>
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="subscription-form-grid" style={{ marginTop: '16px' }}>
                   <label className="block">
-                    <span className="mb-2 block text-sm text-zinc-400">Nombre</span>
-                    <input type="text" value={editForm.name} onChange={(event) => setEditForm((current) => ({ ...current, name: sanitizeName(event.target.value) }))} className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none transition focus:border-emerald-500" minLength={3} maxLength={80} />
+                    <span className="subscription-note" style={{ display: 'block', marginBottom: '8px' }}>Nombre</span>
+                    <input type="text" value={editForm.name} onChange={(event) => setEditForm((current) => ({ ...current, name: sanitizeName(event.target.value) }))} className="subscription-input" minLength={3} maxLength={80} />
                   </label>
                   <label className="block">
-                    <span className="mb-2 block text-sm text-zinc-400">Teléfono</span>
-                    <input type="text" value={editForm.phone} onChange={(event) => setEditForm((current) => ({ ...current, phone: sanitizePhone(event.target.value) }))} className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none transition focus:border-emerald-500" inputMode="numeric" placeholder="10 dígitos" maxLength={10} />
+                    <span className="subscription-note" style={{ display: 'block', marginBottom: '8px' }}>Teléfono</span>
+                    <input type="text" value={editForm.phone} onChange={(event) => setEditForm((current) => ({ ...current, phone: sanitizePhone(event.target.value) }))} className="subscription-input" inputMode="numeric" placeholder="10 dígitos" maxLength={10} />
                   </label>
-                  <label className="block md:col-span-2">
-                    <span className="mb-2 block text-sm text-zinc-400">Mensualidad</span>
-                    <select value={editForm.monthlyFee} onChange={(event) => setEditForm((current) => ({ ...current, monthlyFee: event.target.value }))} className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none transition focus:border-emerald-500">
+                  <label className="block subscription-form-span">
+                    <span className="subscription-note" style={{ display: 'block', marginBottom: '8px' }}>Mensualidad</span>
+                    <select value={editForm.monthlyFee} onChange={(event) => setEditForm((current) => ({ ...current, monthlyFee: event.target.value }))} className="subscription-select">
                       {availablePlans.map((plan) => (
                         <option key={plan} value={String(plan)}>{formatMoney(plan)} / mes</option>
                       ))}
@@ -313,14 +416,14 @@ const SubscriptionClientPage = () => {
                   </label>
                 </div>
 
-                {feedback && <p className="mt-4 text-sm text-emerald-300">{feedback}</p>}
+                {feedback && <p className="subscription-feedback">{feedback}</p>}
 
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <button type="button" onClick={handleSave} disabled={isSaving} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 font-medium text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/40">
+                <div className="subscription-actions-grid" style={{ marginTop: '20px' }}>
+                  <button type="button" onClick={handleSave} disabled={isSaving} className="subscription-accent-btn inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
                     <FaSave />
                     {isSaving ? 'Guardando...' : 'Guardar cambios'}
                   </button>
-                  <button type="button" onClick={() => setIsEditing(false)} disabled={isSaving} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800">
+                  <button type="button" onClick={() => setIsEditing(false)} disabled={isSaving} className="subscription-ghost-btn inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
                     <FaTimes />
                     Cancelar
                   </button>
@@ -329,49 +432,95 @@ const SubscriptionClientPage = () => {
             )}
           </section>
 
-          <aside className="space-y-5">
-            <article className="rounded-[28px] border border-zinc-800 bg-zinc-950/90 p-5">
-              <div className="text-center">
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Código QR de acceso</p>
-                <h3 className="mt-2 text-lg font-semibold text-zinc-100">Escanéalo en Check-In</h3>
+          <aside className="subscription-client-shell" style={{ maxWidth: 'none', margin: 0, gap: '20px' }}>
+            <article className="subscription-qr-panel">
+              <div className="subscription-qr-center">
+                <p className="subscription-label">Código QR de acceso</p>
+                <h3 className="subscription-stat-value" style={{ marginTop: '8px', fontSize: '1.15rem' }}>Escanéalo en Check-In</h3>
               </div>
 
-              <div className="mt-5 flex flex-col items-center rounded-[28px] border border-zinc-800 bg-[linear-gradient(180deg,_rgba(24,24,27,0.95),_rgba(9,9,11,0.95))] p-6">
-                <div ref={qrWrapperRef} className="rounded-[24px] bg-white p-4 shadow-[0_20px_40px_rgba(0,0,0,0.35)]">
+              <div className="subscription-qr-surface">
+                <div ref={qrWrapperRef} className="subscription-qr-box">
                   <QRCodeCanvas value={qrValue} size={220} includeMargin bgColor="#ffffff" fgColor="#000000" level="H" />
                 </div>
-                <p className="mt-4 text-center text-sm text-zinc-400">Identificador único listo para check-in automático.</p>
+                <p className="subscription-note" style={{ marginTop: '16px', textAlign: 'center' }}>Identificador único listo para check-in automático.</p>
                 <a
                   href={qrValue}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 break-all text-center text-xs text-emerald-400 underline hover:text-emerald-300"
+                  className="subscription-link"
                 >{qrValue}</a>
               </div>
             </article>
 
-            <article className="rounded-[28px] border border-zinc-800 bg-zinc-950/90 p-5">
-              <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Últimos movimientos</p>
-              <div className="mt-4 space-y-3">
+            <article className="subscription-side-panel">
+              <h3 className="subscription-stat-value" style={{ marginTop: 0, fontSize: '1rem' }}>Historial de accesos</h3>
+
+              {checkinsLoading && (
+                <p className="subscription-empty">
+                  Cargando accesos...
+                </p>
+              )}
+
+              {!checkinsLoading && checkinsError && (
+                <p className="subscription-error">
+                  {checkinsError}
+                </p>
+              )}
+
+              {!checkinsLoading && !checkinsError && checkins.length === 0 && (
+                <p className="subscription-empty">
+                  Aún no hay check-ins/check-outs registrados para este suscriptor.
+                </p>
+              )}
+
+              {!checkinsLoading && checkins.length > 0 && (
+                <div style={{ marginTop: '12px', display: 'grid', gap: '8px' }}>
+                  {checkins.map((entry) => (
+                    <div key={entry.id || `${entry.checkin_at}-${entry.checkout_at || 'open'}`} className="subscription-list-item">
+                      <div>
+                        <p className="subscription-list-title">Entrada</p>
+                        <p className="subscription-list-copy" style={{ fontSize: '12px' }}>{formatDateTime(resolveCheckinAt(entry))}</p>
+                      </div>
+
+                      {resolveCheckoutAt(entry) ? (
+                        <div className="text-right">
+                          <p className="subscription-list-copy" style={{ color: 'var(--text)', fontSize: '14px' }}>Salida</p>
+                          <p className="subscription-list-copy" style={{ fontSize: '12px' }}>{formatDateTime(resolveCheckoutAt(entry))}</p>
+                        </div>
+                      ) : (
+                        <span className="subscription-pill">En sitio</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </article>
+
+            <article className="subscription-side-panel">
+              <p className="subscription-label">Últimos movimientos</p>
+              <div style={{ marginTop: '16px', display: 'grid', gap: '12px' }}>
                 {(customer.paymentHistory || []).slice(0, 4).map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/80 px-4 py-3">
+                  <div key={entry.id} className="subscription-list-item">
                     <div>
-                      <p className="text-sm font-medium text-zinc-100">{entry.kind === 'new_subscription' ? 'Alta inicial' : 'Renovación'}</p>
-                      <p className="text-xs text-zinc-500">{formatRenewalDate(entry.date)} • {entry.months} mes(es)</p>
+                      <p className="subscription-list-title">{entry.kind === 'new_subscription' ? 'Alta inicial' : 'Renovación'}</p>
+                      <p className="subscription-list-copy" style={{ fontSize: '12px' }}>{formatRenewalDate(entry.date)} • {entry.months} mes(es)</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-emerald-300">{formatMoney(entry.amount)}</p>
-                      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{entry.paymentMethod}</p>
+                      <p className="subscription-money">{formatMoney(entry.amount)}</p>
+                      <p className="subscription-payment-meta" style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.18em' }}>{entry.paymentMethod}</p>
                     </div>
                   </div>
                 ))}
                 {(!customer.paymentHistory || customer.paymentHistory.length === 0) && (
-                  <p className="rounded-2xl border border-dashed border-zinc-800 px-4 py-6 text-center text-sm text-zinc-500">Aún no hay historial de pagos registrado para este suscriptor.</p>
+                  <p className="subscription-payment-empty">Aún no hay historial de pagos registrado para este suscriptor.</p>
                 )}
               </div>
             </article>
           </aside>
         </div>
+
+        <div className="h-8 md:h-10" aria-hidden="true" />
       </div>
     </div>
   )

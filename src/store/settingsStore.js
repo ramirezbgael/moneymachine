@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { t as translate } from '../i18n/translations'
 
-const DEFAULT_NAV_MODULE_ORDER = ['inventory', 'finance', 'pending', 'subscriptions', 'settings']
+const DEFAULT_NAV_MODULE_ORDER = ['inventory', 'customers', 'finance', 'pending', 'subscriptions', 'settings']
 const NAV_MODULE_ORDER_ALLOWED = new Set(DEFAULT_NAV_MODULE_ORDER)
 
 const sanitizeNavModuleOrder = (order) => {

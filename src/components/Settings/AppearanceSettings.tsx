@@ -5,6 +5,7 @@ import { useTenantStore } from '../../store/tenantStore'
 
 const NAV_REORDERABLE_MODULES = [
   { id: 'inventory', label: 'Inventario' },
+  { id: 'customers', label: 'Clientes' },
   { id: 'finance', label: 'Finanzas' },
   { id: 'pending', label: 'Ventas pendientes' },
   { id: 'subscriptions', label: 'Suscripciones' },

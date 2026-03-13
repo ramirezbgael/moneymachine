@@ -9,11 +9,15 @@ import { InventoryNewPage } from './components/Inventory/InventoryNewPage'
 import Pending from './components/Pending/Pending'
 import Reports from './components/Reports/Reports'
 import Finance from './components/Finance/Finance'
+import Customers from './components/Customers/Customers'
 import CajaModule from './components/Caja/CajaModule'
 import Subscriptions from './components/Subscriptions/Subscriptions'
 import { ConfiguracionPage } from './pages/configuracion/ConfiguracionPage'
 import CheckoutPage from './pages/checkout/CheckoutPage'
 import SubscriptionClientPage from './pages/subscriptions/SubscriptionClientPage'
+import CustomerDetailPage from './pages/customers/CustomerDetailPage'
+import NewReceivablePage from './pages/finance/NewReceivablePage'
+import ReceivableDetailPage from './pages/finance/ReceivableDetailPage'
 import PublicCheckPage from './pages/subscriptions/PublicCheckPage'
 import Login from './components/Auth/Login'
 import Register from './components/Auth/Register'
@@ -118,6 +122,10 @@ function App() {
           <Route path="pending" element={<Pending />} />
           <Route path="cash-register" element={<CajaModule />} />
           <Route path="cash-register/:action" element={<CajaModule />} />
+          <Route path="customers" element={<Customers />} />
+          <Route path="customers/:id" element={<CustomerDetailPage />} />
+          <Route path="clientes" element={<Customers />} />
+          <Route path="clientes/:id" element={<CustomerDetailPage />} />
           <Route
             path="subscriptions"
             element={
@@ -144,6 +152,10 @@ function App() {
           />
           <Route path="finance" element={<Finance />} />
           <Route path="finance/:sectionId" element={<Finance />} />
+          <Route path="finance/new-receivable" element={<NewReceivablePage />} />
+          <Route path="finance/receivables/:id" element={<ReceivableDetailPage />} />
+          <Route path="finanzas/nueva-deuda" element={<NewReceivablePage />} />
+          <Route path="finanzas/cxc/:id" element={<ReceivableDetailPage />} />
           <Route path="finance/reports" element={<Reports />} />
           <Route path="finance/reports/:tabId" element={<Reports />} />
           <Route path="settings" element={<ConfiguracionPage />} />

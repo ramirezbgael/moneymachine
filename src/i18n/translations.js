@@ -9,6 +9,7 @@ export const translations = {
     nav: {
       currentSale: 'Current Sale',
       inventory: 'Inventory',
+      customers: 'Customers',
       pending: 'Pending',
       subscriptions: 'Subscriptions',
       reports: 'Reports',
@@ -439,6 +440,7 @@ export const translations = {
     nav: {
       currentSale: 'Venta Actual',
       inventory: 'Inventario',
+      customers: 'Clientes',
       pending: 'Pendientes',
       subscriptions: 'Suscripciones',
       reports: 'Reportes',
