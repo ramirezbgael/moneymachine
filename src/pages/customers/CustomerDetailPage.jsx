@@ -213,7 +213,7 @@ const CustomerDetailPage = () => {
           <h2 className="customer-detail-heading">Historial de deudas</h2>
           <button
             type="button"
-            onClick={() => navigate('/finanzas/nueva-deuda', { state: { preselectedClientId: customer.id } })}
+            onClick={() => navigate('/finance/new-receivable', { state: { preselectedClientId: customer.id } })}
             className="customer-detail-primary-btn"
           >
             + Nueva deuda

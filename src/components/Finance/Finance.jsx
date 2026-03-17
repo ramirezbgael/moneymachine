@@ -158,7 +158,7 @@ const Finance = () => {
           <h2>Cuentas por cobrar</h2>
           <p>Gestiona deudas activas y pagos por cliente.</p>
         </div>
-        <button type="button" onClick={() => navigate('/finanzas/nueva-deuda')}>+ Nueva deuda</button>
+        <button type="button" onClick={() => navigate('/finance/new-receivable')}>+ Nueva deuda</button>
       </header>
 
       <div className="finance-receivables-list">

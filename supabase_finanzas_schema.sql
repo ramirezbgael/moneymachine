@@ -37,6 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_cash_movements_session_created
 CREATE TABLE IF NOT EXISTS accounts_receivable (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL,
+  client_id UUID, -- Nueva columna para relación con clientes
   client_name TEXT NOT NULL,
   concept TEXT NOT NULL,
   amount NUMERIC(12,2) NOT NULL CHECK (amount >= 0),
