@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { FaChartLine, FaCashRegister, FaFileInvoiceDollar, FaChartBar, FaHistory, FaFileExport, FaSearch, FaArrowRight } from 'react-icons/fa'
+import { FaChartLine, FaCashRegister, FaFileInvoiceDollar, FaChartBar, FaHistory, FaFileExport, FaSearch, FaArrowRight, FaReceipt } from 'react-icons/fa'
 import { useReportsStore } from '../../store/reportsStore'
 import { useTenantStore } from '../../store/tenantStore'
+import SalesModule from './SalesModule'
 import './Finance.css'
 
 const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`
@@ -37,6 +38,13 @@ const HUB_CARDS = [
     description: 'Gestionar ventas pendientes y pagos de clientes.',
     icon: FaFileInvoiceDollar,
     to: '/finance/receivables'
+  },
+  {
+    id: 'sales',
+    title: 'Ventas',
+    description: 'Historial de tickets, cancelar ventas pendientes y emitir reembolsos.',
+    icon: FaReceipt,
+    to: '/finance/sales'
   },
   {
     id: 'reports',
@@ -453,6 +461,7 @@ const Finance = () => {
         <>
           {activeSection === 'home' && renderHub()}
           {activeSection === 'receivables' && renderCxc()}
+          {activeSection === 'sales' && <SalesModule />}
           {activeSection === 'cuts' && renderCortes()}
           {activeSection === 'export' && renderExportar()}
           {activeSection === 'reports' && (

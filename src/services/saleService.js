@@ -224,7 +224,184 @@ export const getSales = async (limit = 50) => {
   }
 }
 
+const registerCashRefundMovement = async ({ saleNumber, total, paymentMethod, sessionId }) => {
+  if (paymentMethod !== 'cash' || !sessionId) return
+
+  const { cashSession, registerCashMovement } = useReportsStore.getState()
+  if (!cashSession?.id || cashSession.id !== sessionId) return
+
+  await registerCashMovement({
+    type: 'adjustment',
+    description: `Reembolso venta ${saleNumber}`,
+    amount: total
+  })
+}
+
+export const cancelSale = async ({ saleId, userId }) => {
+  if (!saleId) throw new Error('saleId es requerido')
+
+  if (isSupabaseConfigured() && supabase) {
+    const tenantId = useTenantStore.getState().currentTenantId
+    if (!tenantId) throw new Error('No tenant selected. Please log in again.')
+
+    const { data: sale, error } = await supabase
+      .from('sales')
+      .select('*')
+      .eq('id', saleId)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (error) throw error
+    if (!sale) throw new Error('Venta no encontrada')
+
+    if (sale.status !== 'pending') {
+      throw new Error('Solo se pueden cancelar ventas pendientes')
+    }
+
+    const { error: updateError } = await supabase
+      .from('sales')
+      .update({
+        status: 'cancelled',
+        updated_at: new Date().toISOString(),
+        notes: sale.notes
+          ? `${sale.notes} | Cancelado por usuario ${userId || 'N/A'}`
+          : `Cancelado por usuario ${userId || 'N/A'}`
+      })
+      .eq('id', saleId)
+      .eq('tenant_id', tenantId)
+
+    if (updateError) throw updateError
+
+    return { ...sale, status: 'cancelled' }
+  }
+
+  const savedSales = JSON.parse(localStorage.getItem('sales') || '[]')
+  const idx = savedSales.findIndex((s) => s.id === saleId)
+  if (idx === -1) throw new Error('Venta no encontrada (mock)')
+
+  const sale = savedSales[idx]
+  if (sale.status !== 'pending') {
+    throw new Error('Solo se pueden cancelar ventas pendientes')
+  }
+
+  savedSales[idx] = {
+    ...sale,
+    status: 'cancelled',
+    notes: sale.notes
+      ? `${sale.notes} | Cancelado (mock)`
+      : 'Cancelado (mock)'
+  }
+
+  localStorage.setItem('sales', JSON.stringify(savedSales))
+  return savedSales[idx]
+}
+
+export const refundSale = async ({ saleId, userId }) => {
+  if (!saleId) throw new Error('saleId es requerido')
+
+  if (isSupabaseConfigured() && supabase) {
+    const tenantId = useTenantStore.getState().currentTenantId
+    if (!tenantId) throw new Error('No tenant selected. Please log in again.')
+
+    const { data: sale, error } = await supabase
+      .from('sales')
+      .select(`
+        *,
+        sale_items (
+          *,
+          product:products (*)
+        )
+      `)
+      .eq('id', saleId)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (error) throw error
+    if (!sale) throw new Error('Venta no encontrada')
+
+    if (sale.status !== 'completed') {
+      throw new Error('Solo se pueden reembolsar ventas completadas')
+    }
+
+    const items = sale.sale_items || []
+
+    for (const item of items) {
+      if (!item.product) continue
+      const newStock = (item.product.stock || 0) + item.quantity
+
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ stock: newStock })
+        .eq('id', item.product.id)
+
+      if (updateError) {
+        console.error(`Error revirtiendo stock producto ${item.product.id}:`, updateError)
+      }
+    }
+
+    const { error: updateSaleError } = await supabase
+      .from('sales')
+      .update({
+        status: 'cancelled',
+        updated_at: new Date().toISOString(),
+        notes: sale.notes
+          ? `${sale.notes} | Reembolsado por usuario ${userId || 'N/A'}`
+          : `Reembolsado por usuario ${userId || 'N/A'}`
+      })
+      .eq('id', saleId)
+      .eq('tenant_id', tenantId)
+
+    if (updateSaleError) throw updateSaleError
+
+    await registerCashRefundMovement({
+      saleNumber: sale.sale_number,
+      total: sale.total,
+      paymentMethod: sale.payment_method,
+      sessionId: sale.session_id
+    })
+
+    return {
+      ...sale,
+      status: 'cancelled',
+      sale_items: items.map((item) => ({
+        ...item,
+        product: {
+          ...item.product,
+          stock: (item.product?.stock || 0) + item.quantity
+        }
+      }))
+    }
+  }
+
+  const savedSales = JSON.parse(localStorage.getItem('sales') || '[]')
+  const idx = savedSales.findIndex((s) => s.id === saleId)
+  if (idx === -1) throw new Error('Venta no encontrada (mock)')
+
+  const sale = savedSales[idx]
+  if (sale.status !== 'completed') {
+    throw new Error('Solo se pueden reembolsar ventas completadas')
+  }
+
+  for (const item of sale.sale_items || []) {
+    if (!item.product) continue
+    item.product.stock = (item.product.stock || 0) + item.quantity
+  }
+
+  savedSales[idx] = {
+    ...sale,
+    status: 'cancelled',
+    notes: sale.notes
+      ? `${sale.notes} | Reembolsado (mock)`
+      : 'Reembolsado (mock)'
+  }
+
+  localStorage.setItem('sales', JSON.stringify(savedSales))
+  return savedSales[idx]
+}
+
 export const saleService = {
   processSale,
-  getSales
+  getSales,
+  cancelSale,
+  refundSale
 }

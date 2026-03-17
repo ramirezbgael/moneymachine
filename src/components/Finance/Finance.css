@@ -471,6 +471,354 @@
   text-align: center;
 }
 
+/* ── Sales module ──────────────────────────────────── */
+
+.finance-status--cancelled {
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.38);
+  background: rgba(148, 163, 184, 0.12);
+}
+
+:root[data-theme='light'] .finance-status--cancelled {
+  color: #64748b;
+  border-color: rgba(100, 116, 139, 0.35);
+  background: rgba(100, 116, 139, 0.1);
+}
+
+.fsales-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fsales-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 300px;
+  min-width: 180px;
+}
+
+.fsales-search__icon {
+  position: absolute;
+  left: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.fsales-search input {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 12px 8px 34px;
+  font-size: 13px;
+}
+
+.fsales-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  margin-left: 5px;
+}
+
+.fsales-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.fsales-refresh-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--panel) 95%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.fsales-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes fsales-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.fsales-spin {
+  animation: fsales-rotate 0.8s linear infinite;
+}
+
+.fsales-table {
+  min-width: 960px;
+}
+
+.fsales-sale-number {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.fsales-date {
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.fsales-center {
+  text-align: center;
+}
+
+.fsales-total {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.fsales-discount {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.fsales-muted {
+  color: var(--muted);
+}
+
+.fsales-empty-cell {
+  padding: 28px 12px;
+}
+
+.fsales-row--cancelled td {
+  opacity: 0.55;
+}
+
+.fsales-action-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.fsales-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.fsales-btn:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.fsales-btn--cancel {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.fsales-btn--refund {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+/* Modal overlay */
+
+.fsales-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.fsales-modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 26px 24px;
+  max-width: 440px;
+  width: 100%;
+  display: grid;
+  gap: 14px;
+  box-shadow: 0 28px 56px rgba(0, 0, 0, 0.38);
+  animation: fsales-modal-in 0.18s ease;
+}
+
+@keyframes fsales-modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.fsales-modal__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  font-size: 22px;
+}
+
+.fsales-modal__icon--cancel {
+  background: rgba(239, 68, 68, 0.14);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.fsales-modal__icon--refund {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+}
+
+.fsales-modal h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.fsales-modal__desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.fsales-modal__desc strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.fsales-modal__error {
+  margin: 0;
+  font-size: 12px;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.fsales-modal__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.fsales-modal__back {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.fsales-modal__back:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--panel) 95%, var(--text) 5%);
+}
+
+.fsales-modal__confirm {
+  border-radius: 12px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.fsales-modal__confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.fsales-modal__confirm:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.fsales-modal__confirm--cancel {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(239, 68, 68, 0.32);
+}
+
+.fsales-modal__confirm--refund {
+  background: linear-gradient(135deg, #fde68a, #fbbf24);
+  color: #1a1206;
+  box-shadow: 0 8px 18px rgba(251, 191, 36, 0.3);
+}
+
+.fsales-error {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+@media (max-width: 760px) {
+  .fsales-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .fsales-search {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .fsales-modal {
+    padding: 22px 18px 18px;
+  }
+
+  .fsales-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .fsales-modal__back,
+  .fsales-modal__confirm {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
 @media (max-width: 1100px) {
   .finance-grid--summary,
   .finance-grid--reports,
