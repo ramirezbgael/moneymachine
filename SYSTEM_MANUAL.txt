@@ -1,0 +1,291 @@
+================================================================================
+  MONEYMACHINE — MANUAL DEL SISTEMA
+  Última actualización: 2026-03-16
+================================================================================
+
+ÍNDICE
+------
+  1. Arquitectura general
+  2. Módulo de Inventario
+  3. Módulo de Ventas (POS)
+  4. Módulo de Finanzas
+     4.1 Caja (sesiones y movimientos)
+     4.2 Cuentas por cobrar
+     4.3 Historial de ventas — Cancelaciones y Reembolsos
+  5. Flujo de datos: Venta → Inventario → Caja
+  6. Flujo de datos: Reembolso — cómo se conecta todo
+  7. Modo mock vs. Supabase
+
+
+================================================================================
+1. ARQUITECTURA GENERAL
+================================================================================
+
+Stack:
+  - Frontend : React + Vite
+  - Estado   : Zustand (stores)
+  - Backend  : Supabase (PostgreSQL + Row Level Security)
+  - Offline  : localStorage / mock (cuando Supabase no está configurado)
+
+Patrón dual Supabase/mock:
+  Todos los servicios y stores intentan conectar a Supabase. Si las variables
+  VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY no están presentes, el sistema
+  opera con localStorage como base de datos local. Esto es transparente para
+  el usuario final.
+
+Multi-tenant:
+  Cada registro tiene tenant_id. El tenant activo vive en tenantStore y se
+  inyecta automáticamente en cada operación de escritura/lectura.
+
+
+================================================================================
+2. MÓDULO DE INVENTARIO
+================================================================================
+
+Tablas involucradas:
+  - products      : catálogo de productos (id, name, code, price, cost, stock, ...)
+  - sale_items    : ítems de cada venta (sale_id, product_id, quantity, unit_price)
+
+Store principal: src/store/inventoryStore.ts
+
+  incrementStock(productId, qty, payload)
+    → Suma qty al campo stock del producto.
+    → Registra un movimiento de tipo 'entrada'.
+
+  decrementStock(productId, qty, payload)
+    → Resta qty (con piso en 0).
+    → Registra un movimiento de tipo 'salida'.
+
+  createProduct / updateProduct / deleteProduct
+    → CRUD completo. Usa offlineProductService que detecta automáticamente
+      si hay Supabase disponible o escribe en IndexedDB local.
+
+
+================================================================================
+3. MÓDULO DE VENTAS (POS)
+================================================================================
+
+Tablas involucradas:
+  - sales       : cabecera de cada venta (sale_number, subtotal, discount, total,
+                  payment_method, receipt_type, customer_id, user_id, session_id,
+                  status, tenant_id, created_at, updated_at)
+  - sale_items  : líneas de la venta (sale_id, product_id, quantity, unit_price, subtotal)
+
+Store de carrito: src/store/saleStore.js
+  - Gestiona items[], discount y los cálculos en tiempo real (getTotals).
+  - NO toca la base de datos; solo es estado en memoria.
+
+Servicio: src/services/saleService.js
+
+  processSale(saleData)
+    1. Valida que haya ítems.
+    2. Si status='completed': valida stock suficiente por producto.
+    3. Inserta en 'sales'.
+    4. Inserta en 'sale_items'.
+    5. Si completed: descuenta stock en 'products' y actualiza last_sale_date.
+    6. Si el pago es efectivo y hay sesión de caja abierta:
+       llama registerCashSaleMovement → inserta tipo 'sale' en cash_movements.
+
+Estados de una venta (sales.status):
+  pending   → Guardada pero no cobrada (pago pendiente). Stock NO decrementado.
+  completed → Cobrada y confirmada. Stock decrementado. Caja actualizada.
+  cancelled → Cancelada o reembolsada. Ver sección 4.3.
+
+
+================================================================================
+4. MÓDULO DE FINANZAS
+================================================================================
+
+Ruta principal: /finance  (componente src/components/Finance/Finance.jsx)
+Secciones del hub:
+  - /finance/sales       → Historial de ventas (cancelaciones y reembolsos)
+  - /finance/receivables → Cuentas por cobrar
+  - /finance/reports     → Reportes analíticos
+  - /cash-register       → Caja
+
+
+── 4.1 CAJA (sesiones y movimientos) ────────────────────────────────────────
+
+Tablas:
+  cash_sessions
+    id, tenant_id, opened_by_user_id, opened_at, closed_at,
+    opening_amount, closing_amount, status ('open'|'closed')
+
+  cash_movements
+    id, tenant_id, session_id, type ('sale'|'expense'|'adjustment'),
+    description, amount (>=0), created_at, user_id
+
+Store: src/store/reportsStore.js → registerCashMovement({ type, description, amount })
+  ⚠ Este método REQUIERE que haya una sesión activa (cashSession.id).
+    Si la caja está cerrada, el movimiento se descarta silenciosamente.
+    Por eso los reembolsos usan una ruta alternativa (ver 4.3).
+
+Fórmula del balance (corte X):
+  balance = opening_amount + Σ(sale) − Σ(expense) + Σ(adjustment)
+
+  Tipos y su efecto sobre el balance:
+    sale       → SUMA   (dinero que entra por ventas)
+    expense    → RESTA  (dinero que sale: gastos, reembolsos)
+    adjustment → SUMA   (correcciones manuales positivas)
+
+
+── 4.2 CUENTAS POR COBRAR ───────────────────────────────────────────────────
+
+Tablas: accounts_receivable, payments
+Trigger: al insertar un pago, el trigger del DB actualiza status de la CxC.
+Si el pago es en efectivo y hay caja abierta → el trigger inserta cash_movement
+tipo 'sale' automáticamente (SQL-side, no pasa por el frontend).
+
+
+── 4.3 HISTORIAL DE VENTAS — CANCELACIONES Y REEMBOLSOS ─────────────────────
+
+Ruta: /finance/sales
+Componente: src/components/Finance/SalesModule.jsx
+
+La pantalla muestra todas las ventas con filtros por estado y búsqueda por
+número de ticket. Las acciones disponibles dependen del status:
+
+  ┌──────────────┬─────────────────────────────────────────────────────────┐
+  │ Status       │ Acción disponible                                       │
+  ├──────────────┼─────────────────────────────────────────────────────────┤
+  │ pending      │ [Cancelar]   — No toca inventario ni caja               │
+  │ completed    │ [Reembolsar] — Revierte inventario + registra en caja   │
+  │ cancelled    │ Sin acción disponible                                   │
+  └──────────────┴─────────────────────────────────────────────────────────┘
+
+Ambas acciones muestran un modal de confirmación antes de ejecutarse.
+
+
+================================================================================
+5. FLUJO DE DATOS: VENTA → INVENTARIO → CAJA
+================================================================================
+
+  Usuario completa pago
+         │
+         ▼
+  processSale() [saleService.js]
+         │
+         ├─► INSERT sales (status='completed')
+         │
+         ├─► INSERT sale_items (qty, unit_price por producto)
+         │
+         ├─► UPDATE products.stock -= qty   (por cada ítem)
+         │
+         └─► Si payment_method='cash' y hay sesión abierta:
+               INSERT cash_movements (type='sale', amount=total)
+
+
+================================================================================
+6. FLUJO DE DATOS: REEMBOLSO — CÓMO SE CONECTA TODO
+================================================================================
+
+  Usuario pulsa [Reembolsar] en /finance/sales → modal de confirmación
+         │
+         ▼
+  refundSale({ saleId, userId }) [saleService.js]
+         │
+         ├─ 1. Carga la venta con sus sale_items y productos desde Supabase
+         │
+         ├─ 2. Valida que status='completed' (solo ventas cobradas se reembolsan)
+         │
+         ├─ 3. Revierte inventario:
+         │      Por cada sale_item:
+         │        UPDATE products SET stock = stock + item.quantity
+         │      El stock vuelve a su estado previo a la venta.
+         │
+         ├─ 4. Marca la venta como cancelada:
+         │      UPDATE sales SET status='cancelled',
+         │             notes = notes || ' | Reembolsado por usuario <id>',
+         │             updated_at = NOW()
+         │
+         └─ 5. Registra el egreso en caja [registerCashRefundMovement]:
+               Solo si payment_method='cash'
+
+               ► Sesión de caja a usar:
+                 - Si hay caja ABIERTA actualmente → usa esa sesión activa.
+                 - Si la caja está CERRADA → usa la session_id original
+                   de la venta (la sesión en que se cobró).
+                 Esto garantiza que el movimiento SIEMPRE se registra,
+                 incluso si la caja fue cerrada después de la venta.
+
+               ► INSERT cash_movements:
+                   type        = 'expense'   ← RESTA del balance de caja
+                   description = 'Reembolso venta SALE-XXXXXXXX-NNN'
+                   amount      = total de la venta
+                   session_id  = sesión activa o sesión original
+                   tenant_id   = tenant activo
+                   user_id     = usuario que ejecuta el reembolso
+
+               ► En modo mock (sin Supabase):
+                   Mismo registro, pero en localStorage bajo la clave
+                   'finance:cash_movements'.
+
+               ► Refresco de estado (UI):
+                   Después de insertar el movimiento (tanto en Supabase
+                   como en localStorage), el servicio llama:
+                     fetchCashMovements(sessionId)  → recarga movimientos
+                     fetchXCut()                    → recalcula balance
+                     fetchFinancialSummary()        → actualiza "efectivo esperado"
+                   SalesModule también dispara refreshCash() al confirmar
+                   el reembolso, como respaldo adicional.
+
+                   ⚠ Si la sesión está CERRADA cuando se hace el reembolso,
+                   fetchXCut() devuelve balance=0 (diseño del store). El
+                   movimiento queda guardado correctamente y aparece en el
+                   historial de movimientos de esa sesión, pero el número
+                   "efectivo esperado" requiere una sesión activa para
+                   calcularse.
+
+Diagrama resumido del reembolso:
+
+  sales ──────────────────────────────────────────────────────────────
+   status: completed → cancelled
+   notes: + "Reembolsado por usuario <id>"
+
+  products (por cada ítem vendido) ───────────────────────────────────
+   stock += quantity_vendida
+
+  cash_movements (si pago fue efectivo) ──────────────────────────────
+   type    = 'expense'
+   amount  = total de la venta
+   session = actual (si abierta) | original (si cerrada)
+
+  ── Resultado en el balance de caja ──
+   balance = opening + Σ(sales) − Σ(expenses) + Σ(adjustments)
+                                   ↑
+                        el reembolso aparece aquí como expense,
+                        reduciendo el balance correctamente.
+
+
+CANCELACIÓN (ventas pending):
+
+  refundSale NO aplica. Se usa cancelSale():
+    - Solo cambia sales.status de 'pending' → 'cancelled'.
+    - NO toca inventario (el stock nunca fue decrementado).
+    - NO toca caja (el cobro nunca se registró).
+    - Agrega nota en sales.notes: "Cancelado por usuario <id>".
+
+
+================================================================================
+7. MODO MOCK vs. SUPABASE
+================================================================================
+
+  La función isSupabaseConfigured() en src/lib/supabase.js devuelve true solo
+  si VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY están definidas.
+
+  En modo mock:
+    - Las ventas se guardan en localStorage ('sales').
+    - Los movimientos de caja en localStorage ('finance:cash_movements').
+    - El inventario en IndexedDB vía offlineProductService.
+
+  En modo Supabase:
+    - Todo va a las tablas reales con RLS por tenant_id.
+    - Los triggers del DB manejan consistencia adicional (ej. status CxC).
+
+  El reembolso funciona igual en ambos modos. La diferencia es solo el
+  destino final del registro del movimiento de caja.
+
+
+================================================================================
+  FIN DEL MANUAL
+================================================================================

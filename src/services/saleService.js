@@ -6,6 +6,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { productService } from './productService'
 import { useTenantStore } from '../store/tenantStore'
 import { useReportsStore } from '../store/reportsStore'
+import { useAuthStore } from '../store/authStore'
 
 /**
  * Generate sale number
@@ -225,16 +226,57 @@ export const getSales = async (limit = 50) => {
 }
 
 const registerCashRefundMovement = async ({ saleNumber, total, paymentMethod, sessionId }) => {
-  if (paymentMethod !== 'cash' || !sessionId) return
+  if (paymentMethod !== 'cash') return
+  const numericTotal = Number(total || 0)
+  if (numericTotal <= 0) return
 
-  const { cashSession, registerCashMovement } = useReportsStore.getState()
-  if (!cashSession?.id || cashSession.id !== sessionId) return
+  // Preferir la sesión activa del store; si está cerrada, usar la sesión original de la venta.
+  const { cashSession, fetchXCut, fetchFinancialSummary, fetchCashMovements } = useReportsStore.getState()
+  const targetSessionId = cashSession?.id || sessionId
+  if (!targetSessionId) return
 
-  await registerCashMovement({
-    type: 'adjustment',
+  const tenantId = useTenantStore.getState().currentTenantId
+  const userId = useAuthStore.getState().user?.id || null
+
+  // 'expense' → se RESTA del balance: balance = opening + ventas − gastos + ajustes
+  const movementPayload = {
+    session_id: targetSessionId,
+    type: 'expense',
     description: `Reembolso venta ${saleNumber}`,
-    amount: total
-  })
+    amount: numericTotal,
+    created_at: new Date().toISOString(),
+    user_id: userId,
+  }
+
+  if (isSupabaseConfigured() && supabase && tenantId) {
+    try {
+      await supabase.from('cash_movements').insert({ tenant_id: tenantId, ...movementPayload })
+      // Refrescar estado del store para que la UI refleje el egreso
+      await fetchCashMovements(targetSessionId)
+      await fetchXCut()
+      await fetchFinancialSummary()
+    } catch (e) {
+      console.error('Error registrando movimiento de reembolso en Supabase:', e)
+    }
+    return
+  }
+
+  // Fallback mock / localStorage
+  try {
+    const CASH_KEY = 'finance:cash_movements'
+    const stored = JSON.parse(localStorage.getItem(CASH_KEY) || '[]')
+    stored.unshift({
+      id: `mov-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      ...movementPayload,
+    })
+    localStorage.setItem(CASH_KEY, JSON.stringify(stored))
+    // Refrescar estado del store para que la UI refleje el egreso
+    await fetchCashMovements(targetSessionId)
+    await fetchXCut()
+    await fetchFinancialSummary()
+  } catch (e) {
+    console.error('Error registrando movimiento de reembolso en localStorage:', e)
+  }
 }
 
 export const cancelSale = async ({ saleId, userId }) => {

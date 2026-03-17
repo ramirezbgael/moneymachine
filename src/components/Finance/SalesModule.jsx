@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { FaSearch, FaSync, FaUndo, FaBan, FaExclamationTriangle } from 'react-icons/fa'
 import { getSales, cancelSale, refundSale } from '../../services/saleService'
 import { useAuthStore } from '../../store/authStore'
+import { useReportsStore } from '../../store/reportsStore'
 
 const fmt = (v) => `$${Number(v || 0).toFixed(2)}`
 
@@ -104,6 +105,13 @@ const SalesModule = () => {
 
   const userId = useAuthStore.getState().user?.id ?? null
 
+  const refreshCash = useCallback(() => {
+    const { fetchXCut, fetchFinancialSummary, cashSession, fetchCashMovements } = useReportsStore.getState()
+    if (cashSession?.id) fetchCashMovements(cashSession.id)
+    fetchXCut()
+    fetchFinancialSummary()
+  }, [])
+
   const loadSales = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -145,6 +153,8 @@ const SalesModule = () => {
         await cancelSale({ saleId: confirm.sale.id, userId })
       } else {
         await refundSale({ saleId: confirm.sale.id, userId })
+        // Asegurar que la caja refleje el egreso aunque saleService ya lo haga
+        refreshCash()
       }
       setConfirm(null)
       await loadSales()
