@@ -6,7 +6,8 @@ import { useTenantStore } from '../../store/tenantStore'
 import { isSupabaseConfigured, supabase } from '../../lib/supabase'
 import PrintModal from '../../components/PrintModal/PrintModal'
 
-const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`
+const formatMoney = (value) =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(value || 0))
 
 const formatDate = (value) => {
   if (!value) return '-'

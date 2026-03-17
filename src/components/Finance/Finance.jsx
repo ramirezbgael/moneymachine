@@ -6,7 +6,8 @@ import { useTenantStore } from '../../store/tenantStore'
 import SalesModule from './SalesModule'
 import './Finance.css'
 
-const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`
+const formatMoney = (value) =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(value || 0))
 
 const formatShortDate = (value) => {
   if (!value) return '-'

@@ -4,7 +4,8 @@ import { getSales, cancelSale, refundSale } from '../../services/saleService'
 import { useAuthStore } from '../../store/authStore'
 import { useReportsStore } from '../../store/reportsStore'
 
-const fmt = (v) => `$${Number(v || 0).toFixed(2)}`
+const fmt = (v) =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(v || 0))
 
 const fmtDate = (v) => {
   if (!v) return '-'
