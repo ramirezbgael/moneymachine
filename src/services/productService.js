@@ -273,13 +273,13 @@ export const productService = {
         if (!tenantId) throw new Error('No tenant selected. Please log in again.')
         const { data, error } = await supabase
           .from('products')
-          .insert([{ ...productData, tenant_id: tenantId }])
+          .insert([{ ...productData, business_id: tenantId }])
           .select()
           .single()
 
         if (error) {
           // Handle duplicate code error
-          if (error.code === '23505' && (error.message.includes('products_code_key') || error.message.includes('idx_products_tenant_code'))) {
+          if (error.code === '23505' && (error.message.includes('products_code_key') || error.message.includes('idx_products_business_code') || error.message.includes('idx_products_tenant_code'))) {
             throw new Error(`El código "${productData.code}" ya existe. Por favor, usa un código diferente.`)
           }
           throw error

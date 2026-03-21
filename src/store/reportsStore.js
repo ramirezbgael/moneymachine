@@ -56,7 +56,7 @@ const isMissingColumnOrRelationError = (error) => {
 const mockReceivables = [
   {
     id: 'r-1',
-    tenant_id: 'local',
+    business_id: 'local',
     client_id: null,
     client_name: 'Panaderia Centro',
     concept: 'Pedido mayoreo facturado',
@@ -205,7 +205,7 @@ export const useReportsStore = create((set, get) => ({
       let query = supabase
         .from('sales')
         .select('total')
-        .eq('tenant_id', tenantId)
+        .eq('business_id', tenantId)
         .eq('status', 'completed')
         .in('payment_method', DAILY_ALLOWED_PAYMENT_METHODS)
         .gte('created_at', startIso)
@@ -240,7 +240,7 @@ export const useReportsStore = create((set, get) => ({
           supabase
             .from('sales')
             .select('total')
-            .eq('tenant_id', tenantId)
+            .eq('business_id', tenantId)
             .gte('created_at', monthStart.toISOString())
             .eq('status', 'completed'),
         ])
@@ -253,7 +253,7 @@ export const useReportsStore = create((set, get) => ({
         const { data: pendingReceivables, error: pendingError } = await supabase
           .from('accounts_receivable')
           .select('amount')
-          .eq('tenant_id', tenantId)
+          .eq('business_id', tenantId)
           .eq('status', 'pending')
 
         if (!pendingError) {
@@ -265,7 +265,7 @@ export const useReportsStore = create((set, get) => ({
           const { data: openSession } = await supabase
             .from('cash_sessions')
             .select('*')
-            .eq('tenant_id', tenantId)
+            .eq('business_id', tenantId)
             .eq('status', 'open')
             .order('opened_at', { ascending: false })
             .limit(1)
@@ -353,12 +353,12 @@ export const useReportsStore = create((set, get) => ({
       const local = safeRead(FINANCE_RECEIVABLES_KEY, mockReceivables)
       if (!requestedTenantId) return local
 
-      const exactTenantRows = local.filter((row) => String(row?.tenant_id || '') === String(requestedTenantId))
+      const exactTenantRows = local.filter((row) => String(row?.business_id ?? row?.tenant_id ?? '') === String(requestedTenantId))
       if (exactTenantRows.length > 0) return exactTenantRows
 
       // Migration safety: previously some rows were stored under "local" before tenant finished loading.
       if (requestedTenantId !== 'local') {
-        const legacyLocalRows = local.filter((row) => String(row?.tenant_id || '') === 'local')
+        const legacyLocalRows = local.filter((row) => String(row?.business_id ?? row?.tenant_id ?? '') === 'local')
         if (legacyLocalRows.length > 0) return legacyLocalRows
       }
 
@@ -378,7 +378,7 @@ export const useReportsStore = create((set, get) => ({
           const { data: joinedData, error: joinedError } = await supabase
             .from('accounts_receivable')
             .select('*, finance_customers(id, name, phone, email)')
-            .eq('tenant_id', requestedTenantId)
+            .eq('business_id', requestedTenantId)
             .order('created_at', { ascending: false })
 
           if (!joinedError) {
@@ -405,7 +405,7 @@ export const useReportsStore = create((set, get) => ({
         const { data, error } = await supabase
           .from('accounts_receivable')
           .select('*')
-          .eq('tenant_id', requestedTenantId)
+          .eq('business_id', requestedTenantId)
           .order('created_at', { ascending: false })
         if (error) throw error
         if (isStaleRequest()) return
@@ -436,7 +436,7 @@ export const useReportsStore = create((set, get) => ({
     }
 
     const payload = {
-      tenant_id: tenantId,
+      business_id: tenantId,
       client_id: client_id || null,
       client_name: String(client_name || 'Cliente').trim(),
       concept: String(concept).trim(),
@@ -461,7 +461,7 @@ export const useReportsStore = create((set, get) => ({
           if (!isMissingColumnOrRelationError(insertError)) throw insertError
 
           const legacyPayload = {
-            tenant_id: tenantId,
+            business_id: tenantId,
             client_name: payload.client_name,
             concept: payload.concept,
             amount: payload.amount,
@@ -560,7 +560,7 @@ export const useReportsStore = create((set, get) => ({
             payment_method,
             paid_at: new Date().toISOString(),
             user_id: userId,
-            tenant_id: tenantId
+            business_id: tenantId
           })
         if (paymentError) throw paymentError
 
@@ -580,7 +580,7 @@ export const useReportsStore = create((set, get) => ({
           const { data: openSession } = await supabase
             .from('cash_sessions')
             .select('*')
-            .eq('tenant_id', tenantId)
+            .eq('business_id', tenantId)
             .eq('status', 'open')
             .order('opened_at', { ascending: false })
             .limit(1)
@@ -588,7 +588,7 @@ export const useReportsStore = create((set, get) => ({
           const session = openSession?.[0]
           if (session) {
             await supabase.from('cash_movements').insert({
-              tenant_id: tenantId,
+              business_id: tenantId,
               session_id: session.id,
               type: 'sale',
               description: `Pago CxC ${receivable.client_name || ''}`,
@@ -754,7 +754,7 @@ export const useReportsStore = create((set, get) => ({
         const { data, error } = await supabase
           .from('cash_sessions')
           .select('*')
-          .eq('tenant_id', tenantId)
+          .eq('business_id', tenantId)
           .eq('status', 'open')
           .order('opened_at', { ascending: false })
           .limit(1)
@@ -780,7 +780,7 @@ export const useReportsStore = create((set, get) => ({
         const { data, error } = await supabase
           .from('cash_sessions')
           .select('*')
-          .eq('tenant_id', tenantId)
+          .eq('business_id', tenantId)
           .order('opened_at', { ascending: false })
           .limit(200)
         if (error) throw error
@@ -808,13 +808,13 @@ export const useReportsStore = create((set, get) => ({
         const { data: openData } = await supabase
           .from('cash_sessions')
           .select('id')
-          .eq('tenant_id', tenantId)
+          .eq('business_id', tenantId)
           .eq('status', 'open')
           .limit(1)
         if (openData?.length) return
 
         await supabase.from('cash_sessions').insert({
-          tenant_id: tenantId,
+          business_id: tenantId,
           opened_by_user_id: userId,
           opened_at: new Date().toISOString(),
           opening_amount: amount,
@@ -828,7 +828,7 @@ export const useReportsStore = create((set, get) => ({
       if (sessions.some((s) => s.status === 'open')) return
       sessions.unshift({
         id: `cash-${Date.now()}`,
-        tenant_id: tenantId,
+        business_id: tenantId,
         opened_by_user_id: userId,
         opened_at: new Date().toISOString(),
         opening_amount: amount,
@@ -886,7 +886,7 @@ export const useReportsStore = create((set, get) => ({
       const canUseFinanceBackend = await get().ensureFinanceBackend()
       if (canUseFinanceBackend && tenantId !== 'local') {
         await supabase.from('cash_movements').insert({
-          tenant_id: tenantId,
+          business_id: tenantId,
           session_id: session.id,
           type,
           description,
@@ -984,7 +984,7 @@ export const useReportsStore = create((set, get) => ({
         let query = supabase
           .from('sales')
           .select('total')
-          .eq('tenant_id', tenantId)
+          .eq('business_id', tenantId)
           .eq('status', 'completed')
           .in('payment_method', DAILY_ALLOWED_PAYMENT_METHODS)
           .gte('created_at', startIso)

@@ -7,7 +7,7 @@ const FINANCE_CUSTOMERS_KEY = 'finance:customers'
 const mockCustomers = [
   {
     id: 'c-1',
-    tenant_id: 'local',
+    business_id: 'local',
     name: 'Panaderia Centro',
     phone: '7221234567',
     email: '',
@@ -80,7 +80,7 @@ export const useFinanceCustomersStore = create((set, get) => ({
         const { data, error } = await supabase
           .from('finance_customers')
           .select('*')
-          .eq('tenant_id', tenantId)
+          .eq('business_id', tenantId)
           .order('created_at', { ascending: false })
         if (error) throw error
         set({ customers: data || [], loading: false })
@@ -100,7 +100,7 @@ export const useFinanceCustomersStore = create((set, get) => ({
 
     const tenantId = useTenantStore.getState().currentTenantId || 'local'
     const payload = {
-      tenant_id: tenantId,
+      business_id: tenantId,
       name: safeName,
       phone: String(phone || '').trim(),
       email: String(email || '').trim(),

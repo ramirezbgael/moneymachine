@@ -75,7 +75,7 @@ export const processSale = async (saleData) => {
       const { data: saleRecord, error: saleError } = await supabase
         .from('sales')
         .insert([{
-          tenant_id: tenantId,
+          business_id: tenantId,
           sale_number: saleNumber,
           subtotal,
           discount,
@@ -250,7 +250,7 @@ const registerCashRefundMovement = async ({ saleNumber, total, paymentMethod, se
 
   if (isSupabaseConfigured() && supabase && tenantId) {
     try {
-      await supabase.from('cash_movements').insert({ tenant_id: tenantId, ...movementPayload })
+      await supabase.from('cash_movements').insert({ business_id: tenantId, ...movementPayload })
       // Refrescar estado del store para que la UI refleje el egreso
       await fetchCashMovements(targetSessionId)
       await fetchXCut()
@@ -290,7 +290,7 @@ export const cancelSale = async ({ saleId, userId }) => {
       .from('sales')
       .select('*')
       .eq('id', saleId)
-      .eq('tenant_id', tenantId)
+      .eq('business_id', tenantId)
       .single()
 
     if (error) throw error
@@ -310,7 +310,7 @@ export const cancelSale = async ({ saleId, userId }) => {
           : `Cancelado por usuario ${userId || 'N/A'}`
       })
       .eq('id', saleId)
-      .eq('tenant_id', tenantId)
+      .eq('business_id', tenantId)
 
     if (updateError) throw updateError
 
@@ -355,7 +355,7 @@ export const refundSale = async ({ saleId, userId }) => {
         )
       `)
       .eq('id', saleId)
-      .eq('tenant_id', tenantId)
+      .eq('business_id', tenantId)
       .single()
 
     if (error) throw error
@@ -391,7 +391,7 @@ export const refundSale = async ({ saleId, userId }) => {
           : `Reembolsado por usuario ${userId || 'N/A'}`
       })
       .eq('id', saleId)
-      .eq('tenant_id', tenantId)
+      .eq('business_id', tenantId)
 
     if (updateSaleError) throw updateSaleError
 

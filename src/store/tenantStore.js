@@ -30,9 +30,9 @@ export const useTenantStore = create((set, get) => ({
     set({ featureFlagsLoading: true })
     try {
       const { data, error } = await supabase
-        .from('tenant_module_subscriptions')
+        .from('saas_module_entitlements')
         .select('module_key, status, starts_at, ends_at')
-        .eq('tenant_id', tenantId)
+        .eq('business_id', tenantId)
         .eq('module_key', 'subscriptions')
         .maybeSingle()
 
@@ -100,17 +100,17 @@ export const useTenantStore = create((set, get) => ({
 
     try {
       const { data, error } = await supabase
-        .from('tenant_members')
+        .from('memberships')
         .select(`
-          tenant_id,
-          tenants (id, name, slug)
+          business_id,
+          businesses (id, name, slug)
         `)
         .eq('user_id', userId)
 
       if (error) throw error
 
       const list = (data || [])
-        .map((row) => row.tenants)
+        .map((row) => row.businesses)
         .filter(Boolean)
 
       if (list.length === 0) {

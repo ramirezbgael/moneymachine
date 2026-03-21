@@ -1,5 +1,5 @@
 -- ============================================================
--- PUBLIC READ POLICY for subscription_customers
+-- PUBLIC READ POLICY for client_memberships (gym / end-customer subs)
 -- Allows unauthenticated (anon) users to read a single
 -- customer record by its primary key — used by the
 -- public /check/:id membership card page.
@@ -12,10 +12,10 @@
 -- Supabase Edge Function instead and remove this policy.
 -- ============================================================
 
--- Allow anon to SELECT any subscription_customers row by id.
+-- Allow anon to SELECT any client_memberships row by id.
 -- The public page only shows membership status — no PII beyond name/fee/dates.
-DROP POLICY IF EXISTS "Public anon read by id" ON subscription_customers;
+DROP POLICY IF EXISTS "Public anon read by id" ON client_memberships;
 CREATE POLICY "Public anon read by id"
-  ON subscription_customers FOR SELECT
+  ON client_memberships FOR SELECT
   TO anon
   USING (true);

@@ -8,15 +8,18 @@
 -- ============================================
 -- 0. VIEW: Daily Sales Total (canonical metric)
 -- ============================================
-CREATE OR REPLACE VIEW daily_sales_total AS
+-- Tras migración multi-tenant la columna es business_id; DROP evita error 42P16 al renombrar columnas de la vista.
+DROP VIEW IF EXISTS daily_sales_total CASCADE;
+
+CREATE VIEW daily_sales_total AS
 SELECT
-  tenant_id,
+  business_id,
   COALESCE(SUM(total), 0)::NUMERIC(12,2) AS total
 FROM sales
 WHERE status = 'completed'
   AND payment_method IN ('cash', 'card', 'transfer')
   AND created_at >= DATE_TRUNC('day', NOW())
-GROUP BY tenant_id;
+GROUP BY business_id;
 
 -- ============================================
 -- 1. VIEW: Daily Sales Summary

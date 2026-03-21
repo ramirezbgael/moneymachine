@@ -144,7 +144,7 @@ const buildPaymentHistoryMap = (salesRows = []) => {
 
 const mapDbCustomer = (row) => ({
   id: row.id,
-  tenant_id: row.tenant_id,
+  business_id: row.business_id ?? row.tenant_id,
   name: row.name,
   phone: row.phone || '',
   monthlyFee: Number(row.monthly_fee || 0),
@@ -189,9 +189,9 @@ export const useSubscriptionStore = create((set, get) => ({
     try {
       if (isSupabaseConfigured() && supabase && tenantId) {
         const { data, error } = await supabase
-          .from('tenant_module_subscriptions')
+          .from('saas_module_entitlements')
           .select('metadata')
-          .eq('tenant_id', tenantId)
+          .eq('business_id', tenantId)
           .eq('module_key', 'subscriptions')
           .maybeSingle()
 
@@ -225,9 +225,9 @@ export const useSubscriptionStore = create((set, get) => ({
     if (isSupabaseConfigured() && supabase && tenantId) {
       try {
         const { data: existing, error: fetchError } = await supabase
-          .from('tenant_module_subscriptions')
+          .from('saas_module_entitlements')
           .select('metadata')
-          .eq('tenant_id', tenantId)
+          .eq('business_id', tenantId)
           .eq('module_key', 'subscriptions')
           .maybeSingle()
 
@@ -240,17 +240,17 @@ export const useSubscriptionStore = create((set, get) => ({
 
         if (existing) {
           const { error: updateError } = await supabase
-            .from('tenant_module_subscriptions')
+            .from('saas_module_entitlements')
             .update({ metadata, updated_at: new Date().toISOString() })
-            .eq('tenant_id', tenantId)
+            .eq('business_id', tenantId)
             .eq('module_key', 'subscriptions')
 
           if (updateError) throw updateError
         } else {
           const { error: insertError } = await supabase
-            .from('tenant_module_subscriptions')
+            .from('saas_module_entitlements')
             .insert({
-              tenant_id: tenantId,
+              business_id: tenantId,
               module_key: 'subscriptions',
               metadata
             })
@@ -278,9 +278,9 @@ export const useSubscriptionStore = create((set, get) => ({
       const tenantId = useTenantStore.getState().currentTenantId
       if (isSupabaseConfigured() && supabase && tenantId) {
         const { data, error } = await supabase
-          .from('subscription_customers')
+          .from('client_memberships')
           .select('*')
-          .eq('tenant_id', tenantId)
+          .eq('business_id', tenantId)
           .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -290,7 +290,7 @@ export const useSubscriptionStore = create((set, get) => ({
           const { data: salesData, error: salesError } = await supabase
             .from('sales')
             .select('id, total, created_at, notes, payment_method')
-            .eq('tenant_id', tenantId)
+            .eq('business_id', tenantId)
             .ilike('notes', 'subscription:%')
             .order('created_at', { ascending: false })
 
@@ -331,7 +331,7 @@ export const useSubscriptionStore = create((set, get) => ({
 
     const newCustomer = {
       id: `sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      tenant_id: useTenantStore.getState().currentTenantId,
+      business_id: useTenantStore.getState().currentTenantId,
       name: name?.trim() || 'Cliente sin nombre',
       phone: phone?.trim() || '',
       monthlyFee: monthlyFeeNum,
@@ -360,10 +360,10 @@ export const useSubscriptionStore = create((set, get) => ({
 
     if (isSupabaseConfigured() && supabase && tenantId) {
       const { data, error } = await supabase
-        .from('subscription_customers')
+        .from('client_memberships')
         .insert([
           {
-            tenant_id: tenantId,
+            business_id: tenantId,
             name: newCustomer.name,
             phone: newCustomer.phone,
             monthly_fee: monthlyFeeNum,
@@ -420,7 +420,7 @@ export const useSubscriptionStore = create((set, get) => ({
       const amount = (Number(customer.monthlyFee) || 0) * monthsNum
 
       const { error } = await supabase
-        .from('subscription_customers')
+        .from('client_memberships')
         .update({
           status: 'active',
           end_date: nextEndDate,
@@ -430,7 +430,7 @@ export const useSubscriptionStore = create((set, get) => ({
           updated_at: now.toISOString()
         })
         .eq('id', customerId)
-        .eq('tenant_id', tenantId)
+        .eq('business_id', tenantId)
 
       if (error) {
         console.warn('Supabase renew subscription failed, using local fallback:', error)
@@ -493,7 +493,7 @@ export const useSubscriptionStore = create((set, get) => ({
 
     if (isSupabaseConfigured() && supabase && tenantId) {
       const { error } = await supabase
-        .from('subscription_customers')
+        .from('client_memberships')
         .update({
           name: normalizedName,
           phone: normalizedPhone,
@@ -501,7 +501,7 @@ export const useSubscriptionStore = create((set, get) => ({
           updated_at: new Date().toISOString()
         })
         .eq('id', customerId)
-        .eq('tenant_id', tenantId)
+        .eq('business_id', tenantId)
 
       if (error) {
         console.warn('Supabase update subscription customer failed, using local fallback:', error)
@@ -533,14 +533,14 @@ export const useSubscriptionStore = create((set, get) => ({
 
     if (isSupabaseConfigured() && supabase && tenantId) {
       const { error } = await supabase
-        .from('subscription_customers')
+        .from('client_memberships')
         .update({
           status: 'cancelled',
           cancelled_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('id', customerId)
-        .eq('tenant_id', tenantId)
+        .eq('business_id', tenantId)
 
       if (error) {
         console.warn('Supabase cancel subscription failed, using local fallback:', error)
@@ -577,7 +577,7 @@ export const useSubscriptionStore = create((set, get) => ({
         .from('sales')
         .insert([
           {
-            tenant_id: tenantId,
+            business_id: tenantId,
             sale_number: saleNumber,
             subtotal: amount,
             total: amount,

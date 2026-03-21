@@ -74,9 +74,9 @@ export function ModuleSubscriptionsSettings() {
 
     try {
       const { data: membership, error: membershipError } = await supabase
-        .from('tenant_members')
+        .from('memberships')
         .select('role')
-        .eq('tenant_id', currentTenantId)
+        .eq('business_id', currentTenantId)
         .eq('user_id', user.id)
         .maybeSingle()
 
@@ -84,9 +84,9 @@ export function ModuleSubscriptionsSettings() {
       setCanManage(Boolean(membership?.role))
 
       const { data, error: moduleError } = await supabase
-        .from('tenant_module_subscriptions')
+        .from('saas_module_entitlements')
         .select('module_key, status, monthly_price, currency, starts_at, ends_at, auto_renew')
-        .eq('tenant_id', currentTenantId)
+        .eq('business_id', currentTenantId)
         .eq('module_key', 'subscriptions')
         .maybeSingle()
 
@@ -134,7 +134,7 @@ export function ModuleSubscriptionsSettings() {
     setSaving(true)
     try {
       const payload = {
-        tenant_id: currentTenantId,
+        business_id: currentTenantId,
         module_key: 'subscriptions',
         status,
         monthly_price: Number(monthlyPrice) || 0,
@@ -145,8 +145,8 @@ export function ModuleSubscriptionsSettings() {
       }
 
       const { error: upsertError } = await supabase
-        .from('tenant_module_subscriptions')
-        .upsert(payload, { onConflict: 'tenant_id,module_key' })
+        .from('saas_module_entitlements')
+        .upsert(payload, { onConflict: 'business_id,module_key' })
 
       if (upsertError) throw upsertError
 

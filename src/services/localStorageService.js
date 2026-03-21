@@ -48,14 +48,14 @@ class LocalStorageService {
           productsStore.createIndex('code', 'code', { unique: false })
           productsStore.createIndex('barcode', 'barcode', { unique: false })
           productsStore.createIndex('name', 'name', { unique: false })
-          productsStore.createIndex('tenant_id', 'tenant_id', { unique: false })
+          productsStore.createIndex('business_id', 'business_id', { unique: false })
         }
 
         // Sales store
         if (!db.objectStoreNames.contains(STORES.SALES)) {
           const salesStore = db.createObjectStore(STORES.SALES, { keyPath: 'id' })
           salesStore.createIndex('created_at', 'created_at', { unique: false })
-          salesStore.createIndex('tenant_id', 'tenant_id', { unique: false })
+          salesStore.createIndex('business_id', 'business_id', { unique: false })
         }
 
         // Pending operations store (for sync queue)

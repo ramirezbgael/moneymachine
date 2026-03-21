@@ -43,7 +43,7 @@ const Register = () => {
 
     if (session && isSupabaseConfigured() && supabase) {
       try {
-        const { error: rpcError } = await supabase.rpc('create_tenant_and_join', {
+        const { error: rpcError } = await supabase.rpc('create_business_and_membership', {
           p_name: businessName.trim(),
           p_slug: null
         })

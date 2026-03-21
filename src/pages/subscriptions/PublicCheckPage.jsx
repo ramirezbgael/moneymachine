@@ -3,15 +3,15 @@
  * Accessible at /check/:id
  *
  * Reads from Supabase using the anon key.
- * IMPORTANT: the `subscription_customers` RLS policy must allow
+ * IMPORTANT: the `client_memberships` RLS policy must allow
  * unauthenticated (anon) SELECT by id. Add this policy if missing:
  *
- *   CREATE POLICY "public_read_by_id" ON subscription_customers
+ *   CREATE POLICY "public_read_by_id" ON client_memberships
  *   FOR SELECT TO anon
  *   USING (true);
  *
  * Or scope it more tightly:
- *   USING (id = (SELECT id::uuid FROM subscription_customers WHERE id = id LIMIT 1))
+ *   USING (id = (SELECT id::uuid FROM client_memberships WHERE id = id LIMIT 1))
  */
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
@@ -45,7 +45,7 @@ export default function PublicCheckPage() {
       try {
         if (isSupabaseConfigured() && supabase) {
           const { data, error: dbErr } = await supabase
-            .from('subscription_customers')
+            .from('client_memberships')
             .select('id, name, phone, monthly_fee, start_date, end_date, status, notes')
             .eq('id', id)
             .maybeSingle()

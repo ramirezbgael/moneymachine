@@ -42,7 +42,7 @@ export const createQuotation = async (quotationData) => {
       const { data: quotation, error } = await supabase
         .from('quotations')
         .insert([{
-          tenant_id: tenantId,
+          business_id: tenantId,
           quotation_code: quotationCode,
           items: items.map(item => ({
             product_id: item.product.id,

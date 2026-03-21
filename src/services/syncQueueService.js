@@ -271,7 +271,7 @@ class SyncQueueService {
           .from('products')
           .insert([{
             ...data,
-            tenant_id: tenantId,
+            business_id: tenantId,
             _local_temp_id: undefined
           }])
           .select()

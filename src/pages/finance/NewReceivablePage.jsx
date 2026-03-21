@@ -28,7 +28,7 @@ export default function NewReceivablePage() {
       supabase
         .from("customers")
         .select("id, name, phone, email")
-        .eq("tenant_id", tenantId)
+        .eq("business_id", tenantId)
         .then(({ data }) => setCustomers(data || []));
     }, [tenantId]);
 
@@ -65,7 +65,7 @@ export default function NewReceivablePage() {
                 name: form.newClient.name,
                 phone: form.newClient.phone,
                 email: form.newClient.email,
-                tenant_id: tenantId,
+                business_id: tenantId,
               },
             ])
             .select("id")
@@ -87,7 +87,7 @@ export default function NewReceivablePage() {
             concept: form.concept,
             amount: Number(form.amount),
             due_date: form.due_date,
-            tenant_id: tenantId,
+            business_id: tenantId,
           },
         ]);
         if (err2) throw err2;
