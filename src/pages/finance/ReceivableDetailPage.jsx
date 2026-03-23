@@ -42,12 +42,23 @@ const isOverdue = (row) => {
 
 const getStatusMeta = (row) => {
   if (row?.status === 'paid') {
-    return { label: 'Pagado', className: 'bg-emerald-900/40 text-emerald-300 border-emerald-700/40' }
+    return {
+      label: 'Pagado',
+      className:
+        'border border-[color-mix(in_srgb,var(--accent)_42%,var(--border))] bg-[var(--accent-soft)] text-[var(--accent)]'
+    }
   }
   if (isOverdue(row)) {
-    return { label: 'Vencido', className: 'bg-red-900/35 text-red-300 border-red-700/40' }
+    return {
+      label: 'Vencido',
+      className:
+        'border border-[color-mix(in_srgb,var(--danger)_40%,var(--border))] bg-[color-mix(in_srgb,var(--danger)_14%,transparent)] text-[var(--danger)]'
+    }
   }
-  return { label: 'Pendiente', className: 'bg-orange-900/35 text-orange-300 border-orange-700/40' }
+  return {
+    label: 'Pendiente',
+    className: 'border border-amber-500/40 bg-amber-500/[0.14] text-amber-600'
+  }
 }
 
 export default function ReceivableDetailPage() {
@@ -188,91 +199,112 @@ export default function ReceivableDetailPage() {
     }
   }
 
+  const panelCard =
+    'rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] p-4'
+  const modalInputClass =
+    'w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-tertiary)] px-4 py-3 text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/25'
+
   if (!receivable) {
     return (
-      <div className="min-h-full bg-[#050816] px-4 py-6 pb-24 text-zinc-100 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-zinc-950/85 p-6">
-          <button type="button" onClick={() => navigate('/finance/receivables')} className="mb-6 inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white">
+      <div className="min-h-full bg-[var(--bg)] px-4 py-6 pb-24 text-[var(--text)] sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl rounded-[28px] border border-[var(--border)] bg-[var(--panel)] p-6 shadow-[var(--shadow-sm)]">
+          <button
+            type="button"
+            onClick={() => navigate('/finance/receivables')}
+            className="mb-6 inline-flex items-center gap-2 text-sm text-[var(--muted)] transition hover:text-[var(--accent)]"
+          >
             <FaArrowLeft />
             Volver a cuentas por cobrar
           </button>
-          <h1 className="text-2xl font-semibold text-white">Detalle no encontrado</h1>
-          <p className="mt-2 text-sm text-zinc-400">No se encontró la deuda solicitada.</p>
+          <h1 className="text-2xl font-semibold text-[var(--text)]">Detalle no encontrado</h1>
+          <p className="mt-2 text-sm text-[var(--muted)]">No se encontró la deuda solicitada.</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-full bg-[#050816] px-4 py-6 pb-24 text-zinc-100 sm:px-6 lg:px-8">
+    <div className="min-h-full bg-[var(--bg)] px-4 py-6 pb-24 text-[var(--text)] sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl space-y-5">
-        <div className="flex items-center justify-between rounded-[28px] border border-zinc-800 bg-zinc-950/85 px-4 py-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur">
-          <button type="button" onClick={() => navigate('/finance/receivables')} className="inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-[var(--border)] bg-[var(--panel)] px-4 py-4 shadow-[var(--shadow)] backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => navigate('/finance/receivables')}
+            className="inline-flex items-center gap-2 text-sm text-[var(--muted)] transition hover:text-[var(--accent)]"
+          >
             <FaArrowLeft />
             Volver
           </button>
-          <h1 className="text-lg font-semibold text-emerald-400">Detalle de cuenta por cobrar</h1>
-          <span className={`rounded-full border px-3 py-1 text-xs font-medium ${statusMeta.className}`}>{statusMeta.label}</span>
+          <h1 className="text-lg font-semibold text-[var(--accent)]">Detalle de cuenta por cobrar</h1>
+          <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusMeta.className}`}>{statusMeta.label}</span>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
           <section className="space-y-5">
-            <article className="overflow-hidden rounded-[28px] border border-zinc-800 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.12),_transparent_45%),linear-gradient(180deg,_rgba(24,24,27,0.98),_rgba(9,9,11,0.98))] p-5">
-              <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Cliente</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">{linkedClientName}</h2>
+            <article
+              className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--panel)] p-5 shadow-[var(--shadow-sm)] [background-image:radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--accent)_10%,transparent),transparent_50%)]"
+            >
+              <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Cliente</p>
+              <h2 className="mt-2 text-2xl font-semibold text-[var(--text)]">{linkedClientName}</h2>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-zinc-800 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Monto</p>
-                  <p className="mt-2 text-2xl font-semibold text-emerald-400">{formatMoney(receivable.amount)}</p>
+                <div className={panelCard}>
+                  <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Monto</p>
+                  <p className="mt-2 text-2xl font-semibold text-[var(--accent)]">{formatMoney(receivable.amount)}</p>
                 </div>
-                <div className="rounded-2xl border border-zinc-800 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Concepto</p>
-                  <p className="mt-2 text-sm text-zinc-200">{receivable.concept || 'Sin concepto'}</p>
+                <div className={panelCard}>
+                  <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Concepto</p>
+                  <p className="mt-2 text-sm text-[var(--text)]">{receivable.concept || 'Sin concepto'}</p>
                 </div>
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Abonado</p>
-                  <p className="mt-2 text-sm text-zinc-200">{formatMoney(paidAmount)}</p>
+                <div className={panelCard}>
+                  <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Abonado</p>
+                  <p className="mt-2 text-sm text-[var(--text)]">{formatMoney(paidAmount)}</p>
                 </div>
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Saldo pendiente</p>
-                  <p className={`mt-2 text-sm font-semibold ${remainingAmount > 0 ? 'text-amber-300' : 'text-emerald-300'}`}>
+                <div className={panelCard}>
+                  <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Saldo pendiente</p>
+                  <p
+                    className={`mt-2 text-sm font-semibold ${
+                      remainingAmount > 0 ? 'text-amber-600' : 'text-[var(--accent)]'
+                    }`}
+                  >
                     {formatMoney(remainingAmount)}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Fecha</p>
-                  <p className="mt-2 text-sm text-zinc-200">{formatDate(receivable.issue_date || receivable.created_at)}</p>
+                <div className={panelCard}>
+                  <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Fecha</p>
+                  <p className="mt-2 text-sm text-[var(--text)]">{formatDate(receivable.issue_date || receivable.created_at)}</p>
                 </div>
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Vencimiento</p>
-                  <p className={`mt-2 text-sm ${isOverdue(receivable) ? 'text-red-300' : 'text-zinc-200'}`}>
+                <div className={panelCard}>
+                  <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Vencimiento</p>
+                  <p
+                    className={`mt-2 text-sm ${isOverdue(receivable) ? 'text-[var(--danger)]' : 'text-[var(--text)]'}`}
+                  >
                     {formatDate(receivable.due_date)}
                   </p>
                 </div>
               </div>
 
               {receivable.notes && (
-                <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Notas</p>
-                  <p className="mt-2 text-sm text-zinc-300">{receivable.notes}</p>
+                <div className={`${panelCard} mt-4`}>
+                  <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Notas</p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">{receivable.notes}</p>
                 </div>
               )}
             </article>
           </section>
 
           <aside className="space-y-5">
-            <article className="rounded-[28px] border border-zinc-800 bg-zinc-950/90 p-5">
-              <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Acciones</p>
+            <article className="rounded-[28px] border border-[var(--border)] bg-[var(--panel)] p-5 shadow-[var(--shadow-sm)]">
+              <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Acciones</p>
               <div className="mt-4 grid gap-3">
                 <button
                   type="button"
                   onClick={() => setShowPaymentModal(true)}
                   disabled={!canRegisterPayment}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 font-medium text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--accent)] px-4 py-3 font-medium text-[#02110a] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45 disabled:bg-[var(--panel-2)] disabled:text-[var(--muted)]"
                 >
                   <FaCashRegister />
                   {canRegisterPayment ? 'Registrar pago' : 'Cuenta liquidada'}
@@ -282,7 +314,7 @@ export default function ReceivableDetailPage() {
                   <button
                     type="button"
                     onClick={() => navigate(`/clientes/${linkedClientId}`)}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-4 py-3 font-medium text-[var(--text)] transition hover:border-[color-mix(in_srgb,var(--accent)_45%,var(--border))] hover:bg-[var(--panel)]"
                   >
                     <FaUser />
                     Ver cliente
@@ -292,7 +324,7 @@ export default function ReceivableDetailPage() {
                 <button
                   type="button"
                   onClick={() => navigate('/finance/receivables')}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 font-medium text-zinc-100 transition hover:border-zinc-500 hover:bg-zinc-800"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-4 py-3 font-medium text-[var(--text)] transition hover:border-[color-mix(in_srgb,var(--accent)_45%,var(--border))] hover:bg-[var(--panel)]"
                 >
                   <FaFileInvoiceDollar />
                   Volver a CxC
@@ -300,35 +332,46 @@ export default function ReceivableDetailPage() {
               </div>
             </article>
 
-            <article className="rounded-[28px] border border-zinc-800 bg-zinc-950/90 p-5">
-              <div className="space-y-2 text-sm text-zinc-300">
-                <p className="inline-flex items-center gap-2"><FaCalendarAlt className="text-zinc-500" /> Última actualización: {formatDate(receivable.updated_at || receivable.created_at)}</p>
-                <p className="text-xs text-zinc-500">ID: {receivable.id}</p>
+            <article className="rounded-[28px] border border-[var(--border)] bg-[var(--panel)] p-5 shadow-[var(--shadow-sm)]">
+              <div className="space-y-2 text-sm text-[var(--muted)]">
+                <p className="inline-flex items-center gap-2 text-[var(--text)]">
+                  <FaCalendarAlt className="text-[var(--muted)]" aria-hidden />
+                  Última actualización: {formatDate(receivable.updated_at || receivable.created_at)}
+                </p>
+                <p className="text-xs text-[var(--muted)]">ID: {receivable.id}</p>
               </div>
             </article>
 
-            <article className="rounded-[28px] border border-zinc-800 bg-zinc-950/90 p-5">
-              <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Historial de pagos</p>
+            <article className="rounded-[28px] border border-[var(--border)] bg-[var(--panel)] p-5 shadow-[var(--shadow-sm)]">
+              <p className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">Historial de pagos</p>
               <div className="mt-3 space-y-2">
                 {historyLoading && (
-                  <p className="rounded-2xl border border-dashed border-zinc-800 px-4 py-4 text-center text-sm text-zinc-500">Cargando pagos...</p>
+                  <p className="rounded-2xl border border-dashed border-[var(--border)] px-4 py-4 text-center text-sm text-[var(--muted)]">
+                    Cargando pagos...
+                  </p>
                 )}
 
                 {!historyLoading && paymentHistory.length === 0 && (
-                  <p className="rounded-2xl border border-dashed border-zinc-800 px-4 py-4 text-center text-sm text-zinc-500">Aún no hay pagos registrados.</p>
+                  <p className="rounded-2xl border border-dashed border-[var(--border)] px-4 py-4 text-center text-sm text-[var(--muted)]">
+                    Aún no hay pagos registrados.
+                  </p>
                 )}
 
-                {!historyLoading && paymentHistory.map((entry) => (
-                  <div key={entry.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/80 px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm text-zinc-100">{formatMoney(entry.amount)}</p>
-                      <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] text-zinc-300">
-                        {entry.payment_method || 'cash'}
-                      </span>
+                {!historyLoading &&
+                  paymentHistory.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] px-4 py-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-[var(--text)]">{formatMoney(entry.amount)}</p>
+                        <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">
+                          {entry.payment_method || 'cash'}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--muted)]">{formatDateTime(entry.paid_at)}</p>
                     </div>
-                    <p className="mt-1 text-xs text-zinc-500">{formatDateTime(entry.paid_at)}</p>
-                  </div>
-                ))}
+                  ))}
               </div>
             </article>
           </aside>
@@ -336,25 +379,31 @@ export default function ReceivableDetailPage() {
       </div>
 
       {showPaymentModal && (
-        <section className="fixed inset-0 z-40 grid place-items-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => !paying && setShowPaymentModal(false)}>
-          <article className="w-full max-w-md rounded-[26px] border border-zinc-800 bg-zinc-950 p-5" onClick={(event) => event.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white">Registrar abono</h3>
-            <p className="mt-1 text-sm text-zinc-400">Saldo pendiente: {formatMoney(remainingAmount)}</p>
+        <section
+          className="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={() => !paying && setShowPaymentModal(false)}
+        >
+          <article
+            className="w-full max-w-md rounded-[26px] border border-[var(--border)] bg-[var(--panel)] p-5 shadow-[var(--shadow-lg)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-[var(--text)]">Registrar abono</h3>
+            <p className="mt-1 text-sm text-[var(--muted)]">Saldo pendiente: {formatMoney(remainingAmount)}</p>
 
             <label className="mt-4 block">
-              <span className="mb-2 block text-sm text-zinc-400">Monto a abonar</span>
+              <span className="mb-2 block text-sm text-[var(--muted)]">Monto a abonar</span>
               <input
                 type="number"
                 min="0"
                 step="0.01"
                 value={paymentAmount}
                 onChange={(event) => setPaymentAmount(event.target.value)}
-                className="w-full rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none transition focus:border-emerald-500"
+                className={modalInputClass}
               />
             </label>
 
             <div className="mt-4">
-              <p className="mb-2 text-sm text-zinc-400">Método de pago</p>
+              <p className="mb-2 text-sm text-[var(--muted)]">Método de pago</p>
               <div className="grid grid-cols-3 gap-2">
                 {PAYMENT_METHODS.map((method) => (
                   <button
@@ -363,8 +412,8 @@ export default function ReceivableDetailPage() {
                     onClick={() => setPaymentMethod(method.id)}
                     className={`rounded-xl border px-3 py-2 text-xs font-medium transition ${
                       paymentMethod === method.id
-                        ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300'
-                        : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500'
+                        ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
+                        : 'border-[var(--border)] bg-[var(--panel-2)] text-[var(--text)] hover:border-[color-mix(in_srgb,var(--accent)_40%,var(--border))]'
                     }`}
                   >
                     {method.label}
@@ -378,7 +427,7 @@ export default function ReceivableDetailPage() {
                 type="button"
                 onClick={() => setShowPaymentModal(false)}
                 disabled={paying}
-                className="rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+                className="rounded-xl border border-[var(--border)] bg-[var(--panel-2)] px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--panel)] disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -386,7 +435,7 @@ export default function ReceivableDetailPage() {
                 type="button"
                 onClick={handleConfirmPayment}
                 disabled={paying}
-                className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-emerald-400 disabled:opacity-60"
+                className="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#02110a] transition hover:opacity-90 disabled:opacity-60"
               >
                 {paying ? 'Registrando...' : 'Cobrar y guardar'}
               </button>

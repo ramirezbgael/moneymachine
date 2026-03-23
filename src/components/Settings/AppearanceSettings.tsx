@@ -132,7 +132,7 @@ export function AppearanceSettings() {
 
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel-2)] p-3 space-y-2">
           <p className="text-xs text-[var(--muted)]">
-            Venta actual permanece fija en la primera posición. Los siguientes 2 módulos se muestran directos y el resto queda dentro de Más módulos.
+            Venta actual permanece fija en la primera posición. El orden de la lista define cómo aparecen el resto de módulos en la barra lateral y en la navegación móvil.
           </p>
 
           {orderedModules.map((item, index) => (

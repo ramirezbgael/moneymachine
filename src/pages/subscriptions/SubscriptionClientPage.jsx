@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { QRCodeCanvas } from 'qrcode.react'
-import { FaArrowLeft, FaDownload, FaEdit, FaPhoneAlt, FaPrint, FaSave, FaTimes, FaWhatsapp } from 'react-icons/fa'
+import { FaArrowLeft, FaDownload, FaEdit, FaPhoneAlt, FaPrint, FaSave, FaSignInAlt, FaSignOutAlt, FaTimes, FaWhatsapp } from 'react-icons/fa'
 import { useSubscriptionStore } from '../../store/subscriptionStore'
-import { isSupabaseConfigured, supabase } from '../../lib/supabase'
+import { isSupabaseConfigured } from '../../lib/supabase'
+import { fetchAccessRowsForMember, memberTimelineFromRows } from '../../services/subscriptionAccessService'
 import './SubscriptionClientPage.css'
 
 const dateFormatter = new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -26,9 +27,6 @@ const formatDateTime = (value) => {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? 'Sin registro' : dateTimeFormatter.format(date)
 }
-
-const resolveCheckinAt = (entry) => entry?.checkin_at || entry?.checked_in_at || entry?.entry_at || entry?.created_at || null
-const resolveCheckoutAt = (entry) => entry?.checkout_at || entry?.checked_out_at || entry?.exit_at || null
 
 const sanitizeName = (value) => value
   .replace(/[^a-zA-Z0-9\s.'-]/g, '')
@@ -76,9 +74,12 @@ const SubscriptionClientPage = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [feedback, setFeedback] = useState('')
   const [editForm, setEditForm] = useState({ name: '', phone: '', monthlyFee: '' })
-  const [checkins, setCheckins] = useState([])
-  const [checkinsLoading, setCheckinsLoading] = useState(false)
-  const [checkinsError, setCheckinsError] = useState('')
+  const [accessRows, setAccessRows] = useState([])
+  const [accessLoading, setAccessLoading] = useState(false)
+  const [accessError, setAccessError] = useState('')
+
+  const accessTimeline = useMemo(() => memberTimelineFromRows(accessRows), [accessRows])
+  const lastAccessKind = accessTimeline.length > 0 ? accessTimeline[0].kind : null
 
   useEffect(() => {
     loadCustomers()
@@ -109,79 +110,35 @@ const SubscriptionClientPage = () => {
   useEffect(() => {
     let cancelled = false
 
-    const fetchCheckins = async () => {
-      if (!customer?.id || !isSupabaseConfigured() || !supabase) {
+    const loadAccess = async () => {
+      if (!customer?.id || !isSupabaseConfigured()) {
         if (!cancelled) {
-          setCheckins([])
-          setCheckinsError('')
+          setAccessRows([])
+          setAccessError('')
         }
         return
       }
 
       if (!cancelled) {
-        setCheckinsLoading(true)
-        setCheckinsError('')
+        setAccessLoading(true)
+        setAccessError('')
       }
 
       try {
-        const tableNames = ['gym_checkins', 'checkins']
-        const filterColumns = ['cliente_id', 'customer_id', 'subscription_customer_id', 'subscriber_id']
-        const orderColumns = ['checkin_at', 'checked_in_at', 'created_at', 'entry_at']
-
-        let foundData = null
-        let lastError = null
-
-        for (const tableName of tableNames) {
-          for (const filterColumn of filterColumns) {
-            for (const orderColumn of orderColumns) {
-              const { data, error } = await supabase
-                .from(tableName)
-                .select('*')
-                .eq(filterColumn, customer.id)
-                .order(orderColumn, { ascending: false })
-                .limit(20)
-
-              if (!error) {
-                foundData = data || []
-                break
-              }
-
-              lastError = error
-              const message = String(error.message || '').toLowerCase()
-              const recoverable =
-                message.includes('column') ||
-                message.includes('does not exist') ||
-                message.includes('schema cache') ||
-                message.includes('could not find the table')
-
-              if (!recoverable) {
-                throw error
-              }
-            }
-
-            if (foundData) break
-          }
-
-          if (foundData) break
-        }
-
-        if (!foundData && lastError) {
-          throw lastError
-        }
-
-        if (!cancelled) setCheckins(foundData || [])
+        const rows = await fetchAccessRowsForMember(customer.id, 100)
+        if (!cancelled) setAccessRows(rows || [])
       } catch (error) {
-        console.error('Error loading checkins:', error)
+        console.error('Error loading access events:', error)
         if (!cancelled) {
-          setCheckins([])
-          setCheckinsError('No se pudo cargar el historial de accesos.')
+          setAccessRows([])
+          setAccessError('No se pudo cargar el historial de accesos.')
         }
       } finally {
-        if (!cancelled) setCheckinsLoading(false)
+        if (!cancelled) setAccessLoading(false)
       }
     }
 
-    fetchCheckins()
+    loadAccess()
     return () => {
       cancelled = true
     }
@@ -455,44 +412,51 @@ const SubscriptionClientPage = () => {
 
             <article className="subscription-side-panel">
               <h3 className="subscription-stat-value" style={{ marginTop: 0, fontSize: '1rem' }}>Historial de accesos</h3>
+              {lastAccessKind === 'entry' && accessTimeline.length > 0 && (
+                <p className="subscription-note" style={{ marginTop: '8px' }}>
+                  <span className="subscription-pill">Posiblemente en sitio</span>
+                  {' '}Último registro: entrada (sin salida posterior en los datos cargados).
+                </p>
+              )}
 
-              {checkinsLoading && (
+              {accessLoading && (
                 <p className="subscription-empty">
                   Cargando accesos...
                 </p>
               )}
 
-              {!checkinsLoading && checkinsError && (
+              {!accessLoading && accessError && (
                 <p className="subscription-error">
-                  {checkinsError}
+                  {accessError}
                 </p>
               )}
 
-              {!checkinsLoading && !checkinsError && checkins.length === 0 && (
+              {!accessLoading && !accessError && accessTimeline.length === 0 && (
                 <p className="subscription-empty">
-                  Aún no hay check-ins/check-outs registrados para este suscriptor.
+                  Aún no hay entradas/salidas registradas para este suscriptor (o la tabla usa columnas distintas).
                 </p>
               )}
 
-              {!checkinsLoading && checkins.length > 0 && (
+              {!accessLoading && accessTimeline.length > 0 && (
                 <div style={{ marginTop: '12px', display: 'grid', gap: '8px' }}>
-                  {checkins.map((entry) => (
-                    <div key={entry.id || `${entry.checkin_at}-${entry.checkout_at || 'open'}`} className="subscription-list-item">
-                      <div>
-                        <p className="subscription-list-title">Entrada</p>
-                        <p className="subscription-list-copy" style={{ fontSize: '12px' }}>{formatDateTime(resolveCheckinAt(entry))}</p>
-                      </div>
-
-                      {resolveCheckoutAt(entry) ? (
-                        <div className="text-right">
-                          <p className="subscription-list-copy" style={{ color: 'var(--text)', fontSize: '14px' }}>Salida</p>
-                          <p className="subscription-list-copy" style={{ fontSize: '12px' }}>{formatDateTime(resolveCheckoutAt(entry))}</p>
+                  {accessTimeline.map((ev) => {
+                    const isEntry = ev.kind === 'entry'
+                    return (
+                      <div key={ev.rowId} className="subscription-list-item">
+                        <div className="flex items-start gap-2">
+                          {isEntry ? (
+                            <FaSignInAlt className="mt-0.5 text-emerald-500 shrink-0" aria-hidden />
+                          ) : (
+                            <FaSignOutAlt className="mt-0.5 text-amber-500 shrink-0" aria-hidden />
+                          )}
+                          <div>
+                            <p className="subscription-list-title">{isEntry ? 'Entrada' : 'Salida'}</p>
+                            <p className="subscription-list-copy" style={{ fontSize: '12px' }}>{formatDateTime(ev.at)}</p>
+                          </div>
                         </div>
-                      ) : (
-                        <span className="subscription-pill">En sitio</span>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </article>
@@ -520,7 +484,7 @@ const SubscriptionClientPage = () => {
           </aside>
         </div>
 
-        <div className="h-8 md:h-10" aria-hidden="true" />
+        <div className="h-12 md:h-16 shrink-0" aria-hidden="true" />
       </div>
     </div>
   )

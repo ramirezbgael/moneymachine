@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FaShoppingCart, FaBarcode, FaFileInvoice, FaBoxes, FaClock, FaDollarSign, FaArrowUp, FaArrowDown } from 'react-icons/fa'
+import {
+  FaArrowDown,
+  FaArrowUp,
+  FaBarcode,
+  FaBox,
+  FaBoxes,
+  FaClipboardList,
+  FaClock,
+  FaDollarSign,
+  FaFileInvoice,
+  FaSearch,
+  FaShoppingCart
+} from 'react-icons/fa'
+import '../../components/common/hub-cards.css'
 import { useInventoryStore } from '../../store/inventoryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { InventoryRow } from '../../components/Inventory/InventoryRow'
@@ -197,85 +210,86 @@ export function InventarioPage() {
             {/* Large search input */}
             <div className="mb-6">
               <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Buscar producto por nombre, marca o SKU..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value)
-                    setHighlightedIndex(-1)
-                  }}
-                  onFocus={() => setShowAutocomplete(true)}
-                  onBlur={() => {
-                    // Small delay so item clicks can run before closing dropdown
-                    window.setTimeout(() => {
-                      setShowAutocomplete(false)
+                <div className="hub-search">
+                  <FaSearch className="hub-search__icon" aria-hidden />
+                  <input
+                    type="text"
+                    placeholder="Buscar producto por nombre, marca o SKU..."
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value)
                       setHighlightedIndex(-1)
-                    }, 120)
-                  }}
-                  onKeyDown={(e) => {
-                    if (!search.trim()) return
+                    }}
+                    onFocus={() => setShowAutocomplete(true)}
+                    onBlur={() => {
+                      window.setTimeout(() => {
+                        setShowAutocomplete(false)
+                        setHighlightedIndex(-1)
+                      }, 120)
+                    }}
+                    onKeyDown={(e) => {
+                      if (!search.trim()) return
 
-                    if (e.key === 'Escape') {
-                      e.preventDefault()
-                      setShowAutocomplete(false)
-                      setHighlightedIndex(-1)
-                      return
-                    }
-
-                    if (e.key === 'ArrowDown') {
-                      e.preventDefault()
-                      setShowAutocomplete(true)
-                      const totalOptions = autocompleteItems.length > 0 ? autocompleteItems.length + 1 : 0
-                      if (totalOptions > 0) {
-                        setHighlightedIndex((prev) => (prev + 1 + totalOptions) % totalOptions)
-                      }
-                      return
-                    }
-
-                    if (e.key === 'ArrowUp') {
-                      e.preventDefault()
-                      setShowAutocomplete(true)
-                      const totalOptions = autocompleteItems.length > 0 ? autocompleteItems.length + 1 : 0
-                      if (totalOptions > 0) {
-                        setHighlightedIndex((prev) => (prev - 1 + totalOptions) % totalOptions)
-                      }
-                      return
-                    }
-
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-
-                      if (
-                        showAutocomplete &&
-                        autocompleteItems.length > 0 &&
-                        highlightedIndex >= 0 &&
-                        highlightedIndex < autocompleteItems.length
-                      ) {
-                        handleSelectProduct(autocompleteItems[highlightedIndex].id)
+                      if (e.key === 'Escape') {
+                        e.preventDefault()
+                        setShowAutocomplete(false)
+                        setHighlightedIndex(-1)
                         return
                       }
 
-                      if (
-                        showAutocomplete &&
-                        autocompleteItems.length > 0 &&
-                        highlightedIndex === autocompleteItems.length
-                      ) {
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        setShowAutocomplete(true)
+                        const totalOptions = autocompleteItems.length > 0 ? autocompleteItems.length + 1 : 0
+                        if (totalOptions > 0) {
+                          setHighlightedIndex((prev) => (prev + 1 + totalOptions) % totalOptions)
+                        }
+                        return
+                      }
+
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        setShowAutocomplete(true)
+                        const totalOptions = autocompleteItems.length > 0 ? autocompleteItems.length + 1 : 0
+                        if (totalOptions > 0) {
+                          setHighlightedIndex((prev) => (prev - 1 + totalOptions) % totalOptions)
+                        }
+                        return
+                      }
+
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+
+                        if (
+                          showAutocomplete &&
+                          autocompleteItems.length > 0 &&
+                          highlightedIndex >= 0 &&
+                          highlightedIndex < autocompleteItems.length
+                        ) {
+                          handleSelectProduct(autocompleteItems[highlightedIndex].id)
+                          return
+                        }
+
+                        if (
+                          showAutocomplete &&
+                          autocompleteItems.length > 0 &&
+                          highlightedIndex === autocompleteItems.length
+                        ) {
+                          handleSearchSubmit()
+                          return
+                        }
+
                         handleSearchSubmit()
-                        return
                       }
-
-                      handleSearchSubmit()
-                    }
-                  }}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  autoCapitalize="off"
-                  autoFocus
-                  className="w-full rounded-2xl border-2 border-[var(--border)] bg-[var(--bg-tertiary)] px-6 py-4 text-lg font-medium text-[var(--text)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-4 focus:ring-[var(--accent)]/20 transition-all shadow-lg"
-                  aria-label="Buscar productos"
-                />
+                    }}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    autoCapitalize="off"
+                    autoFocus
+                    aria-label="Buscar productos"
+                  />
+                </div>
 
                 {showAutocomplete && search.trim() && (
                   <div className="absolute left-0 right-0 top-[calc(100%+10px)] rounded-2xl bg-[var(--panel)] border border-[var(--border)]/50 shadow-2xl shadow-black/20 z-40 overflow-hidden">
@@ -324,47 +338,25 @@ export function InventarioPage() {
               </div>
             </div>
 
-            {/* Action cards */}
-            <div className="grid grid-cols-3 md:grid-cols-3 gap-2 md:gap-4 mb-6">
-              <button
-                onClick={() => setShowAddProduct(true)}
-                className="group relative rounded-2xl bg-[var(--panel)]/40 shadow-lg shadow-black/5 p-3 md:p-6 text-center md:text-left transition-all hover:bg-[var(--panel)]/70 hover:shadow-2xl hover:shadow-[var(--accent)]/15 hover:scale-[1.02] min-h-[96px] md:min-h-0 aspect-square md:aspect-auto flex flex-col justify-center"
-              >
-                <div className="text-2xl md:text-4xl mb-1 md:mb-3">📦</div>
-                <h3 className="text-xs md:text-lg font-bold text-[var(--text)] mb-0 md:mb-2 group-hover:text-[var(--accent)] transition-colors leading-tight">
-                  Agregar producto
-                </h3>
-                <p className="hidden md:block text-sm text-[var(--muted)]">
-                  Registra un nuevo producto en el inventario
-                </p>
+            <section className="hub-card-grid hub-card-grid--always-three mb-6" aria-label="Acciones rápidas de inventario">
+              <button type="button" className="hub-card" onClick={() => setShowAddProduct(true)}>
+                <FaBox className="hub-card__icon" aria-hidden />
+                <h3>Agregar producto</h3>
+                <p>Registra un nuevo producto en el inventario</p>
               </button>
 
-              <button
-                onClick={() => setShowImportModal(true)}
-                className="group relative rounded-2xl bg-[var(--panel)]/40 shadow-lg shadow-black/5 p-3 md:p-6 text-center md:text-left transition-all hover:bg-[var(--panel)]/70 hover:shadow-2xl hover:shadow-[var(--accent)]/15 hover:scale-[1.02] min-h-[96px] md:min-h-0 aspect-square md:aspect-auto flex flex-col justify-center"
-              >
-                <div className="text-2xl md:text-4xl mb-1 md:mb-3">📄</div>
-                <h3 className="text-xs md:text-lg font-bold text-[var(--text)] mb-0 md:mb-2 group-hover:text-[var(--accent)] transition-colors leading-tight">
-                  Importar factura
-                </h3>
-                <p className="hidden md:block text-sm text-[var(--muted)]">
-                  Carga masiva desde archivo o factura
-                </p>
+              <button type="button" className="hub-card" onClick={() => setShowImportModal(true)}>
+                <FaFileInvoice className="hub-card__icon" aria-hidden />
+                <h3>Importar factura</h3>
+                <p>Carga masiva desde archivo o factura</p>
               </button>
 
-              <button
-                onClick={handleLoadAll}
-                className="group relative rounded-2xl bg-[var(--panel)]/40 shadow-lg shadow-black/5 p-3 md:p-6 text-center md:text-left transition-all hover:bg-[var(--panel)]/70 hover:shadow-2xl hover:shadow-[var(--accent)]/15 hover:scale-[1.02] min-h-[96px] md:min-h-0 aspect-square md:aspect-auto flex flex-col justify-center"
-              >
-                <div className="text-2xl md:text-4xl mb-1 md:mb-3">📋</div>
-                <h3 className="text-xs md:text-lg font-bold text-[var(--text)] mb-0 md:mb-2 group-hover:text-[var(--accent)] transition-colors leading-tight">
-                  Ver todos los productos
-                </h3>
-                <p className="hidden md:block text-sm text-[var(--muted)]">
-                  Explorar el inventario completo
-                </p>
+              <button type="button" className="hub-card" onClick={handleLoadAll}>
+                <FaClipboardList className="hub-card__icon" aria-hidden />
+                <h3>Ver todos los productos</h3>
+                <p>Explorar el inventario completo</p>
               </button>
-            </div>
+            </section>
 
             {/* Empty state text */}
             <div className="text-center py-6">

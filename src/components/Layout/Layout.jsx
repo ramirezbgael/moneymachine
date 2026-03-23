@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { FaCashRegister, FaBox, FaClock, FaChartBar, FaCog, FaUserClock, FaUsers, FaEllipsisH } from 'react-icons/fa'
+import { FaCashRegister, FaBox, FaClock, FaChartBar, FaCog, FaUserClock, FaUsers } from 'react-icons/fa'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useTenantStore } from '../../store/tenantStore'
 import { useAuthStore } from '../../store/authStore'
@@ -17,7 +17,6 @@ const Layout = () => {
   const location = useLocation()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
-  const [showMoreModules, setShowMoreModules] = useState(false)
   const [setupBusinessName, setSetupBusinessName] = useState('')
   const [setupLoading, setSetupLoading] = useState(false)
   const [setupError, setSetupError] = useState('')
@@ -27,10 +26,6 @@ const Layout = () => {
   const navModuleOrder = useSettingsStore(state => state.navModuleOrder)
   const { currentTenantId, currentTenant, loading: tenantLoading, error: tenantError, loadTenants } = useTenantStore()
   const signOut = useAuthStore(state => state.signOut)
-
-  useEffect(() => {
-    setShowMoreModules(false)
-  }, [location.pathname])
 
   const handleCreateBusiness = async () => {
     const name = setupBusinessName.trim()
@@ -130,51 +125,24 @@ const Layout = () => {
     })
     .map(({ item }) => item)
 
-  const visiblePrimaryModules = orderedModules.slice(0, 2)
-  const overflowOrderedModules = orderedModules.slice(2)
-
-  const pendingModuleItem = reorderableMenuItems.find((item) => item.id === 'pending') || null
-  const moreModuleItems = [
-    pendingModuleItem,
-    ...overflowOrderedModules.filter((item) => item.id !== 'pending')
-  ].filter(Boolean)
-
-  const menuItems = [
-    ...fixedMenuItems,
-    ...visiblePrimaryModules,
-    { path: '/modules', label: 'Más módulos', icon: FaEllipsisH, id: 'more', type: 'more' }
-  ]
-
-  const overflowModuleIds = new Set(moreModuleItems.map((item) => item.id))
-  const directModuleIds = new Set(menuItems.map((item) => item.id))
-  const activeMoreModuleId = moreModuleItems.find((item) => {
-    if (location.pathname.startsWith(item.path)) return true
-    if (item.id === 'subscriptions' && location.pathname.startsWith('/suscripciones')) return true
-    return false
-  })?.id || null
-
-  const mobileTabItems = menuItems
+  const menuItems = [...fixedMenuItems, ...orderedModules]
 
   const getActiveId = () => {
-    if (location.pathname.startsWith('/inventory')) return directModuleIds.has('inventory') ? 'inventory' : 'more'
-    if (location.pathname.startsWith('/inventario')) return directModuleIds.has('inventory') ? 'inventory' : 'more'
-    if (location.pathname.startsWith('/pending')) return directModuleIds.has('pending') ? 'pending' : 'more'
-    if (location.pathname.startsWith('/customers') || location.pathname.startsWith('/clientes')) {
-      return directModuleIds.has('customers') ? 'customers' : 'more'
-    }
-    if (location.pathname.startsWith('/subscriptions') || location.pathname.startsWith('/suscripciones')) return directModuleIds.has('subscriptions') ? 'subscriptions' : 'more'
-    if (location.pathname.startsWith('/finance') || location.pathname.startsWith('/finanzas') || location.pathname.startsWith('/reports')) {
-      return directModuleIds.has('finance') ? 'finance' : 'more'
-    }
-    if (location.pathname.startsWith('/settings') || location.pathname.startsWith('/configuracion')) {
-      return overflowModuleIds.has('settings') ? 'more' : 'settings'
-    }
     if (location.pathname === '/') return 'sale'
-    // Check for exact match first, then startsWith
-    const exactMatch = menuItems.find(item => location.pathname === item.path)
+    if (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/inventario')) return 'inventory'
+    if (location.pathname.startsWith('/pending')) return 'pending'
+    if (location.pathname.startsWith('/customers') || location.pathname.startsWith('/clientes')) return 'customers'
+    if (location.pathname.startsWith('/subscriptions') || location.pathname.startsWith('/suscripciones')) {
+      return subscriptionsEnabled ? 'subscriptions' : 'sale'
+    }
+    if (location.pathname.startsWith('/finance') || location.pathname.startsWith('/finanzas') || location.pathname.startsWith('/reports')) {
+      return 'finance'
+    }
+    if (location.pathname.startsWith('/settings') || location.pathname.startsWith('/configuracion')) return 'settings'
+    const exactMatch = menuItems.find((item) => location.pathname === item.path)
     if (exactMatch) return exactMatch.id
-    const activeItem = menuItems.find(item => 
-      item.path !== '/' && location.pathname.startsWith(item.path)
+    const activeItem = menuItems.find(
+      (item) => item.path !== '/' && location.pathname.startsWith(item.path)
     )
     return activeItem?.id || 'sale'
   }
@@ -200,17 +168,6 @@ const Layout = () => {
   const handleNavigation = (path) => {
     navigate(path)
     setMobileSidebarOpen(false)
-    setShowMoreModules(false)
-  }
-
-  const handleMoreModulesToggle = () => {
-    if (!moreModuleItems.length) return
-    if (!isMobileViewport() && sidebarCollapsed) {
-      setSidebarCollapsed(false)
-      setShowMoreModules(true)
-      return
-    }
-    setShowMoreModules((current) => !current)
   }
 
   const handleSidebarToggle = () => {
@@ -250,52 +207,6 @@ const Layout = () => {
             {menuItems.map((item) => {
               const IconComponent = item.icon
               const isActive = activeId === item.id
-
-              if (item.type === 'more') {
-                const isExpanded = showMoreModules || Boolean(activeMoreModuleId)
-                return (
-                  <li key={item.id} className="sidebar__menu-group">
-                    <button
-                      className={`sidebar__item ${isActive ? 'sidebar__item--active' : ''}`}
-                      onClick={handleMoreModulesToggle}
-                      title={sidebarCollapsed ? item.label : undefined}
-                      disabled={!moreModuleItems.length}
-                    >
-                      <span className="sidebar__icon">
-                        <IconComponent />
-                      </span>
-                      {!sidebarCollapsed && (
-                        <>
-                          <span className="sidebar__label">{item.label}</span>
-                        </>
-                      )}
-                    </button>
-
-                    {!sidebarCollapsed && isExpanded && moreModuleItems.length > 0 && (
-                      <div className="sidebar__subnav">
-                        {moreModuleItems.map((subItem) => {
-                          const SubIcon = subItem.icon
-                          const isSubActive = activeMoreModuleId === subItem.id
-                          return (
-                            <button
-                              key={subItem.id}
-                              type="button"
-                              className={`sidebar__subitem ${isSubActive ? 'sidebar__subitem--active' : ''}`}
-                              onClick={() => handleNavigation(subItem.path)}
-                            >
-                              <span className="sidebar__subitem-icon">
-                                <SubIcon />
-                              </span>
-                              <span className="sidebar__subitem-label">{subItem.label}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </li>
-                )
-              }
-
               return (
                 <li key={item.id}>
                   <button
@@ -342,10 +253,9 @@ const Layout = () => {
 
       {/* Bottom nav for mobile */}
       <nav className="layout__bottom-nav md:hidden">
-        {mobileTabItems.map((item) => {
+        {menuItems.map((item) => {
           const IconComponent = item.icon
           const isActive = activeId === item.id
-          const isMoreButton = item.type === 'more'
           return (
             <button
               key={item.id}
@@ -353,10 +263,9 @@ const Layout = () => {
               className={`layout__bottom-nav-btn ${
                 isActive ? 'layout__bottom-nav-btn--active' : ''
               }`}
-              onClick={() => (isMoreButton ? handleMoreModulesToggle() : handleNavigation(item.path))}
+              onClick={() => handleNavigation(item.path)}
               aria-label={item.label}
               title={item.label}
-              disabled={isMoreButton && !moreModuleItems.length}
             >
               <span className="layout__bottom-nav-btn-icon">
                 <IconComponent />
@@ -364,34 +273,6 @@ const Layout = () => {
             </button>
           )
         })}
-
-        {showMoreModules && moreModuleItems.length > 0 && (
-          <div className="layout__bottom-nav-sheet">
-            <div className="layout__bottom-nav-sheet-head">
-              <span>Más módulos</span>
-              <button type="button" onClick={() => setShowMoreModules(false)} aria-label="Cerrar más módulos">Cerrar</button>
-            </div>
-            <div className="layout__bottom-nav-sheet-list">
-              {moreModuleItems.map((item) => {
-                const IconComponent = item.icon
-                const isSubActive = activeMoreModuleId === item.id
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`layout__bottom-nav-sheet-item ${isSubActive ? 'layout__bottom-nav-sheet-item--active' : ''}`}
-                    onClick={() => handleNavigation(item.path)}
-                  >
-                    <span className="layout__bottom-nav-sheet-item-icon">
-                      <IconComponent />
-                    </span>
-                    <span>{item.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
       </nav>
     </div>
   )

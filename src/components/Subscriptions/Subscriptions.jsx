@@ -1,16 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FaEdit, FaPhoneAlt, FaPlus } from 'react-icons/fa'
+import { FaArrowDown, FaArrowUp, FaClock, FaDollarSign, FaPlus, FaUserClock } from 'react-icons/fa'
 import { useSubscriptionStore } from '../../store/subscriptionStore'
+import { useTenantStore } from '../../store/tenantStore'
+import { LiquidButton } from '../Inventory/LiquidButton'
 import PrintModal from '../PrintModal/PrintModal'
+import { SubscriptionAttendanceInsights } from './SubscriptionAttendanceInsights'
 import './Subscriptions.css'
 
-const statusClasses = {
-  cancelled: 'bg-gray-500/20 text-gray-300 border-gray-400/30',
-  expired: 'bg-red-500/15 text-red-300 border-red-500/35',
-  dueSoon: 'bg-amber-500/15 text-amber-300 border-amber-500/35',
-  active: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35'
-}
+const ITEMS_PER_PAGE = 10
 
 const dateFormatter = new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
 
@@ -19,14 +17,6 @@ const getStatusMeta = (customer) => {
   if (customer.daysLeft < 0) return { label: 'Vencida', tone: 'expired' }
   if (customer.daysLeft <= 7) return { label: 'Por vencer', tone: 'dueSoon' }
   return { label: 'Activa', tone: 'active' }
-}
-
-const formatRenewalLine = (customer) => {
-  if (customer.status === 'cancelled') return 'Suscripción cancelada'
-  if (customer.daysLeft < 0) return `Vencida hace ${Math.abs(customer.daysLeft)} día(s)`
-  if (customer.daysLeft === 0) return `Renueva: ${formatRenewalDate(customer.endDate)} • Vence hoy`
-  if (customer.daysLeft <= 7) return `Renueva: ${formatRenewalDate(customer.endDate)} • Vence en ${customer.daysLeft} día(s)`
-  return `Renueva: ${formatRenewalDate(customer.endDate)} • Renueva en ${customer.daysLeft} día(s)`
 }
 
 const formatMoney = (value) => {
@@ -65,12 +55,6 @@ const FILTERS = [
   { id: 'expired', label: 'Vencidos' }
 ]
 
-const SORT_OPTIONS = [
-  { id: 'renewalDate', label: 'Próxima renovación' },
-  { id: 'name', label: 'Nombre' },
-  { id: 'price', label: 'Precio' }
-]
-
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Efectivo' },
   { id: 'card', label: 'Tarjeta' },
@@ -90,6 +74,10 @@ const Subscriptions = () => {
     saveSubscriptionPlans
   } = useSubscriptionStore()
 
+  const currentTenantId = useTenantStore((state) => state.currentTenantId)
+  const attendanceBusinessId =
+    currentTenantId && currentTenantId !== 'global' ? currentTenantId : null
+
   const [formData, setFormData] = useState({ name: '', phone: '', monthlyFee: '', months: '1' })
   const [selectedId, setSelectedId] = useState(null)
   const [monthsToAdd, setMonthsToAdd] = useState(1)
@@ -106,7 +94,9 @@ const Subscriptions = () => {
   const [plansMessage, setPlansMessage] = useState('')
   const [subscribersSearch, setSubscribersSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [listSort, setListSort] = useState({ key: 'renewalDate', direction: 'asc' })
+  const [sortState, setSortState] = useState({ key: 'renewalDate', direction: 'asc' })
+  const [currentPage, setCurrentPage] = useState(1)
+  const [openMenuId, setOpenMenuId] = useState(null)
   const [renewPaymentMethod, setRenewPaymentMethod] = useState('cash')
   const [renewSubmitting, setRenewSubmitting] = useState(false)
   const [renewType, setRenewType] = useState('add_months')
@@ -115,6 +105,18 @@ const Subscriptions = () => {
     loadCustomers()
     loadSubscriptionPlans()
   }, [loadCustomers, loadSubscriptionPlans])
+
+  useEffect(() => {
+    setOpenMenuId(null)
+  }, [currentPage, subscribersSearch, statusFilter, sortState.key, sortState.direction])
+
+  const cycleSort = (key) => {
+    setSortState((prev) => {
+      if (prev.key !== key) return { key, direction: 'asc' }
+      if (prev.direction === 'asc') return { key, direction: 'desc' }
+      return { key: 'renewalDate', direction: 'asc' }
+    })
+  }
 
   useEffect(() => {
     if (!subscriptionPlans.length) return
@@ -223,10 +225,10 @@ const Subscriptions = () => {
     return [...filteredCustomers].sort((a, b) => {
       let aValue
       let bValue
-      if (listSort.key === 'name') {
+      if (sortState.key === 'name') {
         aValue = (a.name || '').toLowerCase()
         bValue = (b.name || '').toLowerCase()
-      } else if (listSort.key === 'price') {
+      } else if (sortState.key === 'price') {
         aValue = Number(a.monthlyFee || 0)
         bValue = Number(b.monthlyFee || 0)
       } else {
@@ -234,11 +236,32 @@ const Subscriptions = () => {
         bValue = new Date(b.endDate || 0).getTime()
       }
 
-      if (aValue < bValue) return listSort.direction === 'asc' ? -1 : 1
-      if (aValue > bValue) return listSort.direction === 'asc' ? 1 : -1
+      if (aValue < bValue) return sortState.direction === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortState.direction === 'asc' ? 1 : -1
       return 0
     })
-  }, [customers, listSort.direction, listSort.key, statusFilter, subscribersSearch])
+  }, [customers, sortState.direction, sortState.key, statusFilter, subscribersSearch])
+
+  const totalPages = Math.max(1, Math.ceil(visibleCustomers.length / ITEMS_PER_PAGE))
+  const pageStartIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const paginatedCustomers = visibleCustomers.slice(pageStartIndex, pageStartIndex + ITEMS_PER_PAGE)
+  const showingFrom = visibleCustomers.length === 0 ? 0 : pageStartIndex + 1
+  const showingTo = Math.min(pageStartIndex + ITEMS_PER_PAGE, visibleCustomers.length)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [subscribersSearch, statusFilter, sortState.key, sortState.direction])
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, totalPages])
+
+  const visiblePageEnd = Math.min(totalPages, currentPage + 2)
+  const visiblePageStart = Math.max(1, visiblePageEnd - 4)
+  const visiblePages = Array.from(
+    { length: visiblePageEnd - visiblePageStart + 1 },
+    (_, idx) => visiblePageStart + idx
+  )
 
   const selectedCustomer = customers.find((customer) => customer.id === selectedId)
   const renewConfig = renewType === 'renewal'
@@ -281,163 +304,303 @@ const Subscriptions = () => {
     }
   }
 
-  const selectedSortLabel = SORT_OPTIONS.find((option) => option.id === listSort.key)?.label || 'Próxima renovación'
-
   return (
-    <div className="subscriptions-page min-h-screen flex flex-col h-full text-[var(--text)]">
-      <header className="subscriptions-page__header">
-        <h1 className="subscriptions-page__title">Suscripciones</h1>
-      </header>
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] p-4 md:p-6 pb-40 md:pb-16 flex flex-col subscriptions-page--inventory">
+      <div className="max-w-7xl mx-auto w-full flex flex-col">
+        <h1 className="text-2xl font-bold text-[var(--text)] mb-3">Suscripciones</h1>
 
-      <section className="subscriptions-compact-kpis hidden md:flex" aria-label="Resumen de suscripciones">
-        <span>Activas <strong>{summary.active}</strong></span>
-        <span>Por vencer <strong>{summary.dueSoon}</strong></span>
-        <span>Vencidas <strong>{summary.expired}</strong></span>
-        <span>Ingreso <strong>{formatMoney(summary.estimatedRevenue)}</strong></span>
-      </section>
+        <section
+          className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--border)]/60 bg-[var(--panel)]/55 px-3 py-2"
+          aria-label="Resumen de suscripciones"
+        >
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
+            Activas <strong className="text-[var(--text)] text-xs">{summary.active}</strong>
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
+            Por vencer <strong className="text-[var(--text)] text-xs">{summary.dueSoon}</strong>
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
+            Vencidas <strong className="text-[var(--text)] text-xs">{summary.expired}</strong>
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
+            Ingreso <strong className="text-[var(--text)] text-xs tabular-nums">{formatMoney(summary.estimatedRevenue)}</strong>
+          </span>
+          <span className="ml-auto text-[11px] text-[var(--muted)] tabular-nums">
+            {visibleCustomers.length} / {customers.length} cliente(s)
+          </span>
+        </section>
 
-      <section className="subscriptions-page__content">
-        <article className="subscriptions-panel subscriptions-panel--list subscriptions-panel--dashboard">
-          <div className="subscriptions-panel__header subscriptions-panel__header--list hidden md:flex">
-            <h2 className="subscriptions-panel__title">Lista de suscriptores</h2>
-            <span className="subscriptions-panel__counter">{visibleCustomers.length} / {customers.length} cliente(s)</span>
-          </div>
+        <SubscriptionAttendanceInsights businessId={attendanceBusinessId} />
 
-          <div className="subscriptions-list-search-wrap subscriptions-list-search-wrap--desktop">
-            <input type="text" value={subscribersSearch} onChange={(e) => setSubscribersSearch(e.target.value)} className="subscriptions-list-search" placeholder="Buscar suscriptor..." />
-          </div>
-
-          <div className="subscriptions-mobile-sort md:hidden" aria-label="Ordenar suscriptores en móvil">
-            <div className="subscriptions-sort-group" role="tablist" aria-label="Orden por campo">
-              <button
-                type="button"
-                className={`subscriptions-sort-btn ${listSort.key === 'name' ? 'subscriptions-sort-btn--active' : ''}`}
-                onClick={() => setListSort((prev) => ({ ...prev, key: 'name' }))}
-              >
-                A-Z
-              </button>
-              <button
-                type="button"
-                className={`subscriptions-sort-btn ${listSort.key === 'renewalDate' ? 'subscriptions-sort-btn--active' : ''}`}
-                onClick={() => setListSort((prev) => ({ ...prev, key: 'renewalDate' }))}
-              >
-                Fecha
-              </button>
-              <button
-                type="button"
-                className={`subscriptions-sort-btn ${listSort.key === 'price' ? 'subscriptions-sort-btn--active' : ''}`}
-                onClick={() => setListSort((prev) => ({ ...prev, key: 'price' }))}
-              >
-                Monto
-              </button>
-            </div>
-            <button
-              type="button"
-              className="subscriptions-sort-btn subscriptions-sort-btn--active"
-              onClick={() => setListSort((prev) => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
-              aria-label="Cambiar dirección de orden"
+        <div className="mb-4 grid gap-3 lg:grid-cols-[auto,1fr] lg:items-end">
+          <div className="space-y-2">
+            <nav
+              className="inline-flex gap-0.5 rounded-lg bg-[var(--panel)]/60 p-0.5 border border-[var(--border)]/40"
+              aria-label="Filtros de estado"
             >
-              {listSort.direction === 'asc' ? '↑' : '↓'}
-            </button>
-          </div>
-
-          <div className="subscriptions-list-toolbar subscriptions-list-advanced hidden md:grid">
-            <div className="subscriptions-filter-group" role="tablist" aria-label="Filtrar suscripciones">
               {FILTERS.map((filter) => (
-                <button key={filter.id} type="button" className={`subscriptions-filter-btn ${statusFilter === filter.id ? 'subscriptions-filter-btn--active' : ''}`} onClick={() => setStatusFilter(filter.id)}>
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setStatusFilter(filter.id)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${
+                    statusFilter === filter.id
+                      ? 'bg-[var(--accent-soft)]/80 text-[var(--accent)] shadow-md'
+                      : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel)]/40'
+                  }`}
+                >
                   {filter.label}
                 </button>
               ))}
-            </div>
-
-            <div className="subscriptions-sort-controls">
-              <label className="subscriptions-sort-label">
-                <span>Orden</span>
-                <select value={listSort.key} className="subscriptions-sort-select" onChange={(e) => setListSort((prev) => ({ ...prev, key: e.target.value }))}>
-                  {SORT_OPTIONS.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
-              <button type="button" className="subscriptions-sort-btn subscriptions-sort-btn--active" onClick={() => setListSort((prev) => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}>
-                {listSort.direction === 'asc' ? '↑' : '↓'}
+            </nav>
+          </div>
+          <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 lg:justify-end">
+            <div className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)]/40 bg-[var(--panel)]/55 p-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => cycleSort('name')}
+                className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
+                  sortState.key === 'name'
+                    ? 'bg-[var(--accent-soft)]/80 text-[var(--accent)]'
+                    : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel)]/50'
+                }`}
+                title="Orden alfabético"
+              >
+                <span>A</span>
+                {sortState.key === 'name' && sortState.direction === 'asc' ? <FaArrowUp className="w-3 h-3" /> : null}
+                {sortState.key === 'name' && sortState.direction === 'desc' ? <FaArrowDown className="w-3 h-3" /> : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => cycleSort('renewalDate')}
+                className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
+                  sortState.key === 'renewalDate'
+                    ? 'bg-[var(--accent-soft)]/80 text-[var(--accent)]'
+                    : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel)]/50'
+                }`}
+                title="Orden por fecha de renovación"
+              >
+                <FaClock className="w-3 h-3" />
+                {sortState.key === 'renewalDate' && sortState.direction === 'asc' ? <FaArrowUp className="w-3 h-3" /> : null}
+                {sortState.key === 'renewalDate' && sortState.direction === 'desc' ? <FaArrowDown className="w-3 h-3" /> : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => cycleSort('price')}
+                className={`flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ${
+                  sortState.key === 'price'
+                    ? 'bg-[var(--accent-soft)]/80 text-[var(--accent)]'
+                    : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel)]/50'
+                }`}
+                title="Orden por mensualidad"
+              >
+                <FaDollarSign className="w-3 h-3" />
+                {sortState.key === 'price' && sortState.direction === 'asc' ? <FaArrowUp className="w-3 h-3" /> : null}
+                {sortState.key === 'price' && sortState.direction === 'desc' ? <FaArrowDown className="w-3 h-3" /> : null}
               </button>
             </div>
+            <input
+              type="text"
+              placeholder="Buscar por nombre o teléfono..."
+              value={subscribersSearch}
+              onChange={(e) => setSubscribersSearch(e.target.value)}
+              autoComplete="off"
+              className="rounded-xl border border-[var(--border)] bg-[var(--bg-tertiary)] px-4 py-2.5 text-sm font-medium text-[var(--text)] placeholder:text-[var(--muted)] focus:border-[var(--accent)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 min-w-[12rem] flex-1 lg:max-w-xs transition-all"
+              aria-label="Buscar suscriptor"
+            />
+            <LiquidButton
+              size="sm"
+              onClick={() => {
+                setShowCreateModal(true)
+                setShowPlanEditor(false)
+                setPlansMessage('')
+                setPlansError('')
+              }}
+            >
+              <span className="whitespace-nowrap">+ Nueva suscripción</span>
+            </LiquidButton>
           </div>
+        </div>
 
-          {loading ? (
-            <div className="subscriptions-state-box">Cargando suscripciones...</div>
-          ) : visibleCustomers.length === 0 ? (
-            <div className="subscriptions-state-box subscriptions-state-box--empty">No se encontraron suscriptores con esos filtros.</div>
-          ) : (
-            <div className="subscriptions-cards-grid">
-              {visibleCustomers.map((customer) => {
-                const status = getStatusMeta(customer)
-                const isSelected = selectedId === customer.id
-                const daysLabel = customer.daysLeft < 0
-                  ? `Vencida ${Math.abs(customer.daysLeft)}d`
-                  : `${customer.daysLeft} días`
+        {loading ? (
+          <div className="rounded-2xl bg-[var(--panel)]/40 py-16 text-center text-sm text-[var(--muted)]">
+            Cargando suscripciones...
+          </div>
+        ) : visibleCustomers.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--panel)]/30 py-16 text-center text-sm text-[var(--muted)]">
+            No se encontraron suscriptores con esos filtros.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 content-start">
+            {paginatedCustomers.map((customer) => {
+              const status = getStatusMeta(customer)
+              const isSelected = selectedId === customer.id
+              const daysShort =
+                customer.daysLeft < 0 ? `${Math.abs(customer.daysLeft)}d` : `${customer.daysLeft}d`
+              const dotClass =
+                status.tone === 'active'
+                  ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]'
+                  : status.tone === 'dueSoon'
+                    ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]'
+                    : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]'
 
-                return (
-                  <article
-                    key={customer.id}
-                    className={`subscriptions-customer ${isSelected ? 'subscriptions-customer--selected' : ''} cursor-pointer`}
-                    onClick={() => navigate(`/suscripciones/${customer.id}`)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        navigate(`/suscripciones/${customer.id}`)
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
+              return (
+                <div
+                  key={customer.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setOpenMenuId(null)
+                    navigate(`/suscripciones/${customer.id}`)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      setOpenMenuId(null)
+                      navigate(`/suscripciones/${customer.id}`)
+                    }
+                  }}
+                  className={`flex items-center gap-2 rounded-xl bg-[var(--panel)]/35 py-2 px-2.5 transition-all duration-200 hover:bg-[var(--panel)]/60 hover:shadow-lg hover:shadow-[var(--accent)]/10 backdrop-blur-sm cursor-pointer min-w-0 ${
+                    isSelected ? 'ring-1 ring-[var(--accent)]/50' : ''
+                  } ${openMenuId === customer.id ? 'relative z-[40]' : ''}`}
+                >
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[var(--panel)]/60 flex-shrink-0 flex items-center justify-center">
+                    <FaUserClock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--accent)]" aria-hidden />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-[var(--text)] truncate text-sm leading-tight" title={customer.name}>
+                      {customer.name}
+                    </div>
+                    <div className="text-[10px] sm:text-[11px] text-[var(--muted)] truncate leading-tight tabular-nums">
+                      {customer.phone || 'Sin teléfono'} · {formatRenewalDate(customer.endDate)}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right min-w-[3.25rem]">
+                    <span className="text-xs sm:text-sm font-semibold text-[var(--text)] tabular-nums leading-tight block">
+                      {formatMoney(customer.monthlyFee)}
+                    </span>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-1">
+                    <span className="text-[10px] sm:text-xs text-[var(--muted)] tabular-nums w-7 text-right">{daysShort}</span>
+                    <span
+                      className={`inline-block h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full ${dotClass}`}
+                      title={status.label}
+                      aria-label={status.label}
+                    />
+                  </div>
+                  <div className="shrink-0">
+                    <LiquidButton
+                      size="sm"
+                      className="!px-2 !py-1.5"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openRenewModal(customer, 'renewal')
+                      }}
+                      aria-label="Cobrar mensualidad"
+                      title="Cobrar mensualidad"
+                    >
+                      <FaDollarSign className="w-3 h-3" />
+                    </LiquidButton>
+                  </div>
+                  <div className="relative shrink-0 w-7 flex justify-end" data-subscription-row-menu>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setOpenMenuId((id) => (id === customer.id ? null : customer.id))
+                      }}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-lg text-[var(--muted)] hover:bg-[var(--panel)]/80 hover:text-[var(--accent)] transition-all"
+                      aria-label="Más opciones"
+                      aria-expanded={openMenuId === customer.id}
+                    >
+                      ⋯
+                    </button>
+                    {openMenuId === customer.id && (
+                      <div className="absolute right-0 top-full mt-1 py-1.5 min-w-[168px] rounded-xl bg-[var(--panel)] shadow-2xl shadow-black/60 z-[50] border border-[var(--border)]">
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent)]"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setOpenMenuId(null)
+                            navigate(`/suscripciones/${customer.id}`)
+                          }}
+                        >
+                          Ver detalle
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent)]"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setOpenMenuId(null)
+                            openRenewModal(customer, 'renewal')
+                          }}
+                        >
+                          Cobrar mensualidad
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent)]"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setOpenMenuId(null)
+                            openRenewModal(customer, 'add_months')
+                          }}
+                        >
+                          Agregar meses
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {!loading && visibleCustomers.length > 0 && (
+          <div className="mt-6 mb-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-between gap-3 py-2 pb-4 md:pb-6">
+            <p className="text-xs text-[var(--muted)] order-2 sm:order-1">
+              Mostrando {showingFrom}-{showingTo} de {visibleCustomers.length} suscriptor(es)
+            </p>
+            {visibleCustomers.length > ITEMS_PER_PAGE && (
+              <div className="flex items-center justify-center gap-1.5 order-1 sm:order-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2.5 py-1 rounded-md text-xs border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--accent)]/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                {visiblePages.map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`min-w-8 px-2 py-1 rounded-md text-xs border transition-colors ${
+                      page === currentPage
+                        ? 'border-[var(--accent)] bg-[var(--accent)]/15 text-[var(--accent)]'
+                        : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--accent)]/40'
+                    }`}
                   >
-                    <span className={`subscriptions-customer__dot subscriptions-customer__dot--${status.tone}`} title={status.label} aria-label={status.label} />
-
-                    <div className="subscriptions-customer__identity">
-                      <p className="subscriptions-customer__name" title={customer.name}>{customer.name}</p>
-                      <p className="subscriptions-customer__phone"><FaPhoneAlt /><span title={customer.phone || 'Sin teléfono'}>{customer.phone || 'Sin teléfono'}</span></p>
-                    </div>
-
-                    <p className="subscriptions-customer__price">{formatMoney(customer.monthlyFee)} <span>/ mes</span></p>
-
-                    <p className="subscriptions-customer__days" title={status.label}>{daysLabel}</p>
-
-                    <p className="subscriptions-customer__renewal" title={formatRenewalDate(customer.endDate)}>{formatRenewalDate(customer.endDate)}</p>
-
-                    <div className="subscriptions-customer__actions">
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          openRenewModal(customer, 'renewal')
-                        }}
-                        className="subscriptions-action subscriptions-action--renew"
-                        title="Cobrar mensualidad"
-                        aria-label="Cobrar mensualidad"
-                      >
-                        $
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          navigate(`/suscripciones/${customer.id}`)
-                        }}
-                        className="subscriptions-action subscriptions-action--edit"
-                        title="Ver detalle y editar"
-                        aria-label="Ver detalle y editar"
-                      >
-                        <FaEdit aria-hidden="true" />
-                      </button>
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-          )}
-        </article>
-      </section>
+                    {page}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2.5 py-1 rounded-md text-xs border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--accent)]/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <button
         type="button"
