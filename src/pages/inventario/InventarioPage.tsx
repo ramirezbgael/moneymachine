@@ -194,8 +194,8 @@ export function InventarioPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] p-4 md:p-6 pb-32 md:pb-6 flex flex-col">
-      <div className="max-w-7xl mx-auto flex-1 flex flex-col">
+    <div className="mm-page mm-page--flush flex flex-col">
+      <div className="mm-shell mm-shell--wide flex-1 flex flex-col">
         <h1 className="text-2xl font-bold text-[var(--text)] mb-4">Inventario</h1>
 
         {error && (

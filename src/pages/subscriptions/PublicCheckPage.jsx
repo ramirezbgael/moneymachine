@@ -80,7 +80,7 @@ export default function PublicCheckPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-gradient)] text-[var(--text)]">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
       </div>
     )
@@ -88,10 +88,10 @@ export default function PublicCheckPage() {
 
   if (error || !customer) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-zinc-950 px-6 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--bg-gradient)] px-6 text-center text-[var(--text)]">
         <span className="text-5xl">❌</span>
-        <p className="text-lg font-semibold text-white">{error || 'Suscriptor no encontrado.'}</p>
-        <p className="text-sm text-zinc-500">Verifica que el código QR sea correcto o contacta al negocio.</p>
+        <p className="text-lg font-semibold text-[var(--text)]">{error || 'Suscriptor no encontrado.'}</p>
+        <p className="text-sm text-[var(--muted)]">Verifica que el código QR sea correcto o contacta al negocio.</p>
       </div>
     )
   }
@@ -120,14 +120,22 @@ export default function PublicCheckPage() {
   const statusIcon = isCancelled ? '⊘' : isExpired ? '✕' : '✓'
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-5 pt-8 pb-14 sm:px-8 sm:pt-12 sm:pb-20">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--bg-gradient)] px-5 pt-8 pb-14 sm:px-8 sm:pt-12 sm:pb-20 text-[var(--text)]">
       <div className="w-full max-w-sm md:max-w-md">
         {/* Card */}
-        <div className="overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-900 shadow-2xl">
-          {/* Header strip */}
-          <div className={`px-6 py-4 ${isCancelled ? 'bg-zinc-800' : isExpired ? 'bg-red-950' : 'bg-emerald-950'}`}>
-            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">MoneyMachine</p>
-            <p className="mt-0.5 text-xs text-zinc-500">Tarjeta de membresía</p>
+        <div className="overflow-hidden rounded-[28px] border border-[color-mix(in_srgb,var(--border)_50%,transparent)] bg-[color-mix(in_srgb,var(--panel)_48%,transparent)] shadow-[var(--shadow-lg)] backdrop-blur-xl [box-shadow:0_0_0_1px_color-mix(in_srgb,white_8%,transparent)_inset]">
+          {/* Cabecera — vidrio tintado (sin bloques sólidos sucios) */}
+          <div
+            className={`px-6 py-4 border-b border-[color-mix(in_srgb,var(--border)_45%,transparent)] backdrop-blur-md ${
+              isCancelled
+                ? 'bg-[color-mix(in_srgb,var(--panel-2)_50%,transparent)]'
+                : isExpired
+                  ? 'bg-[color-mix(in_srgb,var(--danger)_12%,transparent)]'
+                  : 'bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]'
+            }`}
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">MoneyMachine</p>
+            <p className="mt-0.5 text-xs text-[var(--muted)]">Tarjeta de membresía</p>
           </div>
 
           {/* Body */}
@@ -139,7 +147,7 @@ export default function PublicCheckPage() {
             </span>
 
             {/* Name */}
-            <h1 className="mt-4 text-2xl font-bold leading-tight text-white">{customer.name}</h1>
+            <h1 className="mt-4 text-2xl font-bold leading-tight text-[var(--text)]">{customer.name}</h1>
 
             {/* Details */}
             <dl className="mt-5 space-y-3">

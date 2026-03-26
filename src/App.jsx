@@ -15,6 +15,7 @@ import Subscriptions from './components/Subscriptions/Subscriptions'
 import { ConfiguracionPage } from './pages/configuracion/ConfiguracionPage'
 import CheckoutPage from './pages/checkout/CheckoutPage'
 import SubscriptionClientPage from './pages/subscriptions/SubscriptionClientPage'
+import NewSubscriptionPage from './pages/subscriptions/NewSubscriptionPage'
 import CustomerDetailPage from './pages/customers/CustomerDetailPage'
 import NewReceivablePage from './pages/finance/NewReceivablePage'
 import ReceivableDetailPage from './pages/finance/ReceivableDetailPage'
@@ -135,6 +136,14 @@ function App() {
             }
           />
           <Route
+            path="subscriptions/new"
+            element={
+              <FeatureRoute featureKey="subscriptions">
+                <NewSubscriptionPage />
+              </FeatureRoute>
+            }
+          />
+          <Route
             path="subscriptions/:id"
             element={
               <FeatureRoute featureKey="subscriptions">
@@ -142,6 +151,7 @@ function App() {
               </FeatureRoute>
             }
           />
+          <Route path="suscripciones/nueva" element={<Navigate to="/subscriptions/new" replace />} />
           <Route
             path="suscripciones/:id"
             element={

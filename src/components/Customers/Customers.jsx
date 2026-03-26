@@ -300,8 +300,8 @@ const Customers = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] p-4 md:p-6 pb-32 md:pb-6 flex flex-col">
-      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col min-h-0">
+    <div className="mm-page mm-page--flush flex flex-col">
+      <div className="mm-shell mm-shell--wide w-full flex-1 flex flex-col min-h-0">
         <h1 className="text-2xl font-bold text-[var(--text)] mb-1">Clientes</h1>
         <p className="text-sm text-[var(--muted)] mb-4">Administra clientes y sus cuentas por cobrar.</p>
 

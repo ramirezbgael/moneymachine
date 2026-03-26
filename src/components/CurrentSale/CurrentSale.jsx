@@ -1,43 +1,96 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProductSearch from '../ProductSearch/ProductSearch'
-import ItemsList from '../ItemsList/ItemsList'
-import FloatingBar from '../FloatingBar/FloatingBar'
-import QuickAddProductModal from '../QuickAddProductModal/QuickAddProductModal'
 import FeaturedProducts from '../FeaturedProducts/FeaturedProducts'
+import { ProductGrid } from './pos/ProductGrid'
+import { CartPanel } from './pos/CartPanel'
+import PendingSavedModal from './pos/PendingSavedModal'
+import { PosMobileHeader, PosMobileTabs } from './pos/MobilePosChrome'
+import { useLayoutNav } from '../../context/LayoutNavContext'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useSaleStore } from '../../store/saleStore'
 import { useAuthStore } from '../../store/authStore'
 import { processSale } from '../../services/saleService'
+import { productService } from '../../services/productService'
+import { playScanBeep } from '../../services/soundService'
+import { FaCashRegister } from 'react-icons/fa6'
 import './CurrentSale.css'
 
-/**
- * Main Current Sale screen component
- * Single screen layout optimized for keyboard and barcode scanner
- */
+const MOBILE_MQ = '(max-width: 1023px)'
+
 const CurrentSale = () => {
   const navigate = useNavigate()
-  const t = useSettingsStore(state => state.t)
-  const language = useSettingsStore(state => state.language)
-  const showFeaturedProducts = useSettingsStore(state => state.showFeaturedProducts)
-  const { items, getTotals, clearSale } = useSaleStore()
+  const { openMobileSidebar } = useLayoutNav()
+  const t = useSettingsStore((state) => state.t)
+  const language = useSettingsStore((state) => state.language)
+  const showFeaturedProducts = useSettingsStore((state) => state.showFeaturedProducts)
+  const { items, getTotals, clearSale, addItem } = useSaleStore()
   const { user } = useAuthStore()
-  
-  const [showQuickAddModal, setShowQuickAddModal] = useState(false)
+
   const [currentDateTime, setCurrentDateTime] = useState(new Date())
   const [savingPending, setSavingPending] = useState(false)
+  const [pendingSavedSale, setPendingSavedSale] = useState(null)
+  const [catalog, setCatalog] = useState([])
+  const [catalogQuery, setCatalogQuery] = useState('')
+  const [justAddedId, setJustAddedId] = useState(null)
+  const [cartPulse, setCartPulse] = useState(false)
+  const [mobileTab, setMobileTab] = useState('products')
+  const [isNarrowViewport, setIsNarrowViewport] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(MOBILE_MQ).matches
+  )
+  const bumpTimers = useRef({})
 
-  // Update date/time every minute
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentDateTime(new Date())
-    }, 60000)
+    const mq = window.matchMedia(MOBILE_MQ)
+    const onChange = () => setIsNarrowViewport(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const all = await productService.getAll()
+        if (!cancelled) setCatalog(all || [])
+      } catch (e) {
+        console.error(e)
+        if (!cancelled) setCatalog([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentDateTime(new Date()), 60000)
     return () => clearInterval(interval)
   }, [])
 
-  const handleQuickAddProduct = (productData) => {
-    setShowQuickAddModal(false)
-  }
+  const pulseFeedback = useCallback((productId) => {
+    if (productId != null) {
+      setJustAddedId(productId)
+      const prev = bumpTimers.current[productId]
+      if (prev) clearTimeout(prev)
+      bumpTimers.current[productId] = setTimeout(() => {
+        setJustAddedId((cur) => (cur === productId ? null : cur))
+        delete bumpTimers.current[productId]
+      }, 450)
+    }
+    setCartPulse(true)
+    setTimeout(() => setCartPulse(false), 380)
+  }, [])
+
+  const handleAddProduct = useCallback(
+    (product) => {
+      addItem(product, 1)
+      playScanBeep()
+      pulseFeedback(product?.id)
+    },
+    [addItem, pulseFeedback]
+  )
 
   const handleSaveAsPending = useCallback(async () => {
     if (items.length === 0) {
@@ -47,7 +100,7 @@ const CurrentSale = () => {
     setSavingPending(true)
     try {
       const totals = getTotals()
-      await processSale({
+      const saved = await processSale({
         items,
         subtotal: totals.subtotal,
         discount: totals.discountAmount,
@@ -57,11 +110,7 @@ const CurrentSale = () => {
         status: 'pending'
       })
       clearSale()
-      alert(t('currentSale.pendingSaved'))
-      setTimeout(() => {
-        const searchInput = document.querySelector('.product-search__input')
-        if (searchInput) searchInput.focus()
-      }, 100)
+      setPendingSavedSale(saved)
     } catch (error) {
       console.error('Error saving pending sale:', error)
       alert('Error: ' + (error.message || t('currentSale.pendingSaved')))
@@ -70,7 +119,6 @@ const CurrentSale = () => {
     }
   }, [items, getTotals, clearSale, user?.id, t])
 
-  // F3: Guardar como pendiente (ventas pendientes)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'F3' && items.length > 0 && !savingPending) {
@@ -86,16 +134,8 @@ const CurrentSale = () => {
   }, [items.length, savingPending, handleSaveAsPending])
 
   const formatDateTime = (date) => {
-    // Map language codes to locale strings
-    const localeMap = {
-      'en': 'en-US',
-      'es': 'es-MX',
-      'fr': 'fr-FR',
-      'de': 'de-DE'
-    }
-    
+    const localeMap = { en: 'en-US', es: 'es-MX', fr: 'fr-FR', de: 'de-DE' }
     const locale = localeMap[language] || 'es-MX'
-    
     return date.toLocaleString(locale, {
       month: 'short',
       day: 'numeric',
@@ -105,62 +145,116 @@ const CurrentSale = () => {
     })
   }
 
+  const onQueryChange = useCallback((q) => setCatalogQuery(q), [])
+
+  const itemCount = items.length
+  const isMobilePos = isNarrowViewport
+  const showProductsPanel = !isMobilePos || mobileTab === 'products'
+  const showCartPanel = !isMobilePos || mobileTab === 'cart'
+  const cartIsMobileLayout = isMobilePos && mobileTab === 'cart'
+
   return (
-    <div className="current-sale">
-      {/* Header */}
-      <header className="current-sale__header">
-        <div className="current-sale__header-content">
-          <div>
-            <h1 className="current-sale__title">{t('currentSale.title')}</h1>
-            <div className="current-sale__datetime">{formatDateTime(currentDateTime)}</div>
-          </div>
-          {items.length > 0 && (
-            <div className="current-sale__header-actions">
-              <button
-                className="current-sale__pending-sale-btn"
-                onClick={handleSaveAsPending}
-                disabled={savingPending}
-                title={t('currentSale.savePending') + ' [F3]'}
-              >
-                {savingPending ? t('currentSale.savingPending') : t('currentSale.savePending')}
-                <span className="current-sale__hotkey">[F3]</span>
-              </button>
+    <div className="pos-sale flex h-full min-h-0 w-full flex-col gap-0 overflow-hidden lg:flex-row">
+      {isMobilePos ? (
+        <>
+          <PosMobileHeader
+            title={t('currentSale.title')}
+            subtitle={formatDateTime(currentDateTime)}
+            onOpenMenu={openMobileSidebar}
+            openMenuLabel={t('currentSale.posOpenMenu')}
+            onCaja={() => navigate('/cash-register')}
+            cajaLabel={t('currentSale.cajaNav')}
+          />
+          <PosMobileTabs
+            active={mobileTab}
+            onChange={setMobileTab}
+            productsLabel={t('currentSale.posTabProducts')}
+            cartLabel={t('currentSale.posTabCart')}
+            itemCount={itemCount}
+            tabsAriaLabel={t('currentSale.posTabsAria')}
+          />
+        </>
+      ) : null}
+
+      <section
+        id="pos-panel-products"
+        role="tabpanel"
+        aria-labelledby={isMobilePos ? 'pos-tab-products' : undefined}
+        className={`pos-sale-main min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden lg:flex ${
+          showProductsPanel ? 'flex' : 'max-lg:hidden'
+        }`}
+      >
+        <header className="pos-sale-cart-header hidden shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-6 lg:flex">
+          <div className="pos-sale-header-brand">
+            <span className="pos-sale-header-accent" aria-hidden />
+            <FaCashRegister className="pos-sale-header-icon" aria-hidden />
+            <div className="pos-sale-header-titles">
+              <h1>{t('currentSale.title')}</h1>
+              <p className="pos-sale-header-time">{formatDateTime(currentDateTime)}</p>
             </div>
-          )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => navigate('/cash-register')} className="pos-sale-ghost-btn">
+              {t('currentSale.cajaNav')}
+            </button>
+          </div>
+        </header>
+
+        <div
+          className={`pos-sale-sticky-search shrink-0 px-3 md:px-6 lg:px-4 lg:pb-3 lg:pt-4 ${
+            isMobilePos
+              ? 'sticky top-0 z-20 border-b border-[var(--pos-border-subtle)] bg-[var(--pos-bg-deep)]/95 py-2 backdrop-blur-md'
+              : 'pb-3 pt-2'
+          }`}
+        >
+          <ProductSearch
+            wrapperClassName="pos-sale-search w-full max-w-none"
+            inputClassName="!min-h-[48px] !rounded-2xl !px-5 !py-3 !text-base lg:!min-h-[56px] lg:!py-4"
+            onQueryChange={onQueryChange}
+            suppressSuggestions={isNarrowViewport}
+          />
         </div>
-      </header>
 
-      {/* Search Bar - Always Visible */}
-      <div className="current-sale__search">
-        <ProductSearch />
-      </div>
+        {showFeaturedProducts && (
+          <div className="pos-quick-chips-wrap shrink-0 px-3 pb-1 pt-0 md:px-6 lg:px-4 lg:pb-2 lg:pt-1">
+            <p className="pos-sale-section-label mb-1 lg:mb-2">{t('currentSale.posQuickSection')}</p>
+            <FeaturedProducts
+              onProductAdd={handleAddProduct}
+              className="pos-quick-chips featured-products !gap-2 !overflow-x-auto !pb-1 !pt-0 lg:!pb-2 lg:!pt-1"
+            />
+          </div>
+        )}
 
-      {/* Featured Products strip */}
-      {showFeaturedProducts && <FeaturedProducts />}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-2 md:px-6 lg:px-4 lg:pb-4">
+          <p className="pos-sale-section-label mb-2 lg:mb-3">{t('currentSale.posCatalogSection')}</p>
+          <ProductGrid
+            products={catalog}
+            filter={catalogQuery}
+            onAddProduct={handleAddProduct}
+            justAddedId={justAddedId}
+            denseCards={!isMobilePos}
+          />
+        </div>
+      </section>
 
-      {/* Items List */}
-      <div className="current-sale__items">
-        <ItemsList />
-      </div>
-
-      {/* Floating Bar - Fixed Bottom */}
-      <FloatingBar
+      <CartPanel
+        id="pos-panel-cart"
+        role="tabpanel"
+        aria-labelledby={isMobilePos ? 'pos-tab-cart' : undefined}
+        className={showCartPanel ? 'max-lg:flex' : 'max-lg:hidden'}
+        isMobileLayout={cartIsMobileLayout}
         onCheckout={() => navigate('/checkout')}
         onSavePending={handleSaveAsPending}
         savingPending={savingPending}
+        cartPulse={cartPulse}
+        onProductAddedFeedback={pulseFeedback}
       />
 
-      {/* Quick add product modal */}
-      {showQuickAddModal && (
-        <QuickAddProductModal
-          initialBarcode={pendingBarcode}
-          onSave={handleQuickAddProduct}
-          onCancel={() => {
-            setShowQuickAddModal(false)
-            setPendingBarcode('')
-          }}
-        />
-      )}
+      <PendingSavedModal
+        sale={pendingSavedSale}
+        onClose={() => setPendingSavedSale(null)}
+        t={t}
+      />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import App from './App'
 import { useAuthStore } from './store/authStore'
 import { useSettingsStore } from './store/settingsStore'
 import './index.css'
+import './styles/mm-surface.css'
 
 // Check session on app load
 useAuthStore.getState().checkSession()

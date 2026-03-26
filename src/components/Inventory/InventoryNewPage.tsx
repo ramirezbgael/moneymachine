@@ -116,7 +116,7 @@ export function InventoryNewPage() {
   )
 
   return (
-    <div className="h-full bg-[var(--bg)] text-[var(--text)] px-3 py-2 overflow-hidden">
+    <div className="h-full bg-transparent text-[var(--text)] px-3 py-2 overflow-hidden">
       <div className="max-w-7xl mx-auto h-full flex flex-col gap-2">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">

@@ -184,8 +184,8 @@ const CustomerDetailPage = () => {
 
   if (!customer) {
     return (
-      <div className="customer-detail-page">
-        <div className="customer-detail-shell">
+      <div className="mm-page mm-page--flush">
+        <div className="mm-shell mm-shell--lg mm-stack">
           <button type="button" className="customer-detail-back" onClick={() => navigate('/clientes')}>← Volver a clientes</button>
           <div className="customer-detail-empty">Cliente no encontrado.</div>
         </div>
@@ -194,8 +194,8 @@ const CustomerDetailPage = () => {
   }
 
   return (
-    <div className="customer-detail-page">
-      <div className="customer-detail-shell">
+    <div className="mm-page mm-page--flush">
+      <div className="mm-shell mm-shell--lg mm-stack">
       <button type="button" className="customer-detail-back" onClick={() => navigate('/clientes')}>← Volver a clientes</button>
 
       <section className="customer-detail-panel">

@@ -5,6 +5,8 @@ import { useSettingsStore } from '../../store/settingsStore'
 import { useTenantStore } from '../../store/tenantStore'
 import { useAuthStore } from '../../store/authStore'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { Sidebar } from '../pos/Sidebar'
+import { LayoutNavProvider } from '../../context/LayoutNavContext'
 import './Layout.css'
 
 /**
@@ -179,6 +181,7 @@ const Layout = () => {
   }
 
   const sidebarOffset = mobileSidebarOpen ? 0 : (sidebarCollapsed ? 64 : 240)
+  const isPosHome = location.pathname === '/'
 
   return (
     <div
@@ -191,59 +194,34 @@ const Layout = () => {
           mobileSidebarOpen ? 'layout__sidebar--mobile-open' : ''
         }`}
       >
-        <div className="sidebar__header">
-          <div className="sidebar__logo">Moneymachine</div>
-          <button
-            className="sidebar__toggle"
-            onClick={handleSidebarToggle}
-            aria-label={t('layout.toggleSidebar')}
-          >
-            {sidebarCollapsed ? '→' : '←'}
-          </button>
-        </div>
-
-        <nav className="sidebar__nav">
-          <ul className="sidebar__menu">
-            {menuItems.map((item) => {
-              const IconComponent = item.icon
-              const isActive = activeId === item.id
-              return (
-                <li key={item.id}>
-                  <button
-                    className={`sidebar__item ${isActive ? 'sidebar__item--active' : ''}`}
-                    onClick={() => handleNavigation(item.path)}
-                    title={sidebarCollapsed ? item.label : undefined}
-                  >
-                    <span className="sidebar__icon">
-                      <IconComponent />
-                    </span>
-                    {!sidebarCollapsed && (
-                      <span className="sidebar__label">{item.label}</span>
-                    )}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
-
-        <div className="sidebar__footer">
-          <div className="sidebar__user">
-            {!sidebarCollapsed && (
-              <div className="sidebar__user-info">
-                <div className="sidebar__user-name">{currentTenant?.name || 'POS'}</div>
-                <div className="sidebar__user-role">Cashier</div>
-              </div>
-            )}
-          </div>
-        </div>
+        <Sidebar
+          collapsed={sidebarCollapsed && !mobileSidebarOpen}
+          mobileOpen={mobileSidebarOpen}
+          onToggle={handleSidebarToggle}
+          menuItems={menuItems}
+          activeId={activeId}
+          onNavigate={handleNavigation}
+          t={t}
+          currentTenantName={currentTenant?.name}
+        />
       </aside>
 
       {mobileSidebarOpen && <button type="button" className="layout__backdrop md:hidden" onClick={() => setMobileSidebarOpen(false)} aria-label="Cerrar menú" />}
 
       {/* Main Content - Zone 2 */}
-      <main className={`layout__main ${allowMobileScroll ? 'layout__main--mobile-scroll' : ''}`}>
-        <Outlet />
+      <main
+        className={`layout__main ${allowMobileScroll ? 'layout__main--mobile-scroll' : ''} ${
+          isPosHome ? 'layout__main--pos' : ''
+        }`}
+      >
+        <LayoutNavProvider
+          openMobileSidebar={() => setMobileSidebarOpen(true)}
+          closeMobileSidebar={() => setMobileSidebarOpen(false)}
+        >
+          <div className="layout__outlet">
+            <Outlet />
+          </div>
+        </LayoutNavProvider>
       </main>
 
       {/* Right Panel - Zone 3 (Prepared for future use) */}

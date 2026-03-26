@@ -1,8 +1,10 @@
 .finance-page {
-  padding: 18px;
+  min-height: 100%;
+  padding: 18px 18px calc(18px + env(safe-area-inset-bottom, 0px));
   color: var(--text);
   display: grid;
   gap: 14px;
+  background: transparent;
 }
 
 .finance-quick-search {
@@ -35,16 +37,20 @@
 }
 
 .finance-hub-card {
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--panel) 72%, transparent);
-  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--panel) 52%, transparent);
+  padding: 20px;
   text-align: left;
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-height: 196px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, white 7%, transparent) inset,
+    0 10px 36px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(24px) saturate(165%);
+  -webkit-backdrop-filter: blur(24px) saturate(165%);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
@@ -94,9 +100,28 @@
   gap: 8px;
 }
 
+.finance-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 28px;
+  border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  background: color-mix(in srgb, var(--panel) 50%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, white 8%, transparent) inset,
+    0 12px 40px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(24px) saturate(165%);
+  -webkit-backdrop-filter: blur(24px) saturate(165%);
+}
+
 .finance-header h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--accent);
 }
 
 .finance-header p {
@@ -142,10 +167,15 @@
 }
 
 .finance-card {
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
-  border-radius: 14px;
-  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  background: color-mix(in srgb, var(--panel) 52%, transparent);
+  border-radius: 28px;
+  padding: 16px;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, white 6%, transparent) inset,
+    var(--shadow-sm);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
 }
 
 .finance-card h3 {
@@ -255,22 +285,26 @@
 }
 
 .finance-receivables-header button {
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  background: linear-gradient(135deg, #34d399, #10b981);
-  color: #03150d;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--accent);
+  color: #02110a;
   border-radius: 12px;
   font-size: 12px;
   font-weight: 700;
   padding: 9px 12px;
-  box-shadow: 0 10px 22px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 35%, rgba(0, 0, 0, 0.2));
 }
 
 .finance-receivable-card {
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  border-radius: 18px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 90%, transparent), color-mix(in srgb, var(--panel) 82%, transparent));
-  padding: 16px;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.16);
+  border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--panel) 52%, transparent);
+  padding: 18px;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, white 7%, transparent) inset,
+    0 8px 32px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(24px) saturate(165%);
+  -webkit-backdrop-filter: blur(24px) saturate(165%);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
@@ -402,9 +436,9 @@
 }
 
 .finance-receivable-card__actions button:first-child {
-  background: linear-gradient(135deg, #34d399, #10b981);
-  color: #0a0a0a;
-  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.2), 0 8px 18px rgba(16, 185, 129, 0.28);
+  background: var(--accent);
+  color: #02110a;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent), 0 8px 18px color-mix(in srgb, var(--accent) 30%, rgba(0, 0, 0, 0.15));
 }
 
 .finance-receivable-card__actions button:first-child:disabled {
@@ -413,9 +447,11 @@
 }
 
 .finance-receivable-card__detail-btn {
-  border-color: color-mix(in srgb, var(--border) 70%, transparent) !important;
-  background: color-mix(in srgb, var(--panel) 76%, transparent) !important;
+  border-color: color-mix(in srgb, var(--border) 50%, transparent) !important;
+  background: color-mix(in srgb, var(--panel-2) 45%, transparent) !important;
   color: var(--text) !important;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
 }
 
 .finance-receivables-header button:focus-visible,
@@ -776,15 +812,15 @@
 }
 
 .fsales-modal__confirm--cancel {
-  background: linear-gradient(135deg, #f87171, #ef4444);
+  background: #ef4444;
   color: #fff;
-  box-shadow: 0 8px 18px rgba(239, 68, 68, 0.32);
+  box-shadow: 0 8px 18px rgba(239, 68, 68, 0.28);
 }
 
 .fsales-modal__confirm--refund {
-  background: linear-gradient(135deg, #fde68a, #fbbf24);
+  background: #fbbf24;
   color: #1a1206;
-  box-shadow: 0 8px 18px rgba(251, 191, 36, 0.3);
+  box-shadow: 0 8px 18px rgba(251, 191, 36, 0.26);
 }
 
 .fsales-error {

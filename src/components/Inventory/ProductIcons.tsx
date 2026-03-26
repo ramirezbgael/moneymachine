@@ -98,7 +98,7 @@ interface IconPickerProps {
 
 export function IconPicker({ value, onChange }: IconPickerProps) {
   return (
-    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-64 overflow-y-auto p-2 rounded-2xl bg-[var(--panel-2)]/50">
+    <div className="grid max-h-52 grid-cols-6 gap-2 overflow-y-auto rounded-xl bg-zinc-950/90 p-3 ring-1 ring-zinc-800/90 sm:grid-cols-8 md:grid-cols-10 [scrollbar-gutter:stable]">
       {PRODUCT_ICONS.map((item) => {
         const Icon = item.icon
         const isSelected = value === item.id
@@ -107,14 +107,14 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             key={item.id}
             type="button"
             onClick={() => onChange(item.id)}
-            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
               isSelected
-                ? 'bg-[var(--accent)] text-black shadow-md shadow-[var(--accent)]/30'
-                : 'bg-[var(--panel)]/60 text-[var(--muted)] hover:bg-[var(--panel)] hover:text-[var(--accent)]'
+                ? 'bg-emerald-500 text-zinc-950 shadow-sm ring-1 ring-emerald-400/50'
+                : 'bg-zinc-800/95 text-zinc-400 ring-1 ring-zinc-700/90 hover:bg-zinc-700 hover:text-zinc-100'
             }`}
             title={item.label}
           >
-            <Icon className="w-5 h-5" />
+            <Icon className="pointer-events-none h-[1.125rem] w-[1.125rem]" aria-hidden />
           </button>
         )
       })}

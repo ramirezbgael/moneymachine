@@ -1,0 +1,6 @@
+/* Safari: fondo opaco + color-scheme evita “parches” claros en scroll y tablas */
+.producto-detalles-page {
+  background-color: #09090b;
+  color-scheme: dark;
+  min-height: 100%;
+}

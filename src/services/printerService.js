@@ -28,6 +28,25 @@ function getTicketSettings() {
   }
 }
 
+/**
+ * Asegura items[] y metadatos para getTicketText / printTicket (ventas mock vs Supabase).
+ * @param {object} sale
+ * @param {{ pendingPaymentLabel?: string }} [options]
+ */
+export function normalizeSaleForPrinting(sale, options = {}) {
+  if (!sale || typeof sale !== 'object') return sale
+  const { pendingPaymentLabel } = options
+  return {
+    ...sale,
+    items: sale.items || sale.sale_items || [],
+    payment_method:
+      sale.payment_method ||
+      sale.paymentMethod ||
+      (sale.status === 'pending' && pendingPaymentLabel ? pendingPaymentLabel : null),
+    created_at: sale.created_at || new Date().toISOString()
+  }
+}
+
 const TICKET_WIDTH = 32
 function centerLine(str, width = TICKET_WIDTH) {
   const s = String(str).slice(0, width)

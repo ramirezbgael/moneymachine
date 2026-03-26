@@ -99,6 +99,43 @@ const mockProducts = [
   }
 ]
 
+/**
+ * Solo columnas que existen en `public.products` en Supabase.
+ * El modal envía `icon` (y otros) sólo para UI; si se pasan a .update(),
+ * PostgREST rechaza el request y no se guarda nada (p. ej. image_url).
+ */
+const SUPABASE_PRODUCT_FIELDS = [
+  'code',
+  'name',
+  'barcode',
+  'description',
+  'price',
+  'stock',
+  'cost',
+  'category',
+  'supplier',
+  'minimum_stock',
+  'image_url',
+  'last_sale_date',
+  'unit',
+  'location',
+  'restock_frequency_days'
+]
+
+function pickProductPayloadForSupabase(productData) {
+  if (!productData || typeof productData !== 'object') return {}
+  const out = {}
+  for (const k of SUPABASE_PRODUCT_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(productData, k)) {
+      const v = productData[k]
+      if (v !== undefined) {
+        out[k] = v
+      }
+    }
+  }
+  return out
+}
+
 export const productService = {
   /**
    * Get all products
@@ -271,9 +308,10 @@ export const productService = {
       try {
         const tenantId = useTenantStore.getState().currentTenantId
         if (!tenantId) throw new Error('No tenant selected. Please log in again.')
+        const row = pickProductPayloadForSupabase(productData)
         const { data, error } = await supabase
           .from('products')
-          .insert([{ ...productData, business_id: tenantId }])
+          .insert([{ ...row, business_id: tenantId }])
           .select()
           .single()
 
@@ -313,9 +351,10 @@ export const productService = {
   update: async (id, productData) => {
     if (isSupabaseConfigured() && supabase) {
       try {
+        const row = pickProductPayloadForSupabase(productData)
         const { data, error } = await supabase
           .from('products')
-          .update(productData)
+          .update(row)
           .eq('id', id)
           .select()
           .single()

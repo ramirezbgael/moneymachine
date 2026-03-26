@@ -9,7 +9,7 @@ export function PedidosInventarioPage() {
     useInventoryStore()
 
   return (
-    <div className="min-h-full bg-[#050505] text-white p-6">
+    <div className="mm-page mm-page--flush p-6 text-[var(--text)]">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-white">Pedido a proveedor</h1>

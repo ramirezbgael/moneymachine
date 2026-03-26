@@ -87,9 +87,12 @@
 }
 
 .customers-panel {
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  background: color-mix(in srgb, var(--panel) 52%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, white 6%, transparent) inset, 0 8px 28px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
   padding: 14px;
   min-height: 0;
   display: flex;
@@ -193,13 +196,15 @@
 
 .customers-card {
   width: 100%;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  background: color-mix(in srgb, var(--panel) 50%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, white 6%, transparent) inset, var(--shadow-sm);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
   padding: 14px 18px;
   text-align: left;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-  box-shadow: var(--shadow-sm);
 }
 
 .customers-card:hover {
@@ -259,9 +264,11 @@
 }
 
 .customers-badge--hybrid {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--panel-2) 94%, transparent));
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent);
   border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
 }
 
 .customers-spacer {
@@ -272,14 +279,14 @@
   position: fixed;
   right: 20px;
   bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  border: 1px solid color-mix(in srgb, var(--accent) 36%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   border-radius: 999px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 92%, white 8%), color-mix(in srgb, var(--accent) 72%, black 12%));
-  color: #03150d;
+  background: var(--accent);
+  color: #02110a;
   padding: 14px 20px;
   font-size: 15px;
   font-weight: 700;
-  box-shadow: 0 16px 34px color-mix(in srgb, var(--accent) 28%, rgba(0, 0, 0, 0.2));
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--accent) 32%, rgba(0, 0, 0, 0.25));
 }
 
 .customers-fab:hover {
@@ -298,9 +305,9 @@
 
 .customers-btn-primary {
   border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--accent) 36%, transparent);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 90%, white 10%), color-mix(in srgb, var(--accent) 74%, black 10%));
-  color: #03150d;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent);
+  color: #02110a;
   padding: 12px 16px;
   font-size: 14px;
   font-weight: 700;

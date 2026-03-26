@@ -19,7 +19,13 @@ function getStockLevel(product) {
  * Product search component
  * Always visible, listens to keyboard and barcode scanner
  */
-const ProductSearch = () => {
+const ProductSearch = ({
+  wrapperClassName = '',
+  inputClassName = '',
+  onQueryChange,
+  /** En móvil POS el catálogo ya filtra por texto; el dropdown tapa la rejilla */
+  suppressSuggestions = false
+}) => {
   const t = useSettingsStore(state => state.t)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -30,8 +36,15 @@ const ProductSearch = () => {
   const searchIdRef = useRef(0)
   const { addItem, clearSale, setDiscount } = useSaleStore()
 
-  // Search products on query change (ignore stale responses so scan+Enter doesn't show old suggestions)
+  // Búsqueda para dropdown (omitir en móvil cuando el catálogo filtra en vivo)
   useEffect(() => {
+    if (suppressSuggestions) {
+      searchIdRef.current += 1
+      setResults([])
+      setIsOpen(false)
+      setSelectedIndex(-1)
+      return
+    }
     if (!query.trim()) {
       searchIdRef.current += 1
       setResults([])
@@ -50,7 +63,11 @@ const ProductSearch = () => {
     }
     run()
     return () => { cancelled = true }
-  }, [query])
+  }, [query, suppressSuggestions])
+
+  useEffect(() => {
+    onQueryChange?.(query)
+  }, [query, onQueryChange])
 
   // Handle keyboard navigation
   const handleKeyDown = (e) => {
@@ -218,11 +235,11 @@ const ProductSearch = () => {
   }, [])
 
   return (
-    <div className="product-search">
+    <div className={`product-search ${wrapperClassName}`.trim()}>
       <input
         ref={inputRef}
         type="text"
-        className="product-search__input"
+        className={`product-search__input ${inputClassName}`.trim()}
         value={query}
         onChange={handleChange}
         onKeyDown={(e) => {
@@ -235,7 +252,7 @@ const ProductSearch = () => {
           }
         }}
         onFocus={() => {
-          if (results.length > 0) {
+          if (!suppressSuggestions && results.length > 0) {
             setIsOpen(true)
           }
         }}
@@ -256,11 +273,11 @@ const ProductSearch = () => {
         data-lpignore
         data-form-type="other"
         data-1p-ignore
-        aria-autocomplete="list"
+        aria-autocomplete={suppressSuggestions ? 'none' : 'list'}
         role="searchbox"
       />
 
-      {isOpen && results.length > 0 && (
+      {!suppressSuggestions && isOpen && results.length > 0 && (
         <div className="product-search__results" ref={resultsRef}>
           {results.map((product, index) => {
             const stockLevel = getStockLevel(product)

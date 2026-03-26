@@ -3,18 +3,22 @@
 .layout {
   display: flex;
   position: relative;
-  width: 100vw;
+  /* 100vw provoca overflow horizontal y franja clara en Safari (vs inspector / scrollbar) */
+  width: 100%;
+  max-width: 100%;
   height: 100vh;
   height: 100dvh;
   --mobile-bottom-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
-  background: var(--bg);
+  background: var(--bg-gradient);
   overflow: hidden;
 }
 
 .layout__sidebar {
   width: 240px;
   background: var(--panel);
-  border-right: 1px solid var(--border);
+  /* Sin border-right: en Safari suele verse como línea blanca; separación = sombra oscura */
+  border-right: none;
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   display: flex;
@@ -22,11 +26,14 @@
   flex-shrink: 0;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 10;
+  isolation: isolate;
 }
 
 :root[data-theme='light'] .layout__sidebar {
   background: rgba(255, 255, 255, 0.9);
-  box-shadow: 2px 0 10px rgba(15, 23, 42, 0.08);
+  box-shadow:
+    inset -1px 0 0 rgba(15, 23, 42, 0.06),
+    2px 0 10px rgba(15, 23, 42, 0.08);
 }
 
 :root[data-theme='light'] .sidebar__header {
@@ -326,19 +333,41 @@
   overflow-y: auto;
   min-height: 0;
   min-width: 0;
+  /* Evita “manchas” blancas al hacer scroll o si el hijo no llena el alto */
+  background-color: var(--bg-primary);
+}
+
+.layout__outlet {
+  /* basis 0: el POS puede usar h-full sin que el outlet “crezca al contenido” y colapse la rejilla */
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.layout__main--pos {
+  overflow: hidden;
+}
+
+/* Ficha producto: mismo fondo opaco en el scroll (evita gris/blanco del tema claro detrás) */
+.layout__main:has(.producto-detalles-page) {
+  background-color: #09090b;
 }
 
 .layout__right-panel {
   width: 0;
   flex-shrink: 0;
   background: var(--panel-2);
-  border-left: 1px solid var(--border);
+  border: none;
   transition: width 0.3s ease;
   overflow: hidden;
 }
 
 .layout__right-panel--active {
   width: 320px;
+  border-left: 1px solid var(--border);
 }
 
 /* Mobile layout: collapse sidebar and show bottom nav */

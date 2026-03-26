@@ -5,8 +5,6 @@ import { FaArrowLeft, FaDownload, FaEdit, FaPhoneAlt, FaPrint, FaSave, FaSignInA
 import { useSubscriptionStore } from '../../store/subscriptionStore'
 import { isSupabaseConfigured } from '../../lib/supabase'
 import { fetchAccessRowsForMember, memberTimelineFromRows } from '../../services/subscriptionAccessService'
-import './SubscriptionClientPage.css'
-
 const dateFormatter = new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
 const dateTimeFormatter = new Intl.DateTimeFormat('es-MX', {
   day: '2-digit',
@@ -44,10 +42,10 @@ const normalizeWhatsAppPhone = (value) => {
 }
 
 const getStatusMeta = (customer) => {
-  if (customer.status === 'cancelled') return { label: 'Cancelada', tone: 'subscription-status--neutral' }
-  if (customer.daysLeft < 0) return { label: 'Vencida', tone: 'subscription-status--danger' }
-  if (customer.daysLeft <= 7) return { label: 'Por vencer', tone: 'subscription-status--warn' }
-  return { label: 'Activa', tone: 'subscription-status--ok' }
+  if (customer.status === 'cancelled') return { label: 'Cancelada', tone: 'mm-status mm-status--neutral' }
+  if (customer.daysLeft < 0) return { label: 'Vencida', tone: 'mm-status mm-status--danger' }
+  if (customer.daysLeft <= 7) return { label: 'Por vencer', tone: 'mm-status mm-status--warn' }
+  return { label: 'Activa', tone: 'mm-status mm-status--ok' }
 }
 
 const getAppBaseUrl = () => {
@@ -229,47 +227,51 @@ const SubscriptionClientPage = () => {
   }
 
   if (loading && !customer) {
-    return <div className="subscription-client-page">Cargando cliente...</div>
+    return (
+      <div className="mm-page mm-page--flush flex items-center justify-center text-[var(--muted)]">
+        Cargando cliente...
+      </div>
+    )
   }
 
   if (!customer) {
     return (
-      <div className="subscription-client-page">
-        <div className="subscription-client-shell">
-        <div className="subscription-panel">
-          <button type="button" onClick={() => navigate('/subscriptions')} className="subscription-back" style={{ marginBottom: '24px' }}>
-            <FaArrowLeft />
-            Volver a suscripciones
-          </button>
-          <h1 className="subscription-customer-name" style={{ marginTop: 0, fontSize: '2rem' }}>Cliente no encontrado</h1>
-          <p className="subscription-note" style={{ marginTop: '8px' }}>No existe un suscriptor con ese identificador o aún no se ha cargado en este tenant.</p>
-        </div>
+      <div className="mm-page mm-page--flush">
+        <div className="mm-shell mm-shell--lg mm-stack">
+          <article className="mm-card mm-card--pad-lg">
+            <button type="button" onClick={() => navigate('/subscriptions')} className="mm-back mb-6">
+              <FaArrowLeft />
+              Volver a suscripciones
+            </button>
+            <h1 className="text-2xl font-bold text-[var(--text)]">Cliente no encontrado</h1>
+            <p className="mm-note mt-2">No existe un suscriptor con ese identificador o aún no se ha cargado en este tenant.</p>
+          </article>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="subscription-client-page">
-      <div className="subscription-client-shell">
-        <div className="subscription-topbar">
-          <button type="button" onClick={() => navigate(-1)} className="subscription-back">
+    <div className="mm-page mm-page--flush">
+      <div className="mm-shell mm-shell--lg mm-stack">
+        <div className="mm-topbar">
+          <button type="button" onClick={() => navigate(-1)} className="mm-back">
             <FaArrowLeft />
             Regresar
           </button>
-          <h1 className="subscription-title-chip">Cliente</h1>
-          <span className={`subscription-status ${status.tone}`}>{status.label}</span>
+          <h1 className="mm-topbar-title">Cliente</h1>
+          <span className={status.tone}>{status.label}</span>
         </div>
 
-        <div className="subscription-grid">
-          <section className="subscription-client-shell" style={{ maxWidth: 'none', margin: 0, gap: '20px' }}>
-            <article className="subscription-panel subscription-panel--hero">
-              <div className="subscription-panel-head">
+        <div className="mm-grid-detail">
+          <section className="mm-stack">
+            <article className="mm-card mm-card--hero mm-card--pad-lg overflow-hidden">
+              <div className="mm-panel-head">
                 <div>
-                  <p className="subscription-overline">Suscriptor</p>
-                  <h2 className="subscription-customer-name">{customer.name}</h2>
-                  <p className="subscription-customer-phone">
-                    <FaPhoneAlt className="subscription-phone-icon" />
+                  <p className="mm-overline tracking-[0.24em]">Suscriptor</p>
+                  <h2 className="mm-hero-title">{customer.name}</h2>
+                  <p className="mm-customer-phone">
+                    <FaPhoneAlt className="mm-phone-icon" />
                     {customer.phone || 'Sin teléfono registrado'}
                   </p>
                 </div>
@@ -279,93 +281,93 @@ const SubscriptionClientPage = () => {
                     setIsEditing((current) => !current)
                     setFeedback('')
                   }}
-                  className="subscription-edit-btn"
+                  className="mm-btn mm-btn--ghost shrink-0"
                 >
                   {isEditing ? <FaTimes /> : <FaEdit />}
                   {isEditing ? 'Cerrar edición' : 'Editar cliente'}
                 </button>
               </div>
 
-              <div className="subscription-metrics-grid">
-                <div className="subscription-metric">
-                  <p className="subscription-label">Mensualidad</p>
-                  <p className="subscription-metric-value subscription-metric-value--accent">{formatMoney(customer.monthlyFee)}</p>
+              <div className="mm-metrics-grid">
+                <div className="mm-tile">
+                  <p className="mm-overline">Mensualidad</p>
+                  <p className="mm-metric-value mm-metric-value--accent">{formatMoney(customer.monthlyFee)}</p>
                 </div>
-                <div className="subscription-metric">
-                  <p className="subscription-label">Próxima renovación</p>
-                  <p className="subscription-metric-value" style={{ fontSize: '1.2rem' }}>{formatRenewalDate(customer.endDate)}</p>
-                  <p className="subscription-mini-copy">{customer.daysLeft >= 0 ? `${customer.daysLeft} día(s) restantes` : `Vencida hace ${Math.abs(customer.daysLeft)} día(s)`}</p>
+                <div className="mm-tile">
+                  <p className="mm-overline">Próxima renovación</p>
+                  <p className="mm-metric-value text-xl">{formatRenewalDate(customer.endDate)}</p>
+                  <p className="mm-mini-copy">{customer.daysLeft >= 0 ? `${customer.daysLeft} día(s) restantes` : `Vencida hace ${Math.abs(customer.daysLeft)} día(s)`}</p>
                 </div>
               </div>
 
-              <div className="subscription-stats-grid">
-                <div className="subscription-stat">
-                  <p className="subscription-label">Inicio</p>
-                  <p className="subscription-stat-value">{formatRenewalDate(customer.startDate)}</p>
+              <div className="mm-stats-grid">
+                <div className="mm-tile">
+                  <p className="mm-overline">Inicio</p>
+                  <p className="mm-stat-value">{formatRenewalDate(customer.startDate)}</p>
                 </div>
-                <div className="subscription-stat">
-                  <p className="subscription-label">Meses pagados</p>
-                  <p className="subscription-stat-value">{Number(customer.monthsPurchased || 0)}</p>
+                <div className="mm-tile">
+                  <p className="mm-overline">Meses pagados</p>
+                  <p className="mm-stat-value">{Number(customer.monthsPurchased || 0)}</p>
                 </div>
-                <div className="subscription-stat">
-                  <p className="subscription-label">Total pagado</p>
-                  <p className="subscription-stat-value">{formatMoney(customer.totalPaid)}</p>
+                <div className="mm-tile">
+                  <p className="mm-overline">Total pagado</p>
+                  <p className="mm-stat-value">{formatMoney(customer.totalPaid)}</p>
                 </div>
               </div>
             </article>
 
-            <article className="subscription-panel">
-              <div className="subscription-panel-head">
+            <article className="mm-card mm-card--pad-lg">
+              <div className="mm-panel-head">
                 <div>
-                  <p className="subscription-label">Acciones del QR</p>
-                  <h3 className="subscription-stat-value" style={{ marginTop: '4px', fontSize: '1.15rem' }}>Código QR de acceso</h3>
+                  <p className="mm-overline">Acciones del QR</p>
+                  <h3 className="mm-stat-value mt-1 text-lg">Código QR de acceso</h3>
                 </div>
-                <span className="subscription-pill">Único por suscriptor</span>
+                <span className="mm-pill shrink-0">Único por suscriptor</span>
               </div>
 
-              <div className="subscription-actions-grid">
-                <button type="button" onClick={handleSendWhatsapp} disabled={!whatsappPhone} className="subscription-accent-btn inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
+              <div className="mm-actions-grid mt-4">
+                <button type="button" onClick={handleSendWhatsapp} disabled={!whatsappPhone} className="mm-btn mm-btn--accent-gradient inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
                   <FaWhatsapp />
                   Enviar por WhatsApp
                 </button>
-                <button type="button" onClick={handleDownloadQr} className="subscription-ghost-btn inline-flex items-center justify-center gap-2">
+                <button type="button" onClick={handleDownloadQr} className="mm-btn mm-btn--ghost inline-flex items-center justify-center gap-2">
                   <FaDownload />
                   Descargar QR
                 </button>
-                <button type="button" onClick={handlePrintQr} className="subscription-ghost-btn inline-flex items-center justify-center gap-2">
+                <button type="button" onClick={handlePrintQr} className="mm-btn mm-btn--ghost inline-flex items-center justify-center gap-2">
                   <FaPrint />
                   Imprimir QR
                 </button>
-                <button type="button" onClick={() => setIsEditing(true)} className="subscription-ghost-btn inline-flex items-center justify-center gap-2">
+                <button type="button" onClick={() => setIsEditing(true)} className="mm-btn mm-btn--ghost inline-flex items-center justify-center gap-2">
                   <FaEdit />
                   Editar cliente
                 </button>
               </div>
 
-              {!whatsappPhone && <p className="subscription-note" style={{ marginTop: '12px' }}>Agrega un teléfono válido para habilitar WhatsApp.</p>}
+              {!whatsappPhone && <p className="mm-note mt-3">Agrega un teléfono válido para habilitar WhatsApp.</p>}
             </article>
 
             {isEditing && (
-              <article className="subscription-panel">
-                <div className="subscription-panel-head">
+              <article className="mm-card mm-card--pad-lg">
+                <div className="mm-panel-head">
                   <div>
-                    <p className="subscription-label">Edición</p>
-                    <h3 className="subscription-stat-value" style={{ marginTop: '4px', fontSize: '1.15rem' }}>Modificar datos del cliente</h3>
+                    <p className="mm-overline">Edición</p>
+                    <h3 className="mm-stat-value mt-1 text-lg">Modificar datos del cliente</h3>
                   </div>
                 </div>
 
-                <div className="subscription-form-grid" style={{ marginTop: '16px' }}>
+                <div className="mm-form-grid mt-4">
                   <label className="block">
-                    <span className="subscription-note" style={{ display: 'block', marginBottom: '8px' }}>Nombre</span>
-                    <input type="text" value={editForm.name} onChange={(event) => setEditForm((current) => ({ ...current, name: sanitizeName(event.target.value) }))} className="subscription-input" minLength={3} maxLength={80} />
+                    <span className="mm-note block mb-2">Nombre</span>
+                    <input type="text" value={editForm.name} onChange={(event) => setEditForm((current) => ({ ...current, name: sanitizeName(event.target.value) }))} className="mm-input" minLength={3} maxLength={80} />
                   </label>
                   <label className="block">
-                    <span className="subscription-note" style={{ display: 'block', marginBottom: '8px' }}>Teléfono</span>
-                    <input type="text" value={editForm.phone} onChange={(event) => setEditForm((current) => ({ ...current, phone: sanitizePhone(event.target.value) }))} className="subscription-input" inputMode="numeric" placeholder="10 dígitos" maxLength={10} />
+                    <span className="mm-note block mb-2">Teléfono</span>
+                    <input type="text" value={editForm.phone} onChange={(event) => setEditForm((current) => ({ ...current, phone: sanitizePhone(event.target.value) }))} className="mm-input" inputMode="numeric" placeholder="10 dígitos" maxLength={10} />
                   </label>
-                  <label className="block subscription-form-span">
-                    <span className="subscription-note" style={{ display: 'block', marginBottom: '8px' }}>Mensualidad</span>
-                    <select value={editForm.monthlyFee} onChange={(event) => setEditForm((current) => ({ ...current, monthlyFee: event.target.value }))} className="subscription-select">
+                  <label className="block mm-form-span">
+                    <span className="mm-note block mb-2">Mensualidad</span>
+                    <select value={editForm.monthlyFee} onChange={(event) => setEditForm((current) => ({ ...current, monthlyFee: event.target.value }))} className="mm-select">
                       {availablePlans.map((plan) => (
                         <option key={plan} value={String(plan)}>{formatMoney(plan)} / mes</option>
                       ))}
@@ -373,14 +375,14 @@ const SubscriptionClientPage = () => {
                   </label>
                 </div>
 
-                {feedback && <p className="subscription-feedback">{feedback}</p>}
+                {feedback && <p className="mm-feedback">{feedback}</p>}
 
-                <div className="subscription-actions-grid" style={{ marginTop: '20px' }}>
-                  <button type="button" onClick={handleSave} disabled={isSaving} className="subscription-accent-btn inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
+                <div className="mm-actions-grid mt-5">
+                  <button type="button" onClick={handleSave} disabled={isSaving} className="mm-btn mm-btn--accent-gradient inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
                     <FaSave />
                     {isSaving ? 'Guardando...' : 'Guardar cambios'}
                   </button>
-                  <button type="button" onClick={() => setIsEditing(false)} disabled={isSaving} className="subscription-ghost-btn inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" onClick={() => setIsEditing(false)} disabled={isSaving} className="mm-btn mm-btn--ghost inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
                     <FaTimes />
                     Cancelar
                   </button>
@@ -389,60 +391,45 @@ const SubscriptionClientPage = () => {
             )}
           </section>
 
-          <aside className="subscription-client-shell" style={{ maxWidth: 'none', margin: 0, gap: '20px' }}>
-            <article className="subscription-qr-panel">
-              <div className="subscription-qr-center">
-                <p className="subscription-label">Código QR de acceso</p>
-                <h3 className="subscription-stat-value" style={{ marginTop: '8px', fontSize: '1.15rem' }}>Escanéalo en Check-In</h3>
+          <aside className="mm-stack">
+            <article className="mm-card mm-card--pad-lg">
+              <div className="mm-qr-center">
+                <p className="mm-overline">Código QR de acceso</p>
+                <h3 className="mm-stat-value mt-2 text-lg">Escanéalo en Check-In</h3>
               </div>
 
-              <div className="subscription-qr-surface">
-                <div ref={qrWrapperRef} className="subscription-qr-box">
+              <div className="mm-qr-surface">
+                <div ref={qrWrapperRef} className="mm-qr-box">
                   <QRCodeCanvas value={qrValue} size={220} includeMargin bgColor="#ffffff" fgColor="#000000" level="H" />
                 </div>
-                <p className="subscription-note" style={{ marginTop: '16px', textAlign: 'center' }}>Identificador único listo para check-in automático.</p>
-                <a
-                  href={qrValue}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="subscription-link"
-                >{qrValue}</a>
+                <p className="mm-note mt-4 text-center">Identificador único listo para check-in automático.</p>
+                <a href={qrValue} target="_blank" rel="noopener noreferrer" className="mm-link-break">{qrValue}</a>
               </div>
             </article>
 
-            <article className="subscription-side-panel">
-              <h3 className="subscription-stat-value" style={{ marginTop: 0, fontSize: '1rem' }}>Historial de accesos</h3>
+            <article className="mm-card mm-card--pad-lg">
+              <h3 className="mm-stat-value text-base">Historial de accesos</h3>
               {lastAccessKind === 'entry' && accessTimeline.length > 0 && (
-                <p className="subscription-note" style={{ marginTop: '8px' }}>
-                  <span className="subscription-pill">Posiblemente en sitio</span>
+                <p className="mm-note mt-2">
+                  <span className="mm-pill">Posiblemente en sitio</span>
                   {' '}Último registro: entrada (sin salida posterior en los datos cargados).
                 </p>
               )}
 
-              {accessLoading && (
-                <p className="subscription-empty">
-                  Cargando accesos...
-                </p>
-              )}
+              {accessLoading && <p className="mm-dashed-empty mt-3">Cargando accesos...</p>}
 
-              {!accessLoading && accessError && (
-                <p className="subscription-error">
-                  {accessError}
-                </p>
-              )}
+              {!accessLoading && accessError && <p className="mm-error-box">{accessError}</p>}
 
               {!accessLoading && !accessError && accessTimeline.length === 0 && (
-                <p className="subscription-empty">
-                  Aún no hay entradas/salidas registradas para este suscriptor (o la tabla usa columnas distintas).
-                </p>
+                <p className="mm-dashed-empty mt-3">Aún no hay entradas/salidas registradas para este suscriptor (o la tabla usa columnas distintas).</p>
               )}
 
               {!accessLoading && accessTimeline.length > 0 && (
-                <div style={{ marginTop: '12px', display: 'grid', gap: '8px' }}>
+                <div className="mt-3 grid gap-2">
                   {accessTimeline.map((ev) => {
                     const isEntry = ev.kind === 'entry'
                     return (
-                      <div key={ev.rowId} className="subscription-list-item">
+                      <div key={ev.rowId} className="mm-list-row">
                         <div className="flex items-start gap-2">
                           {isEntry ? (
                             <FaSignInAlt className="mt-0.5 text-emerald-500 shrink-0" aria-hidden />
@@ -450,8 +437,8 @@ const SubscriptionClientPage = () => {
                             <FaSignOutAlt className="mt-0.5 text-amber-500 shrink-0" aria-hidden />
                           )}
                           <div>
-                            <p className="subscription-list-title">{isEntry ? 'Entrada' : 'Salida'}</p>
-                            <p className="subscription-list-copy" style={{ fontSize: '12px' }}>{formatDateTime(ev.at)}</p>
+                            <p className="mm-list-title">{isEntry ? 'Entrada' : 'Salida'}</p>
+                            <p className="mm-list-copy text-xs">{formatDateTime(ev.at)}</p>
                           </div>
                         </div>
                       </div>
@@ -461,23 +448,23 @@ const SubscriptionClientPage = () => {
               )}
             </article>
 
-            <article className="subscription-side-panel">
-              <p className="subscription-label">Últimos movimientos</p>
-              <div style={{ marginTop: '16px', display: 'grid', gap: '12px' }}>
+            <article className="mm-card mm-card--pad-lg">
+              <p className="mm-overline">Últimos movimientos</p>
+              <div className="mt-4 grid gap-3">
                 {(customer.paymentHistory || []).slice(0, 4).map((entry) => (
-                  <div key={entry.id} className="subscription-list-item">
+                  <div key={entry.id} className="mm-list-row mm-list-row--split">
                     <div>
-                      <p className="subscription-list-title">{entry.kind === 'new_subscription' ? 'Alta inicial' : 'Renovación'}</p>
-                      <p className="subscription-list-copy" style={{ fontSize: '12px' }}>{formatRenewalDate(entry.date)} • {entry.months} mes(es)</p>
+                      <p className="mm-list-title">{entry.kind === 'new_subscription' ? 'Alta inicial' : 'Renovación'}</p>
+                      <p className="mm-list-copy text-xs">{formatRenewalDate(entry.date)} • {entry.months} mes(es)</p>
                     </div>
                     <div className="text-right">
-                      <p className="subscription-money">{formatMoney(entry.amount)}</p>
-                      <p className="subscription-payment-meta" style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.18em' }}>{entry.paymentMethod}</p>
+                      <p className="mm-money">{formatMoney(entry.amount)}</p>
+                      <p className="mm-payment-meta">{entry.paymentMethod}</p>
                     </div>
                   </div>
                 ))}
                 {(!customer.paymentHistory || customer.paymentHistory.length === 0) && (
-                  <p className="subscription-payment-empty">Aún no hay historial de pagos registrado para este suscriptor.</p>
+                  <p className="mm-dashed-empty">Aún no hay historial de pagos registrado para este suscriptor.</p>
                 )}
               </div>
             </article>

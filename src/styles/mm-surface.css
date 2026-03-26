@@ -1,0 +1,561 @@
+/**
+ * MoneyMachine — sistema de superficies (alineado a detalle CxC + suscriptor)
+ * Tokens y utilidades reutilizables en todo el proyecto.
+ */
+
+:root {
+  --mm-radius-page: 28px;
+  --mm-radius-card: 28px;
+  --mm-radius-inner: 22px;
+  --mm-radius-control: 18px;
+  --mm-shell-max: 80rem;
+  --mm-shell-wide: 80rem;
+  --mm-shell-lg: 73.75rem;
+  --mm-stack-gap: 1.25rem;
+  /* Liquid glass (sin degradados en superficies) */
+  --mm-glass-blur: blur(24px) saturate(165%);
+  --mm-glass-blur-deep: blur(28px) saturate(175%);
+}
+
+/* —— Page shell (fondo de escena; las tarjetas son vidrio encima) —— */
+.mm-page {
+  min-height: 100%;
+  padding: 16px 16px calc(10rem + env(safe-area-inset-bottom, 0px));
+  background: var(--bg-gradient);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+@media (min-width: 640px) {
+  .mm-page {
+    padding: 24px 24px calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.mm-page--flush {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Contenedor centrado */
+.mm-shell {
+  width: 100%;
+  max-width: var(--mm-shell-max);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mm-shell--wide {
+  max-width: var(--mm-shell-wide);
+}
+
+.mm-shell--lg {
+  max-width: var(--mm-shell-lg);
+}
+
+/* ~max-w-5xl (detalle CxC) */
+.mm-shell--md {
+  max-width: 64rem;
+}
+
+.mm-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mm-stack-gap);
+}
+
+/* Barra superior — liquid glass */
+.mm-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--mm-radius-page);
+  border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  background: color-mix(in srgb, var(--panel) 50%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, white 8%, transparent) inset,
+    0 12px 40px rgba(0, 0, 0, 0.2);
+  backdrop-filter: var(--mm-glass-blur);
+  -webkit-backdrop-filter: var(--mm-glass-blur);
+}
+
+:root[data-theme='light'] .mm-topbar {
+  background: color-mix(in srgb, var(--panel) 76%, transparent);
+  border-color: color-mix(in srgb, var(--border) 40%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, white 85%, transparent) inset,
+    var(--shadow-md);
+}
+
+.mm-topbar-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.mm-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.875rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.mm-back:hover {
+  color: var(--accent);
+}
+
+/* Tarjetas — liquid glass (sin degradados) */
+.mm-card {
+  border-radius: var(--mm-radius-card);
+  border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  background: color-mix(in srgb, var(--panel) 52%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, white 7%, transparent) inset,
+    0 8px 32px rgba(0, 0, 0, 0.16);
+  backdrop-filter: var(--mm-glass-blur);
+  -webkit-backdrop-filter: var(--mm-glass-blur);
+  padding: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .mm-card {
+    border-radius: 24px;
+  }
+}
+
+:root[data-theme='light'] .mm-card {
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  border-color: color-mix(in srgb, var(--border) 38%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, white 92%, transparent) inset,
+    var(--shadow-sm);
+}
+
+/* “Hero”: mismo vidrio, solo acento en el borde (sin relleno degradado) */
+.mm-card--hero {
+  background: color-mix(in srgb, var(--panel) 46%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, white 8%, transparent) inset,
+    0 10px 36px rgba(0, 0, 0, 0.18);
+  backdrop-filter: var(--mm-glass-blur-deep);
+  -webkit-backdrop-filter: var(--mm-glass-blur-deep);
+}
+
+:root[data-theme='light'] .mm-card--hero {
+  background: color-mix(in srgb, var(--panel) 74%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.mm-card--pad-lg {
+  padding: 1.35rem;
+}
+
+/* Cajas métricas internas — vidrio anidado */
+.mm-tile {
+  border-radius: var(--mm-radius-inner);
+  border: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  background: color-mix(in srgb, var(--panel-2) 40%, transparent);
+  box-shadow: 0 1px 0 0 color-mix(in srgb, white 6%, transparent) inset;
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  padding: 1rem;
+}
+
+:root[data-theme='light'] .mm-tile {
+  background: color-mix(in srgb, var(--panel-2) 72%, transparent);
+  border-color: color-mix(in srgb, var(--border) 35%, transparent);
+}
+
+.mm-overline {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: var(--muted);
+}
+
+/* Chips de estado */
+.mm-status {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+}
+
+.mm-status--neutral {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel-2) 96%, transparent);
+}
+
+.mm-status--ok {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.mm-status--warn {
+  color: #d97706;
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.24);
+}
+
+.mm-status--danger {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.22);
+}
+
+/* Estados CxC / facturación */
+.mm-status--paid {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.mm-status--overdue {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+}
+
+.mm-status--pending {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.14);
+  color: #d97706;
+}
+
+:root[data-theme='light'] .mm-status--warn {
+  color: #b45309;
+  border-color: rgba(180, 83, 9, 0.34);
+  background: rgba(245, 158, 11, 0.2);
+}
+
+:root[data-theme='light'] .mm-status--danger {
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.34);
+  background: rgba(239, 68, 68, 0.14);
+}
+
+/* Botones */
+.mm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--mm-radius-control);
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.mm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mm-btn--primary {
+  background: var(--accent);
+  color: #02110a;
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.mm-btn--primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.mm-btn--ghost {
+  border-color: color-mix(in srgb, var(--border) 55%, transparent);
+  background: color-mix(in srgb, var(--panel-2) 45%, transparent);
+  color: var(--text);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, white 5%, transparent) inset;
+}
+
+.mm-btn--ghost:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+/* Mismo acento sólido que primary — sin degradado */
+.mm-btn--accent-gradient {
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent);
+  color: #02110a;
+}
+
+.mm-btn--accent-gradient:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+/* Campos */
+.mm-input,
+.mm-select {
+  width: 100%;
+  border-radius: var(--mm-radius-control);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  background: var(--bg-tertiary);
+  color: var(--text);
+  padding: 14px 16px;
+  outline: none;
+  font-size: 14px;
+}
+
+.mm-input:focus,
+.mm-select:focus {
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--border));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* Filas de lista / historial */
+.mm-list-row {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--border) 48%, transparent);
+  background: color-mix(in srgb, var(--panel-2) 42%, transparent);
+  box-shadow: 0 1px 0 0 color-mix(in srgb, white 5%, transparent) inset;
+  backdrop-filter: blur(16px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
+  padding: 12px 16px;
+}
+
+:root[data-theme='light'] .mm-list-row {
+  background: color-mix(in srgb, var(--panel-2) 70%, transparent);
+}
+
+.mm-dashed-empty {
+  border-radius: 1rem;
+  border: 1px dashed var(--border);
+  padding: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Grid 2 columnas responsive (detalle) */
+.mm-grid-2 {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .mm-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mm-grid-detail {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 1024px) {
+  .mm-grid-detail {
+    grid-template-columns: 1.05fr 0.95fr;
+  }
+}
+
+/* Pill secundario */
+.mm-pill {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* —— Layouts tipo detalle suscriptor —— */
+.mm-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.mm-hero-title {
+  margin-top: 8px;
+  font-size: clamp(1.9rem, 2.4vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.mm-metrics-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.mm-stats-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.mm-actions-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.mm-form-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.mm-form-span {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 640px) {
+  .mm-metrics-grid,
+  .mm-actions-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mm-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .mm-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mm-metric-value {
+  margin-top: 8px;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mm-metric-value--accent {
+  color: var(--accent);
+}
+
+.mm-stat-value {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mm-customer-phone {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.mm-phone-icon {
+  color: var(--accent);
+}
+
+.mm-note {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.mm-mini-copy {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mm-list-title {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mm-list-copy {
+  color: var(--muted);
+}
+
+.mm-money {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.mm-payment-meta {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+.mm-feedback {
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.mm-error-box {
+  margin-top: 12px;
+  border-radius: 20px;
+  padding: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.18);
+}
+
+.mm-qr-center {
+  text-align: center;
+}
+
+.mm-qr-surface {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 28px;
+  padding: 24px;
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  background: color-mix(in srgb, var(--panel-2) 44%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, white 6%, transparent) inset;
+  backdrop-filter: blur(20px) saturate(155%);
+  -webkit-backdrop-filter: blur(20px) saturate(155%);
+}
+
+.mm-qr-box {
+  border-radius: 24px;
+  background: #ffffff;
+  padding: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+}
+
+.mm-link-break {
+  margin-top: 12px;
+  word-break: break-all;
+  text-align: center;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.mm-list-row--split {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .mm-panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

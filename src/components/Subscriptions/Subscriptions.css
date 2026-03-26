@@ -175,8 +175,10 @@
 }
 
 .subscriptions-metric--active {
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.06));
+  background: color-mix(in srgb, rgba(16, 185, 129, 0.2) 100%, transparent);
   border-color: rgba(16, 185, 129, 0.35);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
 }
 
 .subscriptions-metric--active .subscriptions-metric__label,
@@ -185,8 +187,10 @@
 }
 
 .subscriptions-metric--due {
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.16), rgba(245, 158, 11, 0.06));
+  background: color-mix(in srgb, rgba(245, 158, 11, 0.22) 100%, transparent);
   border-color: rgba(245, 158, 11, 0.35);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
 }
 
 .subscriptions-metric--due .subscriptions-metric__label,
@@ -195,8 +199,10 @@
 }
 
 .subscriptions-metric--expired {
-  background: linear-gradient(180deg, rgba(239, 68, 68, 0.16), rgba(239, 68, 68, 0.06));
+  background: color-mix(in srgb, rgba(239, 68, 68, 0.2) 100%, transparent);
   border-color: rgba(239, 68, 68, 0.35);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
 }
 
 .subscriptions-metric--expired .subscriptions-metric__label,
@@ -205,8 +211,10 @@
 }
 
 .subscriptions-metric--revenue {
-  background: linear-gradient(180deg, rgba(59, 130, 246, 0.16), rgba(59, 130, 246, 0.06));
+  background: color-mix(in srgb, rgba(59, 130, 246, 0.2) 100%, transparent);
   border-color: rgba(59, 130, 246, 0.35);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
 }
 
 .subscriptions-metric--revenue .subscriptions-metric__label,

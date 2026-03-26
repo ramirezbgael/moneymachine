@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { FaArrowDown, FaArrowUp, FaClock, FaDollarSign, FaPlus, FaUserClock } from 'react-icons/fa'
 import { useSubscriptionStore } from '../../store/subscriptionStore'
 import { useTenantStore } from '../../store/tenantStore'
@@ -29,18 +29,6 @@ const formatRenewalDate = (value) => {
   return Number.isNaN(date.getTime()) ? 'Sin fecha' : dateFormatter.format(date)
 }
 
-const parsePlansInput = (raw) => raw
-  .split(',')
-  .map((part) => Number(part.trim()))
-  .filter((value) => Number.isFinite(value) && value > 0)
-
-const sanitizeName = (value) => value
-  .replace(/[^a-zA-Z0-9\s.'-]/g, '')
-  .replace(/\s+/g, ' ')
-  .slice(0, 80)
-
-const sanitizePhone = (value) => value.replace(/\D/g, '').slice(0, 15)
-
 const getFilterKey = (customer) => {
   if (customer.status === 'cancelled') return 'cancelled'
   if (customer.daysLeft < 0) return 'expired'
@@ -63,35 +51,22 @@ const PAYMENT_METHODS = [
 
 const Subscriptions = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const {
     customers,
-    subscriptionPlans,
     loading,
-    addCustomer,
     renewCustomer,
-    loadCustomers,
-    loadSubscriptionPlans,
-    saveSubscriptionPlans
+    loadCustomers
   } = useSubscriptionStore()
 
   const currentTenantId = useTenantStore((state) => state.currentTenantId)
   const attendanceBusinessId =
     currentTenantId && currentTenantId !== 'global' ? currentTenantId : null
 
-  const [formData, setFormData] = useState({ name: '', phone: '', monthlyFee: '', months: '1' })
   const [selectedId, setSelectedId] = useState(null)
   const [monthsToAdd, setMonthsToAdd] = useState(1)
-  const [showCheckoutModal, setShowCheckoutModal] = useState(false)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState('cash')
-  const [checkoutSubmitting, setCheckoutSubmitting] = useState(false)
   const [showPrintModal, setShowPrintModal] = useState(false)
   const [lastSubscriptionSale, setLastSubscriptionSale] = useState(null)
-  const [showPlanEditor, setShowPlanEditor] = useState(false)
-  const [plansRaw, setPlansRaw] = useState('')
-  const [plansSaving, setPlansSaving] = useState(false)
-  const [plansError, setPlansError] = useState('')
-  const [plansMessage, setPlansMessage] = useState('')
   const [subscribersSearch, setSubscribersSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortState, setSortState] = useState({ key: 'renewalDate', direction: 'asc' })
@@ -103,8 +78,15 @@ const Subscriptions = () => {
 
   useEffect(() => {
     loadCustomers()
-    loadSubscriptionPlans()
-  }, [loadCustomers, loadSubscriptionPlans])
+  }, [loadCustomers])
+
+  useEffect(() => {
+    const receipt = location.state?.subscriptionSaleReceipt
+    if (!receipt) return
+    setLastSubscriptionSale(receipt)
+    setShowPrintModal(true)
+    navigate(location.pathname, { replace: true, state: {} })
+  }, [location.pathname, location.state, navigate])
 
   useEffect(() => {
     setOpenMenuId(null)
@@ -118,18 +100,6 @@ const Subscriptions = () => {
     })
   }
 
-  useEffect(() => {
-    if (!subscriptionPlans.length) return
-    const hasSelectedPlan = subscriptionPlans.some((plan) => Number(plan) === Number(formData.monthlyFee))
-    if (!hasSelectedPlan) {
-      setFormData((prev) => ({ ...prev, monthlyFee: String(subscriptionPlans[0]) }))
-    }
-  }, [subscriptionPlans, formData.monthlyFee])
-
-  useEffect(() => {
-    setPlansRaw(subscriptionPlans.join(', '))
-  }, [subscriptionPlans])
-
   const summary = useMemo(() => {
     const activeCustomers = customers.filter((customer) => customer.status === 'active' && customer.daysLeft >= 0)
     const active = activeCustomers.filter((customer) => customer.daysLeft > 7).length
@@ -138,80 +108,6 @@ const Subscriptions = () => {
     const estimatedRevenue = activeCustomers.reduce((sum, customer) => sum + Number(customer.monthlyFee || 0), 0)
     return { active, dueSoon, expired, estimatedRevenue }
   }, [customers])
-
-  const parsedInitialMonths = useMemo(() => {
-    const raw = Number(formData.months)
-    if (!formData.months || Number.isNaN(raw)) return 1
-    return Math.max(1, Math.floor(raw))
-  }, [formData.months])
-
-  const initialCharge = useMemo(() => Number(formData.monthlyFee || 0) * parsedInitialMonths, [formData.monthlyFee, parsedInitialMonths])
-
-  const handleCreate = async (event) => {
-    event.preventDefault()
-    if (!formData.name.trim() || formData.name.trim().length < 3) return
-    if (formData.phone && formData.phone.length !== 10) return
-    setShowCheckoutModal(true)
-  }
-
-  const handleConfirmCreate = async () => {
-    if (!formData.name.trim()) return
-    setCheckoutSubmitting(true)
-    try {
-      await addCustomer({
-        name: formData.name,
-        phone: formData.phone,
-        monthlyFee: formData.monthlyFee,
-        months: parsedInitialMonths,
-        paymentMethod: checkoutPaymentMethod
-      })
-
-      setLastSubscriptionSale({
-        id: `sub-sale-${Date.now()}`,
-        sale_number: `SUB-${Date.now()}`,
-        created_at: new Date().toISOString(),
-        subtotal: initialCharge,
-        total: initialCharge,
-        payment_method: checkoutPaymentMethod,
-        items: [{
-          id: `sub-item-${Date.now()}`,
-          quantity: parsedInitialMonths,
-          unitPrice: Number(formData.monthlyFee || 0),
-          subtotal: initialCharge,
-          product: { name: `Suscripción ${formData.name}` }
-        }]
-      })
-
-      setFormData({ name: '', phone: '', monthlyFee: subscriptionPlans.length ? String(subscriptionPlans[0]) : '', months: '1' })
-      setShowCreateModal(false)
-      setShowCheckoutModal(false)
-      setShowPrintModal(true)
-    } finally {
-      setCheckoutSubmitting(false)
-    }
-  }
-
-  const handleSavePlans = async () => {
-    setPlansError('')
-    setPlansMessage('')
-    const parsedPlans = parsePlansInput(plansRaw)
-    if (!parsedPlans.length) {
-      setPlansError('Ingresa al menos una mensualidad válida. Ejemplo: 199, 299, 399')
-      return
-    }
-
-    setPlansSaving(true)
-    try {
-      const savedPlans = await saveSubscriptionPlans(parsedPlans)
-      setPlansRaw(savedPlans.join(', '))
-      setPlansMessage('Mensualidades guardadas.')
-      setFormData((prev) => ({ ...prev, monthlyFee: savedPlans.includes(Number(prev.monthlyFee)) ? prev.monthlyFee : String(savedPlans[0]) }))
-    } catch (error) {
-      setPlansError(error?.message || 'No se pudieron guardar las mensualidades.')
-    } finally {
-      setPlansSaving(false)
-    }
-  }
 
   const visibleCustomers = useMemo(() => {
     const query = subscribersSearch.trim().toLowerCase()
@@ -305,32 +201,38 @@ const Subscriptions = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] p-4 md:p-6 pb-40 md:pb-16 flex flex-col subscriptions-page--inventory">
-      <div className="max-w-7xl mx-auto w-full flex flex-col">
+    <div className="mm-page mm-page--flush flex flex-col subscriptions-page--inventory">
+      <div className="mm-shell mm-shell--wide w-full flex flex-col flex-1 min-h-0">
         <h1 className="text-2xl font-bold text-[var(--text)] mb-3">Suscripciones</h1>
 
         <section
-          className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--border)]/60 bg-[var(--panel)]/55 px-3 py-2"
-          aria-label="Resumen de suscripciones"
+          className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[var(--border)]/60 bg-[var(--panel)]/55 px-3 py-2"
+          aria-label="Resumen y asistencia"
         >
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
-            Activas <strong className="text-[var(--text)] text-xs">{summary.active}</strong>
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
-            Por vencer <strong className="text-[var(--text)] text-xs">{summary.dueSoon}</strong>
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
-            Vencidas <strong className="text-[var(--text)] text-xs">{summary.expired}</strong>
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
-            Ingreso <strong className="text-[var(--text)] text-xs tabular-nums">{formatMoney(summary.estimatedRevenue)}</strong>
-          </span>
-          <span className="ml-auto text-[11px] text-[var(--muted)] tabular-nums">
-            {visibleCustomers.length} / {customers.length} cliente(s)
-          </span>
+          <div className="flex flex-wrap items-center gap-2 min-w-0" aria-label="Resumen de suscripciones">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
+              Activas <strong className="text-[var(--text)] text-xs">{summary.active}</strong>
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
+              Por vencer <strong className="text-[var(--text)] text-xs">{summary.dueSoon}</strong>
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
+              Vencidas <strong className="text-[var(--text)] text-xs">{summary.expired}</strong>
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)]/70 px-2.5 py-1 text-[11px] text-[var(--muted)]">
+              Ingreso <strong className="text-[var(--text)] text-xs tabular-nums">{formatMoney(summary.estimatedRevenue)}</strong>
+            </span>
+            <span className="text-[11px] text-[var(--muted)] tabular-nums whitespace-nowrap md:ml-1">
+              {visibleCustomers.length} / {customers.length} cliente(s)
+            </span>
+          </div>
+          {attendanceBusinessId ? (
+            <>
+              <span className="hidden md:block h-6 w-px shrink-0 bg-[var(--border)]/50" aria-hidden />
+              <SubscriptionAttendanceInsights businessId={attendanceBusinessId} />
+            </>
+          ) : null}
         </section>
-
-        <SubscriptionAttendanceInsights businessId={attendanceBusinessId} />
 
         <div className="mb-4 grid gap-3 lg:grid-cols-[auto,1fr] lg:items-end">
           <div className="space-y-2">
@@ -408,15 +310,7 @@ const Subscriptions = () => {
               className="rounded-xl border border-[var(--border)] bg-[var(--bg-tertiary)] px-4 py-2.5 text-sm font-medium text-[var(--text)] placeholder:text-[var(--muted)] focus:border-[var(--accent)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 min-w-[12rem] flex-1 lg:max-w-xs transition-all"
               aria-label="Buscar suscriptor"
             />
-            <LiquidButton
-              size="sm"
-              onClick={() => {
-                setShowCreateModal(true)
-                setShowPlanEditor(false)
-                setPlansMessage('')
-                setPlansError('')
-              }}
-            >
+            <LiquidButton size="sm" onClick={() => navigate('/subscriptions/new')}>
               <span className="whitespace-nowrap">+ Nueva suscripción</span>
             </LiquidButton>
           </div>
@@ -602,104 +496,10 @@ const Subscriptions = () => {
         )}
       </div>
 
-      <button
-        type="button"
-        className="subscriptions-fab"
-        onClick={() => {
-          setShowCreateModal(true)
-          setShowPlanEditor(false)
-          setPlansMessage('')
-          setPlansError('')
-        }}
-      >
+      <button type="button" className="subscriptions-fab" onClick={() => navigate('/subscriptions/new')}>
         <FaPlus />
         <span>Nueva suscripción</span>
       </button>
-
-      {showCreateModal && (
-        <section className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm grid place-items-center p-4" onClick={() => !checkoutSubmitting && setShowCreateModal(false)}>
-          <article className="w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold">Alta de cliente</h3>
-            <p className="text-sm text-[var(--text-secondary)] mt-1">Registra una nueva suscripción y cobra el primer periodo.</p>
-
-            <form className="subscriptions-form mt-4" onSubmit={handleCreate}>
-              <div className="subscriptions-field subscriptions-field--full">
-                <label className="subscriptions-field__label">Nombre del cliente</label>
-                <input value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: sanitizeName(e.target.value) }))} className="subscriptions-input subscriptions-input--full" placeholder="Ej. Juan Pérez" minLength={3} maxLength={80} required />
-              </div>
-
-              <div className="subscriptions-field">
-                <label className="subscriptions-field__label">Teléfono</label>
-                <input value={formData.phone} onChange={(e) => setFormData((prev) => ({ ...prev, phone: sanitizePhone(e.target.value) }))} className="subscriptions-input" placeholder="Opcional (10 dígitos)" inputMode="numeric" pattern="[0-9]{10}" minLength={10} maxLength={10} />
-              </div>
-
-              <div className="subscriptions-field">
-                <label className="subscriptions-field__label">Mensualidad</label>
-                <select value={formData.monthlyFee} onChange={(e) => setFormData((prev) => ({ ...prev, monthlyFee: e.target.value }))} className="subscriptions-input" required>
-                  {subscriptionPlans.map((plan) => (
-                    <option key={plan} value={String(plan)}>{formatMoney(plan)} / mes</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="subscriptions-link-btn"
-                  onClick={() => {
-                    setShowPlanEditor((prev) => !prev)
-                    setPlansMessage('')
-                    setPlansError('')
-                  }}
-                >
-                  {showPlanEditor ? 'Ocultar configuración' : 'Configurar mensualidades'}
-                </button>
-              </div>
-
-              {showPlanEditor && (
-                <div className="subscriptions-field subscriptions-field--full subscriptions-plans-editor">
-                  <label className="subscriptions-field__label">Opciones de mensualidad</label>
-                  <input type="text" value={plansRaw} onChange={(e) => setPlansRaw(e.target.value)} className="subscriptions-input subscriptions-input--full" placeholder="199, 299, 399" disabled={plansSaving} />
-                  <p className="subscriptions-field__hint">Separa importes por coma. Ejemplo: 199, 299, 399.</p>
-                  {plansError && <p className="subscriptions-inline-error">{plansError}</p>}
-                  {plansMessage && <p className="subscriptions-inline-success">{plansMessage}</p>}
-                  <div className="subscriptions-plans-editor__actions">
-                    <button type="button" onClick={handleSavePlans} disabled={plansSaving} className="subscriptions-action-btn">
-                      {plansSaving ? 'Guardando...' : 'Guardar mensualidades'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="subscriptions-field subscriptions-field--full">
-                <label className="subscriptions-field__label">Meses iniciales de suscripción</label>
-                <div className="subscriptions-stepper">
-                  <button type="button" className="subscriptions-stepper__btn" onClick={() => setFormData((prev) => ({ ...prev, months: String(Math.max(1, parsedInitialMonths - 1)) }))} aria-label="Restar meses">-</button>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.months}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, months: e.target.value }))}
-                    onBlur={() => {
-                      const parsedMonths = Number(formData.months)
-                      if (!formData.months || Number.isNaN(parsedMonths) || parsedMonths < 1) {
-                        setFormData((prev) => ({ ...prev, months: '1' }))
-                      }
-                    }}
-                    className="subscriptions-stepper__input"
-                    placeholder="1"
-                  />
-                  <button type="button" className="subscriptions-stepper__btn" onClick={() => setFormData((prev) => ({ ...prev, months: String(parsedInitialMonths + 1) }))} aria-label="Sumar meses">+</button>
-                </div>
-                <p className="subscriptions-field__hint">Cuántos meses paga al dar de alta. Normalmente 1.</p>
-                <p className="subscriptions-field__hint subscriptions-field__hint--strong">Cobro inicial a registrar: {formatMoney(initialCharge)}</p>
-              </div>
-
-              <div className="subscriptions-modal-actions">
-                <button type="button" className="subscriptions-modal-btn" onClick={() => setShowCreateModal(false)} disabled={checkoutSubmitting}>Cancelar</button>
-                <button type="submit" className="subscriptions-submit" disabled={checkoutSubmitting}>Continuar</button>
-              </div>
-            </form>
-          </article>
-        </section>
-      )}
 
       {selectedCustomer && (
         <section className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm grid place-items-center p-4" onClick={() => !renewSubmitting && setSelectedId(null)}>
@@ -755,39 +555,6 @@ const Subscriptions = () => {
               <button type="button" className="subscriptions-modal-btn" onClick={() => setSelectedId(null)} disabled={renewSubmitting}>Cancelar</button>
               <button type="button" className="subscriptions-modal-btn subscriptions-modal-btn--primary" onClick={handleConfirmRenew} disabled={renewSubmitting}>
                 {renewSubmitting ? 'Procesando...' : renewConfig.actionLabel}
-              </button>
-            </div>
-          </article>
-        </section>
-      )}
-
-      {showCheckoutModal && (
-        <section className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm grid place-items-center p-4" onClick={() => !checkoutSubmitting && setShowCheckoutModal(false)}>
-          <article className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold">Confirmar cobro inicial</h3>
-            <p className="text-sm text-[var(--text-secondary)] mt-1">Cliente: {formData.name}</p>
-
-            <div className="mt-4 rounded-lg border border-[var(--border)] p-3 text-sm space-y-1">
-              <p>Mensualidad: {formatMoney(formData.monthlyFee)}</p>
-              <p>Meses iniciales: {parsedInitialMonths}</p>
-              <p className="font-semibold">Total a cobrar: {formatMoney(initialCharge)}</p>
-            </div>
-
-            <div className="mt-4">
-              <label className="text-sm block mb-1">Método de pago</label>
-              <div className="subscriptions-payment-options">
-                {PAYMENT_METHODS.map((method) => (
-                  <button key={method.id} type="button" className={`subscriptions-payment-option ${checkoutPaymentMethod === method.id ? 'subscriptions-payment-option--active' : ''}`} onClick={() => setCheckoutPaymentMethod(method.id)} disabled={checkoutSubmitting}>
-                    {method.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 flex gap-2 justify-end">
-              <button type="button" className="subscriptions-modal-btn" onClick={() => setShowCheckoutModal(false)} disabled={checkoutSubmitting}>Cancelar</button>
-              <button type="button" className="subscriptions-modal-btn subscriptions-modal-btn--primary" onClick={handleConfirmCreate} disabled={checkoutSubmitting}>
-                {checkoutSubmitting ? 'Procesando...' : 'Cobrar y guardar'}
               </button>
             </div>
           </article>

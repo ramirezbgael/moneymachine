@@ -2,14 +2,38 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useSaleStore } from '../../store/saleStore'
 import { productService } from '../../services/productService'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { useProductImageSrcWithSignedFallback } from '../../hooks/useProductImageSrcWithSignedFallback'
 import './FeaturedProducts.css'
+
+function FeaturedThumb({ product }) {
+  const { src, showImage, onImgError } = useProductImageSrcWithSignedFallback(product)
+  if (!showImage) {
+    return (
+      <span className="featured-products__placeholder">
+        {(product.name || '?').slice(0, 2).toUpperCase()}
+      </span>
+    )
+  }
+  return (
+    <img
+      key={src}
+      src={src}
+      alt=""
+      className="featured-products__img"
+      draggable={false}
+      loading="lazy"
+      decoding="async"
+      onError={onImgError}
+    />
+  )
+}
 
 /**
  * FeaturedProducts — strip of pinned product buttons for quick add.
  * Products with is_featured = true (or the first 8 if none are flagged)
  * show as 50×50 photo tiles. Tap/click adds 1 unit to the sale.
  */
-const FeaturedProducts = () => {
+const FeaturedProducts = ({ onProductAdd, className = '' }) => {
   const addItem = useSaleStore((s) => s.addItem)
   const [products, setProducts] = useState([])
   const [bumped, setBumped] = useState(null) // id of last tapped for animation
@@ -114,7 +138,8 @@ const FeaturedProducts = () => {
   }, [load])
 
   const handleTap = (product) => {
-    addItem(product, 1)
+    if (onProductAdd) onProductAdd(product)
+    else addItem(product, 1)
     setBumped(product.id)
     setTimeout(() => setBumped(null), 220)
   }
@@ -122,7 +147,7 @@ const FeaturedProducts = () => {
   if (products.length === 0) return null
 
   return (
-    <div className="featured-products" aria-label="Productos destacados">
+    <div className={`featured-products ${className}`.trim()} aria-label="Productos destacados">
       {products.map((product) => (
         <button
           key={product.id}
@@ -131,18 +156,7 @@ const FeaturedProducts = () => {
           onClick={() => handleTap(product)}
           title={`${product.name}  $${Number(product.price || 0).toFixed(2)}`}
         >
-          {product.image_url ? (
-            <img
-              src={product.image_url}
-              alt={product.name}
-              className="featured-products__img"
-              draggable={false}
-            />
-          ) : (
-            <span className="featured-products__placeholder">
-              {(product.name || '?').slice(0, 2).toUpperCase()}
-            </span>
-          )}
+          <FeaturedThumb product={product} />
           <span className="featured-products__name">{product.name}</span>
           <span className="featured-products__price">${Number(product.price || 0).toFixed(2)}</span>
         </button>

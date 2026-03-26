@@ -12,6 +12,9 @@ export interface Product {
   minimum_stock?: number
   last_sale_date?: string
   supplier?: string
+  restock_frequency_days?: number
+  unit?: string
+  location?: string
   [key: string]: unknown
 }
 

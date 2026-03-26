@@ -111,25 +111,21 @@ export default function NewReceivablePage() {
       "w-full rounded-xl border border-[var(--border)] bg-[var(--bg-tertiary)] px-3 py-2 text-[var(--text)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/25";
 
     return (
-      <div className="min-h-full bg-[var(--bg)] px-4 py-6 pb-24 text-[var(--text)] sm:px-6 lg:px-8 overflow-x-hidden">
-        <div className="mx-auto max-w-5xl space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-[var(--border)] bg-[var(--panel)] px-4 py-4 shadow-[var(--shadow)] backdrop-blur-sm">
-            <button
-              type="button"
-              onClick={() => navigate("/finance/receivables")}
-              className="inline-flex items-center gap-2 text-sm text-[var(--muted)] transition hover:text-[var(--accent)]"
-            >
-              <span className="text-lg">←</span>
-              <span>Volver a CxC</span>
+      <div className="mm-page mm-page--flush overflow-x-hidden">
+        <div className="mm-shell mm-shell--md mm-stack">
+          <div className="mm-topbar">
+            <button type="button" onClick={() => navigate("/finance/receivables")} className="mm-back">
+              <span className="text-lg" aria-hidden>←</span>
+              Volver a CxC
             </button>
-            <h1 className="text-lg font-semibold text-[var(--accent)]">Nueva cuenta por cobrar</h1>
+            <h1 className="mm-topbar-title">Nueva cuenta por cobrar</h1>
             <span className="text-xs text-[var(--muted)]">Registrar deuda</span>
           </div>
 
           <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
             <form
               onSubmit={handleSubmit}
-              className="w-full rounded-[28px] border border-[var(--border)] bg-[var(--panel)] p-5 md:p-6 flex flex-col gap-4 md:gap-4 shadow-[var(--shadow-sm)] [background-image:radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--accent)_10%,transparent),transparent_50%)]"
+              className="mm-card mm-card--pad-lg w-full flex flex-col gap-4 md:gap-4"
             >
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Cliente y deuda</p>

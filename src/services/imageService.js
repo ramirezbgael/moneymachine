@@ -3,6 +3,7 @@
  * Handles image upload to Supabase Storage
  */
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { PRODUCT_IMAGES_BUCKET } from '../utils/productImageUrl'
 
 /**
  * Upload product image to Supabase Storage
@@ -40,9 +41,8 @@ export const uploadProductImage = async (imageFile, productId) => {
       fileName = `product-${productId || Date.now()}-${fileToUpload.name}`
     }
 
-    // Upload to Supabase Storage bucket 'product-images'
     const { data, error } = await supabase.storage
-      .from('product-images')
+      .from(PRODUCT_IMAGES_BUCKET)
       .upload(fileName, fileToUpload, {
         cacheControl: '3600',
         upsert: false
@@ -67,7 +67,7 @@ export const uploadProductImage = async (imageFile, productId) => {
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
-      .from('product-images')
+      .from(PRODUCT_IMAGES_BUCKET)
       .getPublicUrl(data.path)
 
     return publicUrl
@@ -96,7 +96,8 @@ export const deleteProductImage = async (imageUrl) => {
 
   try {
     // Extract path from URL
-    const urlParts = imageUrl.split('/storage/v1/object/public/product-images/')
+    const marker = `/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET}/`
+    const urlParts = imageUrl.split(marker)
     if (urlParts.length < 2) {
       console.warn('Invalid image URL format:', imageUrl)
       return
@@ -105,7 +106,7 @@ export const deleteProductImage = async (imageUrl) => {
     const filePath = urlParts[1]
     
     const { error } = await supabase.storage
-      .from('product-images')
+      .from(PRODUCT_IMAGES_BUCKET)
       .remove([filePath])
 
     if (error) {
