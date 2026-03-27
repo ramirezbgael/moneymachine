@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FaClock } from 'react-icons/fa6'
 import { useTenantStore } from '../../store/tenantStore'
+import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 
 function formatRemainingSpanish(ms) {
   if (ms <= 0) return null
@@ -24,14 +25,75 @@ function formatRemainingSpanish(ms) {
 export function TrialBanner() {
   const currentTenant = useTenantStore((s) => s.currentTenant)
   const [tick, setTick] = useState(0)
+  const [hasActiveBilling, setHasActiveBilling] = useState(false)
 
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 60_000)
     return () => clearInterval(id)
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+
+    const loadBillingOverride = async () => {
+      if (!currentTenant?.id || !isSupabaseConfigured() || !supabase) {
+        if (!cancelled) setHasActiveBilling(false)
+        return
+      }
+
+      try {
+        const [{ data: subsData, error: subsError }, { data: entData, error: entError }] = await Promise.all([
+          supabase
+            .from('saas_subscriptions')
+            .select('status, current_period_end')
+            .eq('business_id', currentTenant.id)
+            .order('updated_at', { ascending: false })
+            .limit(1),
+          supabase
+            .from('saas_module_entitlements')
+            .select('status, starts_at, ends_at')
+            .eq('business_id', currentTenant.id)
+            .eq('module_key', 'subscriptions')
+            .maybeSingle()
+        ])
+
+        if (subsError) throw subsError
+        if (entError) throw entError
+
+        const sub = Array.isArray(subsData) ? subsData[0] : null
+        const subStatus = sub?.status
+        const periodEnd = sub?.current_period_end ? new Date(sub.current_period_end).getTime() : null
+        const subLooksActive =
+          (subStatus === 'active' || subStatus === 'trialing') &&
+          (periodEnd == null || (!Number.isNaN(periodEnd) && periodEnd >= Date.now()))
+
+        const now = new Date()
+        const startsAt = entData?.starts_at ? new Date(entData.starts_at) : null
+        const endsAt = entData?.ends_at ? new Date(entData.ends_at) : null
+        const entitlementLooksActive =
+          (entData?.status === 'active' || entData?.status === 'trial') &&
+          (!startsAt || startsAt <= now) &&
+          (!endsAt || endsAt >= now)
+
+        if (!cancelled) {
+          setHasActiveBilling(Boolean(subLooksActive || entitlementLooksActive))
+        }
+      } catch {
+        if (!cancelled) setHasActiveBilling(false)
+      }
+    }
+
+    loadBillingOverride()
+    return () => {
+      cancelled = true
+    }
+  }, [currentTenant?.id, tick])
+
   const { show, expired, labelLine } = useMemo(() => {
     const t = currentTenant
+    if (hasActiveBilling) {
+      return { show: false, expired: false, labelLine: '' }
+    }
     if (!t?.billing_status) {
       return { show: false, expired: false, labelLine: '' }
     }
@@ -64,7 +126,7 @@ export function TrialBanner() {
       expired: false,
       labelLine: rem ? `Te quedan ${rem} de prueba.` : 'Periodo de prueba activo.'
     }
-  }, [currentTenant, tick])
+  }, [currentTenant, tick, hasActiveBilling])
 
   if (!show) return null
 

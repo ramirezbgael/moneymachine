@@ -10,6 +10,24 @@ import { useTenantStore } from '../store/tenantStore'
 import { useReportsStore } from '../store/reportsStore'
 import { useAuthStore } from '../store/authStore'
 
+const assertBillingAccessOrThrow = async () => {
+  const tenantState = useTenantStore.getState()
+  const tenantId = tenantState.currentTenantId
+  if (!tenantId) throw new Error('No tenant selected. Please log in again.')
+
+  // Refresco en caliente para no depender de estado viejo en memoria.
+  if (typeof tenantState.loadBillingAccess === 'function') {
+    await tenantState.loadBillingAccess(tenantId)
+  }
+
+  const { billingAccessLocked, billingAccessReason } = useTenantStore.getState()
+  if (billingAccessLocked) {
+    throw new Error(
+      `Acceso bloqueado por facturación (${billingAccessReason || 'subscription_inactive'}). Ve a Configuración para reactivar.`
+    )
+  }
+}
+
 /**
  * Generate sale number
  */
@@ -69,8 +87,8 @@ export const processSale = async (saleData) => {
     const saleNumber = generateSaleNumber()
     
     if (isSupabaseConfigured() && supabase) {
+      await assertBillingAccessOrThrow()
       const tenantId = useTenantStore.getState().currentTenantId
-      if (!tenantId) throw new Error('No tenant selected. Please log in again.')
       // 1. Create sale record
       const { data: saleRecord, error: saleError } = await supabase
         .from('sales')
@@ -284,6 +302,7 @@ export const cancelSale = async ({ saleId, userId }) => {
   if (!saleId) throw new Error('saleId es requerido')
 
   if (isSupabaseConfigured() && supabase) {
+    await assertBillingAccessOrThrow()
     const tenantId = useTenantStore.getState().currentTenantId
     if (!tenantId) throw new Error('No tenant selected. Please log in again.')
 
@@ -343,6 +362,7 @@ export const refundSale = async ({ saleId, userId }) => {
   if (!saleId) throw new Error('saleId es requerido')
 
   if (isSupabaseConfigured() && supabase) {
+    await assertBillingAccessOrThrow()
     const tenantId = useTenantStore.getState().currentTenantId
     if (!tenantId) throw new Error('No tenant selected. Please log in again.')
 

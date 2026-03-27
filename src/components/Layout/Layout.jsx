@@ -43,6 +43,9 @@ const Layout = () => {
     loading: tenantLoading,
     error: tenantError,
     debug: tenantDebug,
+    billingAccessLocked,
+    billingAccessReason,
+    billingSubscriptionStatus,
     loadTenants,
     bootstrapTenantFromRpc
   } = useTenantStore()
@@ -328,7 +331,9 @@ const Layout = () => {
 
   return (
     <div
-      className={`layout ${mobileSidebarOpen ? 'layout--mobile-nav-open' : ''}`}
+      className={`layout ${mobileSidebarOpen ? 'layout--mobile-nav-open' : ''} ${
+        billingAccessLocked ? 'layout--billing-readonly' : ''
+      }`}
       style={{ '--layout-sidebar-offset': `${sidebarOffset}px` }}
     >
       {/* Sidebar - Zone 1 */}
@@ -362,6 +367,12 @@ const Layout = () => {
           openMobileSidebar={() => setMobileSidebarOpen(true)}
           closeMobileSidebar={() => setMobileSidebarOpen(false)}
         >
+          {billingAccessLocked && (
+            <div className="billing-readonly-banner border-b border-amber-500/25 bg-amber-500/10 px-3 py-2.5 text-center text-xs text-amber-100 md:px-4 md:text-sm">
+              Modo solo lectura por facturación ({billingSubscriptionStatus || 'desconocido'}
+              {billingAccessReason ? `: ${billingAccessReason}` : ''}). Puedes navegar, pero no realizar acciones.
+            </div>
+          )}
           <TrialBanner />
           <div className="layout__outlet">
             <Outlet />

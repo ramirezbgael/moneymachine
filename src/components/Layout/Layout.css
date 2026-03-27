@@ -347,6 +347,22 @@
   width: 100%;
 }
 
+/* Bloqueo por facturación: modo solo lectura (ver sí, operar no). */
+.layout--billing-readonly .layout__outlet button,
+.layout--billing-readonly .layout__outlet input,
+.layout--billing-readonly .layout__outlet select,
+.layout--billing-readonly .layout__outlet textarea,
+.layout--billing-readonly .layout__outlet [role='button'],
+.layout--billing-readonly .layout__outlet a {
+  pointer-events: none !important;
+  opacity: 0.55;
+  filter: saturate(0.75);
+}
+
+.layout--billing-readonly .layout__outlet {
+  position: relative;
+}
+
 .layout__main--pos {
   overflow: hidden;
 }

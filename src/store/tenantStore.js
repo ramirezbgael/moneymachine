@@ -91,12 +91,102 @@ export const useTenantStore = create((set, get) => ({
   currentTenant: null, // { id, name, slug }
   tenants: [],
   debug: null, // solo para diagnóstico en UI cuando no hay tenant
+  billingAccessLocked: false,
+  billingAccessReason: null,
+  billingSubscriptionStatus: null,
   featureFlags: {
     subscriptions: true
   },
   featureFlagsLoading: true,
   loading: false,
   error: null,
+
+  loadBillingAccess: async (tenantId) => {
+    if (!tenantId || !isSupabaseConfigured() || !supabase) {
+      set({
+        billingAccessLocked: false,
+        billingAccessReason: null,
+        billingSubscriptionStatus: null
+      })
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('saas_subscriptions')
+        .select('status, current_period_end, cancel_at_period_end, updated_at')
+        .eq('business_id', tenantId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+
+      if (error) throw error
+
+      const row = Array.isArray(data) ? data[0] : null
+      if (!row) {
+        // Fallback: decidir con estado de businesses cuando no hay fila en saas_subscriptions.
+        const { data: biz, error: bizError } = await supabase
+          .from('businesses')
+          .select('billing_status, trial_ends_at')
+          .eq('id', tenantId)
+          .maybeSingle()
+
+        if (bizError) throw bizError
+
+        const status = String(biz?.billing_status || '').toLowerCase()
+        const trialEndMs = biz?.trial_ends_at ? new Date(biz.trial_ends_at).getTime() : null
+        const trialValid = trialEndMs != null && !Number.isNaN(trialEndMs) && trialEndMs >= Date.now()
+        const unlocked = status === 'active' || (status === 'trialing' && trialValid)
+
+        set({
+          billingAccessLocked: !unlocked,
+          billingAccessReason: unlocked ? null : (status || 'no_subscription_record'),
+          billingSubscriptionStatus: status || null
+        })
+        return
+      }
+
+      const status = String(row.status || '').toLowerCase()
+      const nowMs = Date.now()
+      const periodEndMs = row.current_period_end ? new Date(row.current_period_end).getTime() : null
+      const periodStillValid = periodEndMs == null || (!Number.isNaN(periodEndMs) && periodEndMs >= nowMs)
+
+      let locked = false
+      let reason = null
+
+      if (status === 'active' || status === 'trialing') {
+        locked = !periodStillValid
+        reason = locked ? 'period_ended' : null
+      } else if (
+        status === 'canceled' ||
+        status === 'unpaid' ||
+        status === 'past_due' ||
+        status === 'incomplete' ||
+        status === 'incomplete_expired'
+      ) {
+        // Regla solicitada: cancelada => ver pero no operar.
+        locked = true
+        reason = status
+      }
+
+      // Regla dura: si ya marcó cancelación, bloquear de inmediato.
+      if (row.cancel_at_period_end === true) {
+        locked = true
+        reason = 'cancel_at_period_end'
+      }
+
+      set({
+        billingAccessLocked: locked,
+        billingAccessReason: reason,
+        billingSubscriptionStatus: status || null
+      })
+    } catch (err) {
+      console.warn('Error loading billing access, locking by fail-closed fallback:', err)
+      set({
+        billingAccessLocked: true,
+        billingAccessReason: 'billing_check_failed'
+      })
+    }
+  },
 
   loadFeatureFlags: async (tenantId) => {
     if (!tenantId) {
@@ -155,6 +245,9 @@ export const useTenantStore = create((set, get) => ({
         currentTenant: null,
         tenants: [],
         debug: null,
+        billingAccessLocked: false,
+        billingAccessReason: null,
+        billingSubscriptionStatus: null,
         featureFlags: { subscriptions: true },
         featureFlagsLoading: false
       })
@@ -183,6 +276,9 @@ export const useTenantStore = create((set, get) => ({
         currentTenant: defaultTenant,
         tenants: [defaultTenant],
         debug: { at: new Date().toISOString(), userId, step: 'mock' },
+        billingAccessLocked: false,
+        billingAccessReason: null,
+        billingSubscriptionStatus: null,
         featureFlags: { subscriptions: true },
         featureFlagsLoading: false,
         loading: false
@@ -359,6 +455,7 @@ export const useTenantStore = create((set, get) => ({
       const first = list[0]
       const mapped = list.map(mapBusinessRow).filter(Boolean)
       await get().loadFeatureFlags(first.id)
+      await get().loadBillingAccess(first.id)
       set({
         currentTenantId: first.id,
         currentTenant: mapBusinessRow(first),
@@ -417,6 +514,9 @@ export const useTenantStore = create((set, get) => ({
       currentTenantId: id,
       currentTenant: mapBusinessRow(row),
       tenants: [mapBusinessRow(row)],
+      billingAccessLocked: false,
+      billingAccessReason: null,
+      billingSubscriptionStatus: 'trialing',
       loading: false,
       error: null,
       featureFlagsLoading: false
@@ -432,6 +532,7 @@ export const useTenantStore = create((set, get) => ({
         currentTenant: { ...tenant }
       })
       get().loadFeatureFlags(tenantId)
+      get().loadBillingAccess(tenantId)
     }
   },
 
@@ -441,6 +542,9 @@ export const useTenantStore = create((set, get) => ({
       currentTenant: null,
       tenants: [],
       debug: null,
+      billingAccessLocked: false,
+      billingAccessReason: null,
+      billingSubscriptionStatus: null,
       featureFlags: { subscriptions: true },
       featureFlagsLoading: false,
       error: null
