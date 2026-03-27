@@ -1,7 +1,9 @@
 /**
  * Sale service for processing and saving sales
- * MVP: Supports stock validation and inventory decrement
+ * Las ventas no descuentan inventario ni bloquean por falta de stock (solo registro de venta).
  */
+/** Si en el futuro se desea enlazar inventario con ventas, poner en true y revisar refundSale. */
+const ADJUST_STOCK_ON_SALE = false
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { productService } from './productService'
 import { useTenantStore } from '../store/tenantStore'
@@ -32,9 +34,8 @@ const registerCashSaleMovement = async ({ saleNumber, total, paymentMethod, stat
 
 /**
  * Process and save a sale (completed or pending)
- * - Validates stock availability (if completing)
+ * - Opcionalmente valida y descuenta stock (ver ADJUST_STOCK_ON_SALE)
  * - Saves sale to database
- * - Decrements product stock (if completing)
  */
 export const processSale = async (saleData) => {
   const {
@@ -56,10 +57,9 @@ export const processSale = async (saleData) => {
     throw new Error('No items in sale')
   }
 
-  // Validate stock for all items before processing (only if completing)
-  if (status === 'completed') {
+  if (ADJUST_STOCK_ON_SALE && status === 'completed') {
     for (const item of items) {
-      if (item.product.stock < item.quantity) {
+      if (typeof item.product.stock === 'number' && item.product.stock < item.quantity) {
         throw new Error(`Insufficient stock for ${item.product.name}. Available: ${item.product.stock}`)
       }
     }
@@ -108,13 +108,12 @@ export const processSale = async (saleData) => {
 
       if (itemsError) throw itemsError
 
-      // 3. Update product stock (only if completing)
-      if (status === 'completed') {
+      if (ADJUST_STOCK_ON_SALE && status === 'completed') {
         for (const item of items) {
           const newStock = item.product.stock - item.quantity
           const { error: updateError } = await supabase
             .from('products')
-            .update({ 
+            .update({
               stock: newStock,
               last_sale_date: new Date().toISOString()
             })
@@ -122,7 +121,6 @@ export const processSale = async (saleData) => {
 
           if (updateError) {
             console.error(`Error updating stock for product ${item.product.id}:`, updateError)
-            // Continue with other updates
           }
         }
       }
@@ -130,11 +128,13 @@ export const processSale = async (saleData) => {
       const processedSale = {
         ...saleRecord,
         sale_number: saleNumber,
-        items: items.map(item => ({
+        items: items.map((item) => ({
           ...item,
           product: {
             ...item.product,
-            stock: item.product.stock - item.quantity
+            stock: ADJUST_STOCK_ON_SALE && status === 'completed'
+              ? item.product.stock - item.quantity
+              : item.product.stock
           }
         }))
       }
@@ -143,10 +143,8 @@ export const processSale = async (saleData) => {
 
       return processedSale
     } else {
-      // Mock mode: Update local product data (only if completing)
-      if (status === 'completed') {
+      if (ADJUST_STOCK_ON_SALE && status === 'completed') {
         for (const item of items) {
-          // Update stock in mock data
           const product = await productService.getById(item.product.id)
           if (product) {
             product.stock -= item.quantity
@@ -170,12 +168,15 @@ export const processSale = async (saleData) => {
         session_id: sessionId,
         status: status,
         created_at: new Date().toISOString(),
-        sale_items: items.map(item => ({
+        sale_items: items.map((item) => ({
           ...item,
           product_id: item.product.id,
           product: {
             ...item.product,
-            stock: status === 'completed' ? item.product.stock - item.quantity : item.product.stock
+            stock:
+              ADJUST_STOCK_ON_SALE && status === 'completed'
+                ? item.product.stock - item.quantity
+                : item.product.stock
           }
         }))
       }
@@ -367,17 +368,19 @@ export const refundSale = async ({ saleId, userId }) => {
 
     const items = sale.sale_items || []
 
-    for (const item of items) {
-      if (!item.product) continue
-      const newStock = (item.product.stock || 0) + item.quantity
+    if (ADJUST_STOCK_ON_SALE) {
+      for (const item of items) {
+        if (!item.product) continue
+        const newStock = (item.product.stock || 0) + item.quantity
 
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ stock: newStock })
-        .eq('id', item.product.id)
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ stock: newStock })
+          .eq('id', item.product.id)
 
-      if (updateError) {
-        console.error(`Error revirtiendo stock producto ${item.product.id}:`, updateError)
+        if (updateError) {
+          console.error(`Error revirtiendo stock producto ${item.product.id}:`, updateError)
+        }
       }
     }
 
@@ -409,7 +412,9 @@ export const refundSale = async ({ saleId, userId }) => {
         ...item,
         product: {
           ...item.product,
-          stock: (item.product?.stock || 0) + item.quantity
+          stock: ADJUST_STOCK_ON_SALE
+            ? (item.product?.stock || 0) + item.quantity
+            : item.product?.stock
         }
       }))
     }
@@ -424,9 +429,11 @@ export const refundSale = async ({ saleId, userId }) => {
     throw new Error('Solo se pueden reembolsar ventas completadas')
   }
 
-  for (const item of sale.sale_items || []) {
-    if (!item.product) continue
-    item.product.stock = (item.product.stock || 0) + item.quantity
+  if (ADJUST_STOCK_ON_SALE) {
+    for (const item of sale.sale_items || []) {
+      if (!item.product) continue
+      item.product.stock = (item.product.stock || 0) + item.quantity
+    }
   }
 
   savedSales[idx] = {

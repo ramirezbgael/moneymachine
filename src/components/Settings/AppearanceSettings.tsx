@@ -37,6 +37,8 @@ export function AppearanceSettings() {
     setTheme,
     showFeaturedProducts,
     setShowFeaturedProducts,
+    showPosProductCatalog,
+    setShowPosProductCatalog,
     navModuleOrder,
     setNavModuleOrder,
     t
@@ -118,6 +120,34 @@ export function AppearanceSettings() {
             <span
               className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
                 showFeaturedProducts ? 'translate-x-5' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        </label>
+
+        <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
+          <div>
+            <p className="text-sm font-medium text-[var(--text)]">Catálogo de productos</p>
+            <p className="text-xs text-[var(--muted)] mt-0.5">
+              Si está activo, se muestra la rejilla del catálogo y el buscador no abre sugerencias (el filtrado
+              es en vivo). Si lo desactivas, se oculta el catálogo y el buscador vuelve a mostrar sugerencias al
+              escribir.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showPosProductCatalog}
+            onClick={() => setShowPosProductCatalog(!showPosProductCatalog)}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full border-2 transition-colors duration-200 focus:outline-none ${
+              showPosProductCatalog
+                ? 'border-[var(--accent)] bg-[var(--accent)]'
+                : 'border-[var(--border)] bg-[var(--panel-2)]'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                showPosProductCatalog ? 'translate-x-5' : 'translate-x-0.5'
               }`}
             />
           </button>

@@ -127,12 +127,31 @@ export const useAuthStore = create((set, get) => {
     // Check session
     checkSession: async () => {
       if (!isSupabaseConfigured()) {
-        // Mock session check
         const { user, session } = get()
         if (user && session) {
           set({ isAuthenticated: true })
+          useTenantStore.getState().loadTenants(user.id)
         }
         return
+      }
+
+      // Sesión "mock-user" guardada cuando la app corría sin .env; con Supabase real esa fila no existe en memberships.
+      if (get().user?.id === 'mock-user') {
+        console.warn(
+          '[Moneymachine] Sesión de demostración (mock) incompatible con Supabase. Cierra sesión y entra de nuevo con tu cuenta.'
+        )
+        try {
+          await supabase.auth.signOut()
+        } catch {
+          /* ignore */
+        }
+        useTenantStore.getState().clearTenants()
+        set({ user: null, session: null, isAuthenticated: false, error: null })
+        try {
+          localStorage.removeItem('auth-storage')
+        } catch {
+          /* ignore */
+        }
       }
 
       try {

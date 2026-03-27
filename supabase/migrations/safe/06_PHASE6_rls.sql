@@ -40,8 +40,11 @@ CREATE POLICY businesses_update_privileged ON public.businesses
   WITH CHECK (public.has_business_role(id, 'owner', 'admin', 'billing'));
 
 ALTER TABLE public.memberships ENABLE ROW LEVEL SECURITY;
-CREATE POLICY memberships_select_same_business ON public.memberships
-  FOR SELECT USING (business_id IN (SELECT public.user_business_ids()));
+-- Importante: NO usar política recursiva para SELECT en memberships.
+-- user_business_ids() lee memberships; si el SELECT a memberships depende de user_business_ids()
+-- se queda en "cero filas" al arrancar y el cliente cree que no hay negocio.
+CREATE POLICY memberships_select_own ON public.memberships
+  FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY memberships_insert_admin ON public.memberships
   FOR INSERT WITH CHECK (public.has_business_role(business_id, 'owner', 'admin'));
 CREATE POLICY memberships_update_admin ON public.memberships

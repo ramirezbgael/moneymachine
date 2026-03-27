@@ -24,6 +24,7 @@ const CurrentSale = () => {
   const t = useSettingsStore((state) => state.t)
   const language = useSettingsStore((state) => state.language)
   const showFeaturedProducts = useSettingsStore((state) => state.showFeaturedProducts)
+  const showPosProductCatalog = useSettingsStore((state) => state.showPosProductCatalog)
   const { items, getTotals, clearSale, addItem } = useSaleStore()
   const { user } = useAuthStore()
 
@@ -211,7 +212,7 @@ const CurrentSale = () => {
             wrapperClassName="pos-sale-search w-full max-w-none"
             inputClassName="!min-h-[48px] !rounded-2xl !px-5 !py-3 !text-base lg:!min-h-[56px] lg:!py-4"
             onQueryChange={onQueryChange}
-            suppressSuggestions={isNarrowViewport}
+            suppressSuggestions={showPosProductCatalog}
           />
         </div>
 
@@ -225,16 +226,24 @@ const CurrentSale = () => {
           </div>
         )}
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-2 md:px-6 lg:px-4 lg:pb-4">
-          <p className="pos-sale-section-label mb-2 lg:mb-3">{t('currentSale.posCatalogSection')}</p>
-          <ProductGrid
-            products={catalog}
-            filter={catalogQuery}
-            onAddProduct={handleAddProduct}
-            justAddedId={justAddedId}
-            denseCards={!isMobilePos}
-          />
-        </div>
+        {showPosProductCatalog ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-2 md:px-6 lg:px-4 lg:pb-4">
+            <p className="pos-sale-section-label mb-2 lg:mb-3">{t('currentSale.posCatalogSection')}</p>
+            <ProductGrid
+              products={catalog}
+              filter={catalogQuery}
+              onAddProduct={handleAddProduct}
+              justAddedId={justAddedId}
+              denseCards={!isMobilePos}
+            />
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col justify-center px-4 pb-6 pt-2 md:px-6 lg:px-4">
+            <p className="text-center text-sm leading-relaxed text-[var(--pos-text-muted)]">
+              Catálogo oculto. Escribe el nombre o código en el buscador para ver sugerencias y agregar.
+            </p>
+          </div>
+        )}
       </section>
 
       <CartPanel

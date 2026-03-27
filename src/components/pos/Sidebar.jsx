@@ -11,8 +11,18 @@ export function Sidebar({
   activeId,
   onNavigate,
   t,
-  currentTenantName
+  currentTenantName,
+  fallbackBusinessName
 }) {
+  const isGenericTenantName = (name) => {
+    const normalized = String(name || '').trim().toLowerCase()
+    return normalized === 'mi negocio' || normalized === 'mi negocio.'
+  }
+
+  const businessNameToShow = isGenericTenantName(currentTenantName)
+    ? (fallbackBusinessName || currentTenantName || 'POS')
+    : (currentTenantName || fallbackBusinessName || 'POS')
+
   return (
     <div className="flex h-full w-full min-w-0 flex-col bg-[rgba(9,9,9,0.98)]">
       <div className="flex min-h-0 items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-5">
@@ -67,7 +77,7 @@ export function Sidebar({
         {(!collapsed || mobileOpen) && (
           <div className="min-w-0">
             <div className="truncate text-sm font-medium text-zinc-300">
-              {currentTenantName || 'POS'}
+              {businessNameToShow}
             </div>
             <div className="truncate text-xs text-zinc-600">Cashier</div>
           </div>

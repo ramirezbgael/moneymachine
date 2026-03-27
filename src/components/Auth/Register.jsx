@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { useTenantStore } from '../../store/tenantStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 import './Login.css'
 
@@ -12,6 +13,7 @@ import './Login.css'
 const Register = () => {
   const navigate = useNavigate()
   const { signUp, isAuthenticated, isLoading, error } = useAuthStore()
+  const setPrinterSettings = useSettingsStore(state => state.setPrinterSettings)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [businessName, setBusinessName] = useState('')
@@ -52,6 +54,7 @@ const Register = () => {
           setLocalError(rpcError.message || 'Could not create business. You can sign in and try again.')
           return
         }
+        setPrinterSettings({ businessName: businessName.trim() })
         await useTenantStore.getState().loadTenants(session.user.id)
         navigate('/', { replace: true })
       } catch (err) {

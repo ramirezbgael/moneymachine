@@ -63,6 +63,7 @@ export const useSettingsStore = create((set, get) => {
     businessLogo: state.businessLogo,
     ticketPrintLogo: state.ticketPrintLogo,
     showFeaturedProducts: state.showFeaturedProducts,
+    showPosProductCatalog: state.showPosProductCatalog,
     showPendingModule: state.showPendingModule,
     showSubscriptionsModule: state.showSubscriptionsModule,
     navModuleOrder: state.navModuleOrder,
@@ -87,6 +88,7 @@ export const useSettingsStore = create((set, get) => {
     businessLogo: initialSettings.businessLogo || '',
     ticketPrintLogo: initialSettings.ticketPrintLogo !== false,
     showFeaturedProducts: initialSettings.showFeaturedProducts !== false,
+    showPosProductCatalog: initialSettings.showPosProductCatalog !== false,
     showPendingModule: initialSettings.showPendingModule !== false,
     showSubscriptionsModule: initialSettings.showSubscriptionsModule !== false,
     navModuleOrder: sanitizeNavModuleOrder(initialSettings.navModuleOrder),
@@ -96,6 +98,11 @@ export const useSettingsStore = create((set, get) => {
       set({ showFeaturedProducts: value })
       const currentState = get()
       saveSettings(getPersistedSettings(currentState, { showFeaturedProducts: value }))
+    },
+    setShowPosProductCatalog: (value) => {
+      set({ showPosProductCatalog: value })
+      const currentState = get()
+      saveSettings(getPersistedSettings(currentState, { showPosProductCatalog: value }))
     },
     setShowPendingModule: (value) => {
       set({ showPendingModule: value })

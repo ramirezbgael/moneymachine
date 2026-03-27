@@ -1,7 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const configuredSupabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+// En DEV, usamos proxy same-origin (/supabase) para evitar bloqueos CORS del navegador.
+// En PROD, usamos la URL real.
+const supabaseUrl = configuredSupabaseUrl
+  ? (import.meta.env.DEV ? `${window.location.origin}/supabase` : configuredSupabaseUrl)
+  : configuredSupabaseUrl
 
 // Security check: Detect if service_role key is being used (common mistake)
 if (supabaseAnonKey && supabaseAnonKey.includes('service_role')) {
@@ -13,11 +19,14 @@ if (supabaseAnonKey && supabaseAnonKey.includes('service_role')) {
   throw new Error('Forbidden use of secret API key in browser')
 }
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials not found. Using mock mode.')
+if (!configuredSupabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    'Supabase credentials not found (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY). Using mock mode. ' +
+      'Si acabas de añadir .env, reinicia el servidor de desarrollo (npm run dev).'
+  )
 }
 
-export const supabase = supabaseUrl && supabaseAnonKey
+export const supabase = configuredSupabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null
 
