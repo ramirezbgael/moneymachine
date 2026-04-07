@@ -25,6 +25,7 @@ import Register from './components/Auth/Register'
 import { useAuthStore } from './store/authStore'
 import { useTenantStore } from './store/tenantStore'
 import { offlineProductService } from './services/offlineProductService'
+import { setDemoMode } from './lib/supabase'
 import './App.css'
 
 // Protected Route Component
@@ -85,6 +86,25 @@ const PublicSubscriptionCheckRedirect = () => {
   return <Navigate to={id ? `/suscripciones/${id}` : '/subscriptions'} replace />
 }
 
+const DemoEntry = () => {
+  useEffect(() => {
+    setDemoMode(true)
+    useAuthStore.setState({
+      user: { id: 'mock-user', email: 'demo@moneymachine.local' },
+      session: { access_token: 'mock-token' },
+      isAuthenticated: true,
+      isLoading: false,
+      error: null
+    })
+    useTenantStore.getState().loadTenants('mock-user')
+  }, [])
+  return (
+    <ProtectedRoute>
+      <Layout />
+    </ProtectedRoute>
+  )
+}
+
 function App() {
   // Initialize offline services
   useEffect(() => {
@@ -104,6 +124,35 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/check/:id" element={<PublicCheckPage />} />
+        <Route path="/demo" element={<DemoEntry />}>
+          <Route index element={<CurrentSale />} />
+          <Route path="checkout" element={<CheckoutPage />} />
+          <Route path="inventory" element={<InventarioPage />} />
+          <Route path="inventory/product/:id" element={<ProductoDetallesPage />} />
+          <Route path="inventory/orders" element={<PedidosInventarioPage />} />
+          <Route path="inventory/new" element={<InventoryNewPage />} />
+          <Route path="pending" element={<Pending />} />
+          <Route path="cash-register" element={<CajaModule />} />
+          <Route path="cash-register/:action" element={<CajaModule />} />
+          <Route path="customers" element={<Customers />} />
+          <Route path="customers/:id" element={<CustomerDetailPage />} />
+          <Route path="clientes" element={<Customers />} />
+          <Route path="clientes/:id" element={<CustomerDetailPage />} />
+          <Route path="subscriptions" element={<Subscriptions />} />
+          <Route path="subscriptions/new" element={<NewSubscriptionPage />} />
+          <Route path="subscriptions/:id" element={<SubscriptionClientPage />} />
+          <Route path="suscripciones/nueva" element={<Navigate to="/demo/subscriptions/new" replace />} />
+          <Route path="suscripciones/:id" element={<SubscriptionClientPage />} />
+          <Route path="finance" element={<Finance />} />
+          <Route path="finance/:sectionId" element={<Finance />} />
+          <Route path="finance/new-receivable" element={<NewReceivablePage />} />
+          <Route path="finance/receivables/:id" element={<ReceivableDetailPage />} />
+          <Route path="finanzas/nueva-deuda" element={<NewReceivablePage />} />
+          <Route path="finanzas/cxc/:id" element={<ReceivableDetailPage />} />
+          <Route path="finance/reports" element={<Reports />} />
+          <Route path="finance/reports/:tabId" element={<Reports />} />
+          <Route path="settings" element={<ConfiguracionPage />} />
+        </Route>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route

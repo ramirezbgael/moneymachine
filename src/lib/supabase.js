@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const configuredSupabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const DEMO_MODE_KEY = 'mm_demo_mode'
 
 // En DEV, usamos proxy same-origin (/supabase) para evitar bloqueos CORS del navegador.
 // En PROD, usamos la URL real.
@@ -30,7 +31,24 @@ export const supabase = configuredSupabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null
 
+export const isDemoMode = () => {
+  try {
+    return localStorage.getItem(DEMO_MODE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export const setDemoMode = (enabled) => {
+  try {
+    if (enabled) localStorage.setItem(DEMO_MODE_KEY, '1')
+    else localStorage.removeItem(DEMO_MODE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
 // Check if Supabase is configured
 export const isSupabaseConfigured = () => {
-  return supabase !== null
+  return supabase !== null && !isDemoMode()
 }
